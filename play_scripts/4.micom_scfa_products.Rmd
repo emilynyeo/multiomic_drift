@@ -1,0 +1,25 @@
+---
+title: "micom_scfa"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(knitr,data.table,dplyr,tidyr,tableone,kableExtra,readr)
+```
+
+# Load in Micom SCFA products
+
+```{r}
+load("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/WD_Cplex/products_all.RData")
+mi_scfa <- products.all
+rm(products.all)
+```
+
+# kn
+
+```{r}
+
+```
+

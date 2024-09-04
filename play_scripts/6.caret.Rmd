@@ -1,0 +1,64 @@
+---
+title: "6.caret_meta"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+```
+
+
+Caret 
+```{r}
+## Default S3 method:
+train(
+  x,
+  y,
+  method = "rf",
+  preProcess = NULL,
+  weights = NULL,
+  metric = ifelse(is.factor(y), "Accuracy", "RMSE"),
+  maximize = ifelse(metric %in% c("RMSE", "logLoss", "MAE", "logLoss"), 
+                    FALSE, TRUE),
+  trControl = trainControl(),
+  tuneGrid = NULL,
+  tuneLength = ifelse(trControl$method == "none", 1, 3)
+)
+
+## S3 method for class 'formula'
+train(form, data, weights, subset, na.action = na.fail, contrasts = NULL)
+
+## S3 method for class 'recipe'
+train(
+  x,
+  data,
+  method = "rf",
+  metric = ifelse(is.factor(y_dat), "Accuracy", "RMSE"),
+  maximize = ifelse(metric %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE),
+  trControl = trainControl(),
+  tuneGrid = NULL,
+  tuneLength = ifelse(trControl$method == "none", 1, 3))
+```
+
+
+```{r}
+## Regression Example
+library(mlbench)
+data(BostonHousing)
+
+lmFit <- train(medv ~ . + rm:lstat,
+               data = BostonHousing,
+               method = "lm")
+
+library(rpart)
+rpartFit <- train(medv ~ .,
+                  data = BostonHousing,
+                  method = "rpart",
+                  tuneLength = 9)
+```
+
+
+
