@@ -188,10 +188,66 @@ TBD
 
 ### Code 
 
-In some cases, there is a need to use principal component analysis (PCA) to transform the data to a smaller sub–space where the new variable are uncorrelated with one another.
+In some cases, there is a need to use principal component analysis (PCA) to transform the data to a smaller sub–space where the new variable are uncorrelated with one another. 
+The “spatial sign” transformation (Serneels et al, 2006) projects the data for a predictor to the unit circle in p dimensions, where p is the number of predictors. Essentially, a vector of data is divided by its norm. The two figures below show two centered and scaled descriptors from the MDRR data before and after the spatial sign transformation. The predictors should be centered and scaled before applying this transformation.
+
+```{r}
+transparentTheme(trans = .4)
+
+plotSubset <- data.frame(scale(testTransformed[, c("wt_pctchange_12m_bl", "outcome_wt_fnl_BL")])) 
+group <- as.factor(testTransformed$sex)
+levels(group) <- c("Woman", "Man")
+xyplot(wt_pctchange_12m_bl ~ outcome_wt_fnl_BL,
+       data = plotSubset,
+       groups = group, 
+       auto.key = list(columns = 2))  
+```
+
+After spatial sign 
+
+```{r}
+transformed <- spatialSign(plotSubset)
+transformed <- as.data.frame(transformed)
+xyplot(wt_pctchange_12m_bl ~ outcome_wt_fnl_BL, 
+       data = transformed, 
+       groups = group, 
+       auto.key = list(columns = 2)) 
+```
+
+Another option, "BoxCox" will estimate a Box–Cox transformation on the predictors if the data are greater than zero.
+
+```{r}
+preProcValues2 <- preProcess(training, method = "BoxCox")
+trainBC <- predict(preProcValues2, training)
+testBC <- predict(preProcValues2, test)
+preProcValues2
+```
+
 
 ### Background 
 
+In some cases, there is a need to use principal component analysis (PCA) to transform the data to a smaller sub–space where the new variable are uncorrelated with one another. The preProcess class can apply this transformation by including "pca" in the method argument. Doing this will also force scaling of the predictors. Note that when PCA is requested, predict.preProcess changes the column names to PC1, PC2 and so on.
+
+Similarly, independent component analysis (ICA) can also be used to find new variables that are linear combinations of the original set such that the components are independent (as opposed to uncorrelated in PCA). The new variables will be labeled as IC1, IC2 and so on.
+
+The “spatial sign” transformation (Serneels et al, 2006) projects the data for a predictor to the unit circle in p dimensions, where p is the number of predictors. Essentially, a vector of data is divided by its norm. The two figures in the code tab show two centered and scaled descriptors from the MDRR data before and after the spatial sign transformation. The predictors should be centered and scaled before applying this transformation.
+
 # {-}
+
+# Putting section 3 together {.tabset}
+
+### info
+
+In Applied Predictive Modeling there is a case study where the execution times of jobs in a high performance computing environment are being predicted. The data are:
+
+
+### Transformations & scaling
+
+### 
+
+# {-}
+
+
+
 
 
