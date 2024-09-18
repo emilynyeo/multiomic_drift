@@ -1,0 +1,176 @@
+---
+title: "7.imputing_microbiome_data"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor)
+```
+
+# Read in Taxonomy data {.tabset}
+
+```{r}
+# Phyloseq Object
+load("~/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/PhyloseqObj.RData")
+# Ancom results 
+#load("~/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/Code_for_ANCOM/emily_acom_outputs/ancom_sig_bmi.04.15.RData")
+# Phyloseq species object
+load("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/Genus_Sp_tables.RData")
+rm(drift.phy.count.r21116, drift.phy.ra, genus.clr, genus.count, genus.ra,
+   drift.phy.clr, drift.phy.count)
+```
+
+## Make it match testing and training sets of metadata
+
+```{r}
+train_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/train_samples_standard_clinical.csv")
+
+test_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/test_samples_standard_clinical.csv")
+
+a1_T <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/a1_meta_Transformed_standard_clinical.csv")
+```
+
+## Make Taxa data splits 
+
+CTL data has already been center log transformed. So perhaps sticking to that is best. 
+CLR for RF. 
+16S sometimes wide eye for genus
+
+```{r}
+sp.data <- sp.clr
+sample_names <- sp.data$SampleID
+baseline_samples <- sp.data$SampleID[grep("\\.BL$", sample_names)]
+BL_clr <- sp.data %>% filter(SampleID %in% baseline_samples)
+
+# Function to process the names
+process_names <- function(names) {
+  bl_names <- grep("\\.BL$", names, value = TRUE) # ending with "BL"
+  extracted_numbers <- sub(".*-(\\d+)\\.BL$", "\\1", bl_names) # Numbers after "-", before "."
+  cleaned_numbers <- sub("^0+", "", extracted_numbers) # Remove leading zeros
+  cleaned_numbers # Return the cleaned numbers
+}
+# Apply the function to the sample names
+BL_clr$SampleID <- process_names(BL_clr$SampleID)
+
+# Make training and testing to match the samples in training and testing of ANCOMBC
+training_sample_names <- train_Transformed$V1
+testing_sample_names <- test_Transformed$V1
+
+# Filter rows in BL_clr that match training and testing samples 
+BL_clr_training <- BL_clr %>% filter(SampleID %in% training_sample_names)
+BL_clr_testing <- BL_clr %>% filter(SampleID %in% testing_sample_names)
+```
+
+## Visualize Microbiome data
+
+Missing data with MICE
+```{r}
+cci(BL_clr_training) # all complete cases 
+```
+
+
+## Transformations
+
+# {-}
+
+# Read in Functional data {.tabset}
+
+Using the Picrust functional data pathways 
+
+```{r}
+# picrust outputs 
+#ko <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/KO_metagenome_out/pred_metagenome_unstrat_descrip.tsv")
+
+#ko_ab <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/KO_metagenome_out/pred_metagenome_unstrat.tsv")
+
+pathways <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/pathways_out/path_abun_unstrat_descrip.tsv")
+```
+
+remove those with very low variability. Make sure it's normal. Look into CLR transform.
+Ask John or Jennifer. 
+Micom - standard center scale T
+
+## Visualize functional data
+
+Edit pathway data frame
+```{r}
+pathways_1 <- pathways[, -1]  # Remove the first column (pathway)
+pathways_2 <- t(pathways_1)
+pathways_3 <- as.data.frame(pathways_2) %>% 
+              row_to_names(1) %>% 
+              rownames_to_column("SampleID")
+# Only baseline samples
+sample_names <- pathways_3$SampleID
+baseline_samples <- pathways_3$SampleID[grep("\\.BL$", sample_names)]
+path_BL <- pathways_3 %>% filter(SampleID %in% baseline_samples)
+
+# All time samples 
+path_all_time <- pathways_3
+
+# Convert all columns except the first one to numeric
+path_BL[-1] <- lapply(path_BL[-1], as.numeric)
+path_all_time[-1] <- lapply(path_all_time[-1], as.numeric)
+
+rm(pathways_1, pathways_2, pathways_3, sample_names, baseline_samples)
+```
+
+# {-}
+
+# Remove variables with low presence thresholds
+
+```{r}
+relative_abundances <- path_all_time %>%
+  rowwise() %>%
+  dplyr::mutate(across(-SampleID, ~ . / sum(c_across(-SampleID)), .names = "rel_{col}")) %>%
+  ungroup()
+
+# Calculate relative abundances
+relative_abundances <- path_all_time
+relative_abundances[-1] <- apply(relative_abundances[-1], 1, 
+                                 function(x) x / sum(x))
+colnames(relative_abundances)[-1] <- paste0("rel_", 
+                                            colnames(relative_abundances)[-1])
+
+```
+
+# Plot 
+```{r}
+# Reshape the data to long format
+long_data <- relative_abundances %>%
+  pivot_longer(cols = -SampleID, 
+               names_to = "Pathway", 
+               values_to = "Relative_Abundance")
+
+# Create a bar plot
+ggplot(long_data, aes(x = SampleID, y = Relative_Abundance, fill = Pathway)) +
+  geom_bar(stat = "identity", position = "stack") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Relative Abundance of Pathways per Sample",
+       x = "Sample ID",
+       y = "Relative Abundance") +
+  scale_fill_brewer(palette = "Set3") 
+```
+
+
+
+# Remove variable with low variance 
+
+
+# Transformations 
+
+```{r}
+# Apply log transformation
+data_log <- data %>%
+  mutate(across(everything(), log1p))  # log1p is used to handle zero values
+```
+
+
+

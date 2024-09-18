@@ -86,6 +86,19 @@ a1_meta <- meta %>%
                   Ghrelin_BL, Leptin_BL, Peptide_YY_BL,
                   Glucose_BL, Hemoglobin_A1C_BL, Insulin_endo_BL, HOMA_IR_BL, 
                   outcome_BMI_fnl_BL))
+
+stand <- meta %>% 
+  dplyr::select(c(record_id,
+                  age, 
+                  sex, 
+                  Triglyceride_lipid_BL, 
+                  HDL_Total_Direct_lipid_BL, 
+                  LDL_Calculated_BL,
+                  Glucose_BL, Insulin_endo_BL, 
+                  HOMA_IR_BL, 
+                  outcome_BMI_fnl_BL))
+
+a1_meta <- stand
 # Intervention : IMF = 1 , DCR = 2
 head(a1_meta)
 ```
@@ -94,15 +107,11 @@ head(a1_meta)
 
 ## These tabs are kind of exploratory, so scroll
 
-I was just looking at variable correlatons, variations, summary stats and PCAs
+I was just looking at variable correlations, variations, summary stats and PCAs
 
 ## Looking at correlations between vars
 ```{r echo=FALSE, warning=FALSE}
-scatterplotMatrix(a1_meta[3:5])
-```
-
-```{r message=FALSE, warning=FALSE}
-scatterplotMatrix(a1_meta[10:15])
+scatterplotMatrix(stand[4:10])
 ```
 
 ```{r echo=FALSE, warning=FALSE}
@@ -110,7 +119,17 @@ regVar <- c("age", "income", "HOMA_IR_BL", "spk_EE_int_kcal_day_BL",
             "C_Reactive_Protein_BL", "Ghrelin_BL", "Leptin_BL", "Peptide_YY_BL",
             "Cholesterol_lipid_BL", "Triglyceride_lipid_BL" ,
             "HDL_Total_Direct_lipid_BL", "LDL_Calculated_BL")
-subset_df <- a1_meta %>% select(all_of(regVar))
+
+regVar2 <- c("age", 
+                  "sex", 
+                  "Triglyceride_lipid_BL", 
+                  "HDL_Total_Direct_lipid_BL", 
+                  "LDL_Calculated_BL",
+                  "Glucose_BL", "Insulin_endo_BL", 
+                  "HOMA_IR_BL", 
+                  "outcome_BMI_fnl_BL")
+
+subset_df <- a1_meta %>% dplyr::select(all_of(regVar2))
 str(subset_df)
 
 theme1 <- trellis.par.get()
@@ -150,7 +169,7 @@ mosthighlycorrelated <- function(mydataframe,numtoreport)
 
 top 10 correlated variables a1 data set
 ```{r}
-mosthighlycorrelated(a1_meta[2:31], 10)
+mosthighlycorrelated(a1_meta[2:9], 10)
 ```
 
 ## Variable variations
@@ -245,34 +264,26 @@ body_list <- list(a1_meta$height_cm, a1_meta$wc_average_BL, a1_meta$WBTOT_FAT_BL
 
 energy_list <- list(a1_meta$spk_EE_int_kcal_day_BL, a1_meta$rmr_kcald_BL,
                     a1_meta$outcome_BMI_fnl_BL)
+
+stand <- regVar2
+stand_list <- list(a1_meta$age, 
+                   a1_meta$sex, 
+                   a1_meta$Triglyceride_lipid_BL, 
+                   a1_meta$HDL_Total_Direct_lipid_BL, 
+                   a1_meta$LDL_Calculated_BL,
+                   a1_meta$Glucose_BL,
+                   a1_meta$Insulin_endo_BL, 
+                   a1_meta$HOMA_IR_BL, 
+                   a1_meta$outcome_BMI_fnl_BL)
 ```
 
-variation in socio variables 
+variation in standard variables 
 ```{r}
-makeProfilePlot(socio_list, socio)
+makeProfilePlot(stand_list, stand)
 ```
 
 I probably need to scale all my variables before this'll make any sense
 
-variation in some blood markers and bloop pressure
-```{r}
-makeProfilePlot(blood_bp_list, blood_bp)
-```
-
-variation in hunger-associated variables
-```{r}
-makeProfilePlot(hunger_list, hunger)
-```
-
-variation in biometric variables
-```{r}
-makeProfilePlot(body_list, body)
-```
-
-variations in energy list
-```{r}
-makeProfilePlot(energy_list, energy)
-```
 
 ## Mean and Std. Dev. 
 Function by group
@@ -302,23 +313,20 @@ printMeanAndSdByGroup <- function(variables,groupvariable)
 
 Mean and Std. by sex
 ```{r}
-printMeanAndSdByGroup(a1_meta[2:31],a1_meta[4])
+printMeanAndSdByGroup(a1_meta[2:10],a1_meta[3])
 ```
 
 ## Standardizations
 
 "If you want to compare different variables that have different units, are very different variances, it is a good idea to first standardize the variables.
 For a principal component analysis (PCA), the first principal component would be dominated by the variables which show the largest variances.
-Thus, its better to first standardise the variables so that they all have variance 1 and mean 0, and to then carry out the principal component analysis on the standardised data. This would allow us to find the principal components that provide the best low-dimensional representation of the variation in the original data, without being overly biased by those variables that show the most variance in the original data."
+Thus, its better to first standardize the variables so that they all have variance 1 and mean 0, and to then carry out the principal component analysis on the standardized data. This would allow us to find the principal components that provide the best low-dimensional representation of the variation in the original data, without being overly biased by those variables that show the most variance in the original data."
 
-You can standardise variables in R using the scale function.
+You can standardize variables in R using the scale function.
 ```{r}
-scaled_a1 <- as.data.frame(scale(a1_meta[2:31]))
+scaled_a1 <- as.data.frame(scale(a1_meta[, c(2:10)[-3]])) # don't standardize sex
 head(scaled_a1)
-#scaled_a1 <- as.data.frame(scale(a1_meta[, c(3, 5:10, 15:31)]))
 ```
-
-should this be done to my zero 1 category variables?
 
 ## PCA 
 
@@ -349,12 +357,13 @@ screeplot(a1_meta_pca, type="lines")
 
 ## Zero & near zero predictors 
 
-In some situations, the data generating mechanism can create predictors that only have a single unique value (i.e. a “zero-variance predictor”). For many models (excluding tree-based models), this may cause the model to crash or the fit to be unstable.
+In some situations, the data generating mechanism can create predictors that only have a single unique value (i.e. a “zero-variance predictor”). 
+For many models (excluding tree-based models), this may cause the model to crash or the fit to be unstable.
 
 Similarly, predictors might have only a handful of unique values that occur with very low frequencies.
 ```{r}
 nzv <- nearZeroVar(scaled_a1, saveMetrics= TRUE)
-nzv[nzv$nzv,][1:10,]
+nzv[nzv$nzv,][2:10,]
 
 dim(a1_meta)
 
@@ -364,14 +373,17 @@ dim(filteredDescr)
 setdiff(colnames(a1_meta), colnames(filteredDescr))
 ```
 
+No zero variance predictors
+
 ## Linear Dependencies 
 
 The function findLinearCombos uses the QR decomposition of a matrix to enumerate sets of linear combinations (if they exist).
 findLinearCombos will return a list that enumerates these dependencies. For each linear combination, it will incrementally remove columns from the matrix and test to see if the dependencies have been resolved. findLinearCombos will also return a vector of column positions can be removed to eliminate the linear dependencies.
 
 ```{r}
-comboInfo <- findLinearCombos(noNA_scaled_a1)
-comboInfo
+#noNA_scaled_a1 <- na.omit(scaled_a1)
+#comboInfo <- findLinearCombos(scaled_a1)
+#comboInfo
 ```
 
 nothing to remove
@@ -403,8 +415,8 @@ training <- myData[inTrain, ]
 test <- myData[-inTrain, ]
 
 # a1 data training and testing sets
-dim(training)
-dim(test)
+dim(training) # 127, 10
+dim(test) # 32, 10
 
 trainTarget <- myTarget[inTrain]
 testTarget <- myTarget[-inTrain]
@@ -420,34 +432,12 @@ The list = FALSE avoids returning the data as a list. This function also has an 
 
 ```{r}
 set.seed(3456)
-trainIndex <- createDataPartition(iris$Species, p = .8, 
+trainIndex <- createDataPartition(a1_meta$outcome_BMI_fnl_BL, p = .8, 
                                   list = FALSE, 
                                   times = 1)
 head(trainIndex)
-irisTrain <- iris[ trainIndex,]
-irisTest  <- iris[-trainIndex,]
-```
-
-## Split based on predictors 
-
-haven't tried this 
-
-Also, the function maxDissim can be used to create sub–samples using a maximum dissimilarity approach (Willett, 1999). Suppose there is a data set A with m samples and a larger data set B with n samples. We may want to create a sub–sample from B that is diverse when compared to A. To do this, for each sample in B, the function calculates the m dissimilarities between each point in A. The most dissimilar point in B is added to A and the process continues. There are many methods in R to calculate dissimilarity. caret uses the proxy package. See the manual for that package for a list of available measures. Also, there are many ways to calculate which sample is “most dissimilar”. The argument obj can be used to specify any function that returns a scalar measure. caret includes two functions, minDiss and sumDiss, that can be used to maximize the minimum and total dissimilarities, respectfully.
-
-As an example, the figure below shows a scatter plot of two chemical descriptors for the Cox2 data. Using an initial random sample of 5 compounds, we can select 20 more compounds from the data so that the new compounds are most dissimilar from the initial 5 that were specified. The panels in the figure show the results using several combinations of distance metrics and scoring functions. For these data, the distance measure has less of an impact than the scoring method for determining which compounds are most dissimilar.
-
-```{r}
-library(mlbench)
-data(BostonHousing)
-
-testing <- scale(BostonHousing[, c("age", "nox")])
-set.seed(5)
-## A random sample of 5 data points
-startSet <- sample(1:dim(testing)[1], 5)
-samplePool <- testing[-startSet,]
-start <- testing[startSet,]
-newSamp <- maxDissim(start, samplePool, n = 20)
-head(newSamp)
+a1_meta_Train <- a1_meta[ trainIndex,]
+a1_meta_Test  <- a1_meta[-trainIndex,]
 ```
 
 ## Split for time series 
@@ -488,8 +478,8 @@ preProcValues <- preProcess(training,
 # Apply tranformation
 train_Transformed <- predict(preProcValues, training)
 test_Transformed <- predict(preProcValues, test)
+a1_meta_Transformed <- predict(preProcValues, a1_meta)
 ```
-
 
 ## Differences w/ Caret
 
@@ -497,34 +487,24 @@ Lookiing at the differences in original vs. transformed data
 
 histograms:
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-training_big_nos <- training %>% 
-                dplyr::select(c(rmr_kcald_BL,spk_EE_int_kcal_day_BL,
-                                #WBTOT_FAT_BL, WBTOT_LEANmass_BL, 
-                                height_cm,
-                                wc_average_BL, avg_systolic_BL,
-                                Ghrelin_BL, LDL_Calculated_BL, Triglyceride_lipid_BL,
-                                Cholesterol_lipid_BL, Peptide_YY_BL))
-training_small <- training %>% 
-                dplyr::select(-c(record_id, rmr_kcald_BL,spk_EE_int_kcal_day_BL,
-                                 WBTOT_FAT_BL, WBTOT_LEANmass_BL, height_cm,
-                                wc_average_BL, avg_systolic_BL,
-                                Ghrelin_BL, LDL_Calculated_BL, Triglyceride_lipid_BL,
-                                Cholesterol_lipid_BL, Peptide_YY_BL))
+training_old <- training %>% 
+                dplyr::select(c("age", 
+                  "sex", 
+                  "Triglyceride_lipid_BL", 
+                  "HDL_Total_Direct_lipid_BL", 
+                  "LDL_Calculated_BL",
+                  "Glucose_BL", "Insulin_endo_BL", 
+                  "HOMA_IR_BL", 
+                  "outcome_BMI_fnl_BL"))
 
 # Combine original and transformed data for easy comparison
-original_melted_big <- melt(training_big_nos)
-original_melted_small <- melt(training_small)
+original_melted_training_old <- melt(training_old)
 transformed_melted <- melt(train_Transformed)
 
 # Plot histograms
-ggplot(original_melted_big, aes(x = value, fill = variable)) + 
+ggplot(original_melted_training_old, aes(x = value, fill = variable)) + 
     geom_histogram(bins = 30, alpha = 0.5) + 
-    ggtitle("Histograms of Original Training Data with bigger numbers") +
-    theme_minimal()
-
-ggplot(original_melted_small, aes(x = value, fill = variable)) + 
-    geom_histogram(bins = 30, alpha = 0.5) + 
-    ggtitle("Histograms of Original Training Data with smaller numbers") +
+    ggtitle("Histograms of Original Training Data") +
     theme_minimal()
 
 ggplot(transformed_melted, aes(x = value, fill = variable)) + 
@@ -536,14 +516,9 @@ ggplot(transformed_melted, aes(x = value, fill = variable)) +
 density plots
 ```{r}
 # Density plots
-ggplot(original_melted_big, aes(x = value, color = variable)) +
+ggplot(original_melted_training_old, aes(x = value, color = variable)) +
     geom_density() +
-    ggtitle("Density Plots of Original Training Data with bigger numbers") +
-    theme_minimal()
-
-ggplot(original_melted_small, aes(x = value, color = variable)) +
-    geom_density() +
-    ggtitle("Density Plots of Original Training Data that's smaller") +
+    ggtitle("Density Plots of Original Training Data") +
     theme_minimal()
 
 ggplot(transformed_melted, aes(x = value, color = variable)) +
@@ -555,15 +530,9 @@ ggplot(transformed_melted, aes(x = value, color = variable)) +
 Boxplots
 ```{r}
 # Box plots
-ggplot(original_melted_big, aes(x = variable, y = value, fill = variable)) +
+ggplot(original_melted_training_old, aes(x = variable, y = value, fill = variable)) +
     geom_boxplot() +
-    ggtitle("Box Plots of Original Training Data with bigger numbers") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggplot(original_melted_small, aes(x = variable, y = value, fill = variable)) +
-    geom_boxplot() +
-    ggtitle("Box Plots of Original Training Data that's smaller") +
+    ggtitle("Box Plots of Original Training Data") +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -622,6 +591,7 @@ the specific number of PCA components to keep. If specified, this over-rides thr
 
 
 # {-}
+
 # Data summary of transformed {.tabset}
 
 ## First looking at the variatioons in the data
@@ -673,57 +643,140 @@ body_list_t  <- list(train_Transformed$height_cm, train_Transformed$wc_average_B
 energy_list_t  <- list(train_Transformed$spk_EE_int_kcal_day_BL,
                        train_Transformed$rmr_kcald_BL,
                        train_Transformed$outcome_BMI_fnl_BL)
+
+stand_t <- c("age", "sex", "Triglyceride_lipid_BL", "HDL_Total_Direct_lipid_BL", 
+                  "LDL_Calculated_BL", "Glucose_BL", "Insulin_endo_BL", 
+                  "HOMA_IR_BL", "outcome_BMI_fnl_BL")
+
+stand_list_t <- list(train_Transformed$age,
+                     train_Transformed$sex,
+                     train_Transformed$Triglyceride_lipid_BL,
+                     train_Transformed$HDL_Total_Direct_lipid_BL,
+                     train_Transformed$LDL_Calculated_BL,
+                     train_Transformed$Glucose_BL,
+                      train_Transformed$Insulin_endo_BL, 
+                      train_Transformed$HOMA_IR_BL,
+                      train_Transformed$outcome_BMI_fnl_BL)
 ```
 
-Socio transformed 
+
+Clinical standard variable transformed variation 
 ```{r}
-makeProfilePlot(socio_list_t, socio_t)
+makeProfilePlot(stand_list_t, stand_t)
 ```
-
-blood transformed variable variation 
-```{r}
-makeProfilePlot(blood_bp_list_t, blood_bp_t)
-```
-
-sugar transformed variable variation 
-```{r}
-makeProfilePlot(sugar_list_t, sugar_t)
-```
-
-hunger transformed variable variation 
-```{r}
-makeProfilePlot(hunger_list_t, hunger_t)
-```
-
-body transformed variable variation 
-```{r}
-makeProfilePlot(body_list_t, body_t)
-```
-
-energy transformed variable variation 
-```{r}
-makeProfilePlot(energy_list_t, energy_t)
-```
-
-
 
 ## Mean and std. 
 
 ```{r}
-printMeanAndSdByGroup(train_Transformed[2:31],train_Transformed[4])
+printMeanAndSdByGroup(train_Transformed[2:10],train_Transformed[3])
 ```
 
 ## Correlation when transformed 
 
 ```{r}
-mosthighlycorrelated(train_Transformed[2:31], 10) # top 10 most correlated variables
+mosthighlycorrelated(train_Transformed[2:9], 10) # top 10 most correlated variables
 ```
+
 
 
 # {-}
 
 
 
+
+## Save meta data and splits for samples 
+
+```{r}
+#write.csv(train_Transformed, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/train_samples_standard_clinical.csv")
+
+#write.csv(test_Transformed, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/test_samples_standard_clinical.csv")
+
+#write.csv(a1_meta_Transformed, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/a1_meta_Transformed_standard_clinical.csv")
+```
+
+
+# Model training with imputed data {.tabset}
+
+### random forest with imputed training data 
+ mtry is a hyperparameter that controls the number of variables (predictors) that are randomly selected for consideration at each split in the decision trees that make up the forest.
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 10, ## k-fold repeated ten times
+                           p = 0.80,
+                           verboseIter = TRUE,
+                           summaryFunction = defaultSummary,
+                           selectionFunction = "best",
+                           savePredictions = "final")
+
+gbmFit1 <- train(outcome_BMI_fnl_BL ~ ., data = train_Transformed, 
+                 method = "rf", 
+                 trControl = fitControl,
+                 verbose = TRUE)
+
+gbmFit1
+plot(gbmFit1)
+```
+
+```{r}
+gbmFit1$bestTune
+head(gbmFit1$results)
+```
+
+```{r}
+trellis.par.set(caretTheme())
+plot(gbmFit1, metric = "Rsquared")
+```
+
+```{r}
+ggplot(gbmFit1) 
+```
+
+### Variable importances
+
+The function automatically scales the importance scores to be between 0 and 100. 
+Using scale = FALSE avoids this normalization step.
+
+```{r}
+gbmImp <- varImp(gbmFit1, scale = TRUE)
+plot(gbmImp)
+```
+
+### Feature selections
+
+```{r}
+# define the control using a random forest selection function
+control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+# run the RFE algorithm
+results <- rfe(train_Transformed[,2:30], 
+               train_Transformed[,31], sizes=c(1:16), 
+               rfeControl=control)
+# summarize the results
+print(results)
+predictors(results) # list the chosen features
+plot(results, type=c("g", "o")) # plot the results
+```
+
+### Changing tolerance
+
+Tolerance selects the least complex model within some % tolerance of the best value.
+Less complex model based on (x-xbest)/xbestx 100, which is the % difference. 
+For example, to select parameter values based on a 12% loss of performance:
+
+```{r}
+whichTwoPct <- tolerance(gbmFit1$results, metric = "Rsquared", 
+                         tol = 12, maximize = TRUE)  
+cat("best model within 12 pct of best:\n")
+gbmFit1$results[whichTwoPct,1:6]
+```
+
+so then the simpler model is better (just 2 variables)
+
+# {-}
 
 # Put it all together {.tabset}
 
@@ -737,12 +790,12 @@ For the ranfom forest model,
 
 to do 
 
-## trainControl settings 
+## trainControl settings 1
 
 Lots of settings here 
 
-```{r}
-trn_ctrl <- trainControl(method = "cv", # cross val
+```{r eval=FALSE, include=TRUE}
+trn_ctrl_1 <- trainControl(method = "cv", # cross val
                          #number = "10", # 10 fold
                          #repeats = 5, # no. complete sets of folds to compute
                          number = ifelse(grepl("cv", "cv"), 10, 25),
@@ -774,28 +827,79 @@ trn_ctrl <- trainControl(method = "cv", # cross val
                                          method = "gls",
                                          complete = TRUE),
                          trim = FALSE,
-                         allowParallel = TRUE
-                         )
+                         allowParallel = TRUE)
 ```
 
-## Train model
+## Train Control 2
 
-Here I using BL BMI as my outcome variable 
+```{r eval=FALSE, include=TRUE}
+trn_ctrl_2 <- trainControl(
+  method = "cv",                  # Use cross-validation
+  number = 10,                    # Number of folds
+  p = 0.80,                       # % of data used for training (only applicable for some methods)
+  search = "grid",                # Grid search for tuning
+  verboseIter = TRUE,             # Print iteration details
+  returnData = TRUE,              # Return the data used for resampling
+  savePredictions = "all",        # Save all predictions
+  classProbs = FALSE,             # Whether to compute class probabilities (for classification)
+  summaryFunction = defaultSummary,  # Function to summarize model performance
+  selectionFunction = "best",     # Select the best tuning parameter
+  allowParallel = TRUE)            # Allow parallel processing
 
-```{r}
-train(
-  a1_meta,
-  "outcome_BMI_fnl_BL",
-  method = "rf",
-  #preProcess = NULL,
-  weights = NULL,
-  metric = "RMSE",
-  maximize = FALSE,
-  trControl = trainControl(trn_ctrl),
-  tuneGrid = NULL,
-  tuneLength = ifelse(trControl$method == "none", 1, 3)
+# Define trainControl with cross-validation
+trn_ctrl_3 <- trainControl(
+  method = "cv",                  # Cross-validation
+  number = 10,                    # 10-fold cross-validation
+  savePredictions = "all",        # Save all predictions
+  classProbs = FALSE,             # Not a classification problem
+  summaryFunction = defaultSummary,
+  allowParallel = TRUE,
+  preProcOptions = list("scaling", 
+                        "centering", 
+                        "knn",
+                         thresh = 0.95, 
+                         ICAcomp = 3, 
+                         k = 5, freqCut = 95/5, 
+                         uniqueCut = 10, 
+                         cutoff = 0.9)) # Enable parallel processing
+```
+
+## Train RF model 
+
+```{r eval=FALSE, include=TRUE}
+indep_var = colnames(a1_meta) != "outcome_BMI_fnl_BL"
+model_rf = train(x = a1_meta[indep_var], 
+                 y = a1_meta$outcome_BMI_fnl_BL,
+                 method = "rf",   # Random Forest method
+                 metric = "RMSE",                # Performance metric
+                 maximize = FALSE,               # Whether to maximize the metric
+                 trControl = trn_ctrl_2,           # Control parameters
+                 tuneGrid = NULL,                # Grid for tuning parameters
+                 tuneLength = 3,
+                 preProcess = list("scaling", 
+                        "centering", 
+                        "knnIm")) # Number of tuning parameters to try
+
+model <- train(x = a1_meta[indep_var], 
+               y = a1_meta$outcome_BMI_fnl_BL,             # Outcome variable
+               method = "rf",                  # Random Forest method
+               metric = "RMSE",                # Performance metric
+               maximize = FALSE,               # Whether to maximize the metric
+               trControl = trn_ctrl_1,           # Control parameters
+               tuneGrid = NULL,                # Grid for tuning parameters
+               tuneLength = 3)                # Number of tuning parameters to try
+
+# Train the model
+model <- train(
+  outcome_BMI_fnl_BL ~ .,         # Formula specifying the outcome
+  data = a1_meta,                 # Dataset
+  method = "rf",                  # Random forest method
+  metric = "RMSE",                # Performance metric
+  maximize = FALSE,               # Minimize RMSE
+  trControl = trn_ctrl,
 )
 ```
+
 
 #{-}
 _________________________________________________________________________________________
@@ -811,6 +915,8 @@ http://topepo.github.io/caret/visualizations.html
 
 ## 1. Imputing using KNN, also centering & scaling numerical columns 
 
+I dont know if I should do this before splitting data, or within each fold ? 
+
 ```{r}
 a1_meta_pre <- preProcess(a1_meta, method = c("knnImpute","center","scale"))
 a1_meta_imp <-predict(a1_meta_pre, a1_meta)
@@ -823,4 +929,27 @@ a1_meta_imp <-predict(a1_meta_pre, a1_meta)
 
 
 
+
+
+
+# Take 3
+
+```{r}
+library(randomForest)
+rf_model <- randomForest(outcome_BMI_fnl_BL ~ ., 
+                         data=train_Transformed, importance=TRUE)
+
+# Evaluate the model:
+predictions <- predict(rf_model, newdata=test_Transformed)
+confusion_matrix <- table(test_Transformed$outcome_BMI_fnl_BL, predictions)
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(accuracy)
+
+# Feature importance 
+importance(rf_model)
+varImpPlot(rf_model)
+```
 
