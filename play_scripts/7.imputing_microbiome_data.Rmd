@@ -5,14 +5,27 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+The purpose of this script is to process the clr taxonomic data. This includes:
+
+1. Removing taxa with below a 10 % prevelance
+2. Removing taxa with below % variance
+3. Splitting into aim 1 (baseline only) testing and training data frames* 
+4. Splitting into aim 2 (all time points) testing and training data frames*
+
+* testing and training was done on a 80 % split that matched the samples split in the meta data processing script. 
+
+Tutorials:
+https://mibwurrepo.github.io/Microbial-bioinformatics-introductory-course-Material-2018/set-up-and-pre-processing.html#general-overview
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
                readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
                AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
-               summarytools, grid, mice, plyr, mlmRev,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, ape,
                jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
-               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor)
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
+               RColorBrewer, DT, ggpubr, microbiomeutilities, compositions)
 ```
 
 # Read in Taxonomy data {.tabset}
@@ -24,18 +37,100 @@ load("~/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/Phylos
 #load("~/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/Code_for_ANCOM/emily_acom_outputs/ancom_sig_bmi.04.15.RData")
 # Phyloseq species object
 load("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/Genus_Sp_tables.RData")
+
 rm(drift.phy.count.r21116, drift.phy.ra, genus.clr, genus.count, genus.ra,
-   drift.phy.clr, drift.phy.count)
+   sp.ra, sp.count)
+```
+
+## Taxa info
+
+```{r}
+summarize_phyloseq(drift.phy.count)
+print_ps(drift.phy.count)
+```
+
+
+## Taxa reads by timepoint
+
+```{r}
+ntaxa(drift.phy.clr)
+ntaxa(drift.phy.count)
+nsamples(drift.phy.clr)
+nsamples(drift.phy.count)
+
+myTaxa = names(sort(taxa_sums(drift.phy.count), decreasing = TRUE)[1:10])
+ex1 = prune_taxa(myTaxa, drift.phy.count)
+plot <- plot_tree(ex1, color = "timepoint", 
+          label.tips = "Phylum", 
+          ladderize = "left", justify = "left" , size = "Abundance")
+plot
+```
+
+Remove taxa not seen more than 2 times in at least 20% of the samples. 
+This protects against an OTU with small mean & trivially large C.V.
+
+```{r}
+# With clr data - don't think it's accurate to use clr instead of count for this 
+GP_clr = filter_taxa(drift.phy.clr, 
+                 function(x) sum(x > 3) > (0.1*length(x)), TRUE)
+ntaxa(GP_clr)
+# With count data
+GP_count = filter_taxa(drift.phy.count, 
+                 function(x) sum(x > 3) > (0.1*length(x)), TRUE)
+ntaxa(GP_count)
+# with core function
+# must be detected in at least 3 counts across all samples
+ps_ct <- core(drift.phy.count, detection = 3, prevalence = 20 / 100)
+
+ntaxa(ps_ct)
+```
+
+## look at variation
+
+Coefficient of variation (C.V), i.e. sd(x)/mean(x)
+Filter the taxa using a cutoff of 1.0 for the Coefficient of Variation
+So you are selecting taxa based on their variability relative to their mean abundance across samples.
+
+```{r}
+gpsf = filter_taxa(ps_ct, 
+                   function(x) sd(x)/mean(x) > 1.0, 
+                   TRUE)
+ntaxa(gpsf)
+```
+
+log transformations and distribuitions of count data
+
+```{r}
+p1 <- plot_taxa_cv(gpsf, plot.type = "scatter")
+p1_count <- p1 + scale_x_log10()
+
+p1
+p1_count
+```
+
+## Convert new filtered df to clr 
+clr from compositions package used. 
+center log ratio transformation seems do-able with log(df$count + k) - mean(log(df$count + k)), where k is a small constant. 
+
+```{r warning=FALSE, include=FALSE}
+tax <- tax_glom(gpsf, "Genus")
+genus_filtered_count <- otu_table(tax) 
+genus_filtered_count <- t(genus_filtered_count) %>% as.data.frame()
+colnames(genus_filtered_count) <- as.data.frame(tax_table(tax))$Genus
+
+
+# Perform CLR transformation
+clr_transformed <- apply(genus_filtered_count, 2, clr) %>% as.data.frame()
 ```
 
 ## Make it match testing and training sets of metadata
 
 ```{r}
-train_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/train_samples_standard_clinical.csv")
+train_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/train_samples_standard_clinical.csv")
 
-test_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/test_samples_standard_clinical.csv")
+test_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/test_samples_standard_clinical.csv")
 
-a1_T <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/a1_meta_Transformed_standard_clinical.csv")
+a1_T <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/a1_meta_Transformed_standard_clinical.csv")
 ```
 
 ## Make Taxa data splits 
@@ -45,132 +140,71 @@ CLR for RF.
 16S sometimes wide eye for genus
 
 ```{r}
-sp.data <- sp.clr
-sample_names <- sp.data$SampleID
-baseline_samples <- sp.data$SampleID[grep("\\.BL$", sample_names)]
-BL_clr <- sp.data %>% filter(SampleID %in% baseline_samples)
+# All samples 
+sample_names <- rownames(clr_transformed)
 
-# Function to process the names
-process_names <- function(names) {
+# make just baselnie
+baseline_samples <- rownames(clr_transformed)[grep("\\.BL$", sample_names)] %>% 
+  unique()
+
+bl_clr <- clr_transformed[grep("\\.BL$", rownames(clr_transformed)), ]
+
+# Function to process the names BL
+process_names_bl <- function(names) {
   bl_names <- grep("\\.BL$", names, value = TRUE) # ending with "BL"
-  extracted_numbers <- sub(".*-(\\d+)\\.BL$", "\\1", bl_names) # Numbers after "-", before "."
-  cleaned_numbers <- sub("^0+", "", extracted_numbers) # Remove leading zeros
-  cleaned_numbers # Return the cleaned numbers
-}
-# Apply the function to the sample names
-BL_clr$SampleID <- process_names(BL_clr$SampleID)
+  extracted_numbers_BL <- sub(".*-(\\d+)\\.BL$", 
+                           "\\1", bl_names) # Numbers after "-", before "."
+  cleaned_numbers_bl <- sub("^0+", "", extracted_numbers_BL) # Remove leading zeros
+  cleaned_numbers_bl} # Return the cleaned numbers
 
-# Make training and testing to match the samples in training and testing of ANCOMBC
-training_sample_names <- train_Transformed$V1
-testing_sample_names <- test_Transformed$V1
+# Function to process the names BL
+process_names_all <- function(names) {
+  all_names <- grep("\\..*$", names, value = TRUE) # all samples 
+  extracted_numbers_all <- sub(".*-(\\d+)\\..*$", 
+                           "\\1", all_names) 
+  cleaned_numbers_all <- sub("^0+", "", extracted_numbers_all) # Remove leading zeros
+  cleaned_numbers_all} # Return the cleaned numbers
+
+
+# Apply the function to the sample names
+bl_clr$bl_samples <- process_names_bl(rownames(bl_clr))
+clr_transformed$all_samples <- process_names_all(rownames(clr_transformed))
+
+# Make training & testing to match the samples in training and testing of ANCOMBC
+training_sample_names <- train_Transformed$record_id
+testing_sample_names <- test_Transformed$record_id
 
 # Filter rows in BL_clr that match training and testing samples 
-BL_clr_training <- BL_clr %>% filter(SampleID %in% training_sample_names)
-BL_clr_testing <- BL_clr %>% filter(SampleID %in% testing_sample_names)
+# Step 1: Make column names unique
+colnames(bl_clr) <- make.names(colnames(bl_clr), unique = TRUE)
+# Step 2: Filter the data
+BL_clr_testing <- bl_clr %>% filter(bl_samples %in% testing_sample_names)
+BL_clr_training <- bl_clr %>% filter(bl_samples %in% training_sample_names)
+
+# Step 1: Make column names unique
+colnames(clr_transformed) <- make.names(colnames(clr_transformed), unique = TRUE)
+# Step 2: Filter the data
+all_clr_training <- clr_transformed %>% filter(all_samples %in% training_sample_names)
+all_clr_testing <- clr_transformed %>% filter(all_samples %in% testing_sample_names)
 ```
 
-## Visualize Microbiome data
+## Save files 
 
-Missing data with MICE
 ```{r}
-cci(BL_clr_training) # all complete cases 
+# aim 1 files
+# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/BL_clr_training.csv")
+# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/BL_clr_testing.csv")
+# write.csv(bl_clr, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/BL_clr_taxa_all.csv")
+# 
+# # aim 2 files
+# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/aim2_clr_training.csv")
+# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/aim2_clr_testing.csv")
+# write.csv(clr_transformed, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/clr_taxa_all.csv")
 ```
 
-
-## Transformations
 
 # {-}
 
-# Read in Functional data {.tabset}
-
-Using the Picrust functional data pathways 
-
-```{r}
-# picrust outputs 
-#ko <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/KO_metagenome_out/pred_metagenome_unstrat_descrip.tsv")
-
-#ko_ab <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/KO_metagenome_out/pred_metagenome_unstrat.tsv")
-
-pathways <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/pathways_out/path_abun_unstrat_descrip.tsv")
-```
-
-remove those with very low variability. Make sure it's normal. Look into CLR transform.
-Ask John or Jennifer. 
-Micom - standard center scale T
-
-## Visualize functional data
-
-Edit pathway data frame
-```{r}
-pathways_1 <- pathways[, -1]  # Remove the first column (pathway)
-pathways_2 <- t(pathways_1)
-pathways_3 <- as.data.frame(pathways_2) %>% 
-              row_to_names(1) %>% 
-              rownames_to_column("SampleID")
-# Only baseline samples
-sample_names <- pathways_3$SampleID
-baseline_samples <- pathways_3$SampleID[grep("\\.BL$", sample_names)]
-path_BL <- pathways_3 %>% filter(SampleID %in% baseline_samples)
-
-# All time samples 
-path_all_time <- pathways_3
-
-# Convert all columns except the first one to numeric
-path_BL[-1] <- lapply(path_BL[-1], as.numeric)
-path_all_time[-1] <- lapply(path_all_time[-1], as.numeric)
-
-rm(pathways_1, pathways_2, pathways_3, sample_names, baseline_samples)
-```
-
-# {-}
-
-# Remove variables with low presence thresholds
-
-```{r}
-relative_abundances <- path_all_time %>%
-  rowwise() %>%
-  dplyr::mutate(across(-SampleID, ~ . / sum(c_across(-SampleID)), .names = "rel_{col}")) %>%
-  ungroup()
-
-# Calculate relative abundances
-relative_abundances <- path_all_time
-relative_abundances[-1] <- apply(relative_abundances[-1], 1, 
-                                 function(x) x / sum(x))
-colnames(relative_abundances)[-1] <- paste0("rel_", 
-                                            colnames(relative_abundances)[-1])
-
-```
-
-# Plot 
-```{r}
-# Reshape the data to long format
-long_data <- relative_abundances %>%
-  pivot_longer(cols = -SampleID, 
-               names_to = "Pathway", 
-               values_to = "Relative_Abundance")
-
-# Create a bar plot
-ggplot(long_data, aes(x = SampleID, y = Relative_Abundance, fill = Pathway)) +
-  geom_bar(stat = "identity", position = "stack") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Relative Abundance of Pathways per Sample",
-       x = "Sample ID",
-       y = "Relative Abundance") +
-  scale_fill_brewer(palette = "Set3") 
-```
-
-
-
-# Remove variable with low variance 
-
-
-# Transformations 
-
-```{r}
-# Apply log transformation
-data_log <- data %>%
-  mutate(across(everything(), log1p))  # log1p is used to handle zero values
-```
 
 
 

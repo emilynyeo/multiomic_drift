@@ -1,0 +1,207 @@
+---
+title: "1.the_perfect_meta_for_aim2"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+this contains multiple timepoints
+http://rismyhammer.com/ml/Pre-Processing.html#imputation
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, ape,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
+               RColorBrewer, DT, ggpubr, microbiomeutilities, compositions)
+```
+
+# Read in meta data 
+```{r}
+slim <- read.csv("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/new_meta_data/DRIFT_meta_deltas_03.12.2024.csv")
+
+all <- read.csv("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/new_meta_data/DRIFT_meta_longitudinal_03.12.2024.csv")
+
+all_deltas <- read_excel("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/new_meta_data/DRIFT2\ Analysis\ Data\ sets.xlsx", sheet = "longitudinal_delta")
+
+long_survey <- read_excel("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/new_meta_data/DRIFT2\ Analysis\ Data\ sets.xlsx", sheet = "longitudinal_survey")
+
+meta <- read_csv("~/projects/research/Stanislawski/BMI_risk_scores/data/correct_meta_files/ashleys_meta/DRIFT_working_dataset_meta_deltas_filtered_05.21.2024.csv")
+
+# Replace spaces with underscores in column names
+colnames(meta) <- gsub(" ", "_", colnames(meta))
+
+# Drop non-consenting individuals 
+meta <- meta[meta$consent != "no", ]
+```
+# Create variables 
+metS, 
+```{r}
+# Stratify by sex 
+meta_male <- meta %>% dplyr::filter(meta$sex == "1")
+meta_female <- meta %>% dplyr::filter(meta$sex == "0")
+
+# Glucose, 
+meta$met_gluc <- ifelse(meta$Glucose_BL >= 100, 1, 0)
+meta$met_tg <- ifelse(meta$Triglyceride_lipid_BL >= 150, 1, 0)
+meta$met_bp <- ifelse(meta$avg_systolic_BL >= 130, 1,
+                      ifelse(meta$avg_diastolic_BL >= 85, 1, 0))
+
+# Sex diff hdl
+meta_female$met_hdl <- ifelse(meta_female$HDL_Total_Direct_lipid_BL <= 50, 1, 0)
+meta_male$met_hdl <- ifelse(meta_male$HDL_Total_Direct_lipid_BL <= 40, 1, 0)
+# Sex diff waist circ
+meta_female$met_wc <- ifelse(meta_female$wc_average_BL >= 89, 1, 0)
+meta_male$met_wc <- ifelse(meta_male$wc_average_BL >= 102, 1, 0)
+
+# merge
+mf <- meta_female %>% dplyr::select(record_id, met_hdl, met_wc)
+mm <- meta_male %>% dplyr::select(record_id, met_hdl, met_wc)
+mfm <- rbind(mf, mm)
+mmm <- merge(mfm, meta, by = "record_id")
+
+# Calculate the sum of the specified columns and create the new variable
+# criteria is greater than 3
+mmm$metS_BL <- ifelse(rowSums(mmm[c("met_hdl", "met_wc", "met_gluc", 
+                                      "met_tg", "met_bp")]) >= 3, 
+                                       1, 0)
+meta <- mmm
+remove(mmm, mm, mfm, mf, meta_female, meta_male)
+```
+
+# Drop and rename variables
+Predictor variables will be only baseline for aim 1, and longitudinal for aim 2. That means two separate data sets. 
+
+## Aim 2 
+removed some highly correlated variables, 18m columns and non-completer
+```{r}
+a2 <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, consent,
+                               cohort_number, sex, race, age, completer,
+                               # BL
+                               outcome_BMI_fnl_BL, Glucose_BL, HOMA_IR_BL, 
+                               Insulin_endo_BL, HDL_Total_Direct_lipid_BL, 
+                               LDL_Calculated_BL, Triglyceride_lipid_BL,
+                               # 3m
+                               #outcome_BMI_fnl_3m, Glucose_3m, HOMA_IR_3m,
+                               #Insulin_endo_3m, HDL_Total_Direct_lipid_3m,
+                               #LDL_Calculated_3m, Triglyceride_lipid_3m,
+                               # 6m
+                               outcome_BMI_fnl_6m, Glucose_6m, HOMA_IR_6m,
+                               Insulin_endo_6m, HDL_Total_Direct_lipid_6m, 
+                               LDL_Calculated_6m, Triglyceride_lipid_6m,
+                               # 12m
+                               outcome_BMI_fnl_12m, Glucose_12m, HOMA_IR_12m,
+                               Insulin_endo_12m, HDL_Total_Direct_lipid_12m,
+                               LDL_Calculated_12m, Triglyceride_lipid_12m))
+
+
+# Remove non - 12 month completers 
+a2_meta <- a2 %>% 
+  filter(completer != 0) %>% 
+  dplyr::select(-c(completer, consent)) %>%
+  mutate(across(where(is.logical), as.numeric)) # make logical numeric
+```
+
+# Variable transformations if skewed 
+
+## preProcessing function:
+Pre-processing transformation (centering, scaling etc.) can be estimated from the training data and applied to any data set with the same variables.
+The operations are applied in this order: zero-variance filter, near-zero variance filter, correlation filter, Box-Cox/Yeo-Johnson/exponential transformation, centering, scaling, range, imputation, PCA, ICA then spatial sign. 
+k-nearest neighbor imputation is carried out by finding the k closest samples (Euclidian distance) in the training set. Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. Imputation via medians takes the median of each predictor in the training set, and uses them to fill missing values. This method is simple, fast, and accepts missing values, but treats each predictor independently, and may be inaccurate.
+
+```{r}
+# Preprocess the data - imputation and scaling 
+preProcValues <- preProcess(a2_meta[, 7:28], 
+                            method = c("center", 
+                                       "scale", 
+                                       "YeoJohnson",
+                                       "knnImpute",
+                                       "nzv"),
+          thresh = 0.95, # cutoff for cumulative % of variance to be retained by PCA
+          pcaComp = NULL, #no. PCA components to keep. If specified, over-rides thresh
+          na.remove = TRUE, # should missing values be removed from the calculations
+          k = 5, # number of nearest neighbors from training set to use for imputation
+          knnSummary = mean, # function to average neighbor values/column during imputation
+          outcome = "outcome_BMI_fnl_BL",
+          fudge = 0.2, # a tolerance value: Box-Cox transformation lambda values
+          numUnique = 15, # no. unique values y has to estimate Box-Cox transformation
+          verbose = TRUE, # a logical: prints a log as the computations proceed
+          freqCut = 95/5, # cutoff for ratio of most to 2nd most common value.
+          uniqueCut = 10, # cutoff % of distinct values out of no. total samples
+          cutoff = 0.85, # a numeric value for the pair-wise absolute correlation cutoff.
+          rangeBounds = c(0, 1))
+
+a2_meta_Transformed <- cbind(a2_meta[, 1:6], 
+                             predict(preProcValues, a2_meta[,7:28]))
+```
+
+## Make it match testing and training sets of metadata
+
+```{r}
+train_Transformed_a1  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/train_samples_standard_clinical.csv")
+
+test_Transformed_a1  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/test_samples_standard_clinical.csv")
+
+a1_T <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/a1_meta_Transformed_standard_clinical.csv")
+```
+
+```{r}
+# Make training & testing to match the samples in training and testing of ANCOMBC
+training_sample_names <- train_Transformed_a1$subject_id
+testing_sample_names <- test_Transformed_a1$subject_id
+
+# Filter rows in BL_clr that match training and testing samples 
+a2_training <- a2_meta_Transformed %>% filter(subject_id %in% training_sample_names)
+a2_testing <- a2_meta_Transformed %>% filter(subject_id %in% testing_sample_names)
+```
+
+## Plot normality
+
+```{r}
+plot_normality <- function(data) {
+  # Select only numeric columns
+  numeric_data <- data[sapply(data, is.numeric)]
+  
+  # Loop through each numeric column to create and print plots
+  for (col_name in names(numeric_data)) {
+    # Histogram
+    p1 <- ggplot(numeric_data, aes_string(col_name)) +
+      geom_histogram(bins = 30, fill = "blue", alpha = 0.5) +
+      labs(title = paste("Histogram of", col_name), x = col_name, y = "Frequency") +
+      theme_minimal()
+    
+    print(p1)  # Print the histogram
+
+    # Q-Q Plot
+    p2 <- ggplot(numeric_data, aes_string(sample = col_name)) +
+      stat_qq() +
+      stat_qq_line() +
+      labs(title = paste("Q-Q Plot of", col_name), x = "Theoretical Quantiles", y = "Sample Quantiles") +
+      theme_minimal()
+    
+    print(p2)  # Print the Q-Q plot
+  }
+}
+
+plot_normality(a2_meta_Transformed[,5:28])
+```
+
+
+## Save files
+
+```{r}
+#write.csv(a2_training, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_train_samples_standard_clinical.csv")
+
+#write.csv(a2_testing, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_test_samples_standard_clinical.csv")
+
+#write.csv(a2_meta_Transformed, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_Transformed_standard_clinical.csv")
+
+#write.csv(a2_meta, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_not_Transformed_standard_clinical.csv")
+```
+

@@ -89,8 +89,10 @@ a1_meta <- meta %>%
 
 stand <- meta %>% 
   dplyr::select(c(record_id,
+                  subject_id,
+                  randomized_group,
+                  sex,
                   age, 
-                  sex, 
                   Triglyceride_lipid_BL, 
                   HDL_Total_Direct_lipid_BL, 
                   LDL_Calculated_BL,
@@ -111,7 +113,7 @@ I was just looking at variable correlations, variations, summary stats and PCAs
 
 ## Looking at correlations between vars
 ```{r echo=FALSE, warning=FALSE}
-scatterplotMatrix(stand[4:10])
+scatterplotMatrix(stand[5:12])
 ```
 
 ```{r echo=FALSE, warning=FALSE}
@@ -169,7 +171,7 @@ mosthighlycorrelated <- function(mydataframe,numtoreport)
 
 top 10 correlated variables a1 data set
 ```{r}
-mosthighlycorrelated(a1_meta[2:9], 10)
+mosthighlycorrelated(a1_meta[5:9], 10)
 ```
 
 ## Variable variations
@@ -313,7 +315,7 @@ printMeanAndSdByGroup <- function(variables,groupvariable)
 
 Mean and Std. by sex
 ```{r}
-printMeanAndSdByGroup(a1_meta[2:10],a1_meta[3])
+printMeanAndSdByGroup(a1_meta[5:10],a1_meta[3])
 ```
 
 ## Standardizations
@@ -324,7 +326,9 @@ Thus, its better to first standardize the variables so that they all have varian
 
 You can standardize variables in R using the scale function.
 ```{r}
-scaled_a1 <- as.data.frame(scale(a1_meta[, c(2:10)[-3]])) # don't standardize sex
+scaled_a1 <- a1_meta %>%
+  mutate(across(5:12, scale))
+
 head(scaled_a1)
 ```
 
@@ -335,8 +339,7 @@ find the best low-dimensional representation of the variation in a multivariate 
 https://little-book-of-r-for-multivariate-analysis.readthedocs.io/en/latest/src/multivariateanalysis.html#principal-component-analysis
 ```{r}
 # use standardized variables for PCA
-noNA_scaled_a1 <- scaled_a1[complete.cases(scaled_a1), ]
-a1_meta_pca <- prcomp(noNA_scaled_a1)
+a1_meta_pca <- prcomp(complete.cases(scaled_a1[5:12]))
 summary(a1_meta_pca)
 ```
 
@@ -362,15 +365,8 @@ For many models (excluding tree-based models), this may cause the model to crash
 
 Similarly, predictors might have only a handful of unique values that occur with very low frequencies.
 ```{r}
-nzv <- nearZeroVar(scaled_a1, saveMetrics= TRUE)
-nzv[nzv$nzv,][2:10,]
-
-dim(a1_meta)
-
 nzv <- nearZeroVar(a1_meta)
-filteredDescr <- a1_meta[, -nzv]
-dim(filteredDescr)
-setdiff(colnames(a1_meta), colnames(filteredDescr))
+nzv # no zero variance predictors 
 ```
 
 No zero variance predictors
@@ -455,7 +451,7 @@ I played around with the settings and thresholds of this function and then looke
 ## Impute w/ caret
 ```{r}
 # Preprocess the data - imputation and scaling 
-preProcValues <- preProcess(training, 
+preProcValues <- preProcess(training[, 5:12], 
                             method = c("center", 
                                        "scale", 
                                        "YeoJohnson",
@@ -476,9 +472,22 @@ preProcValues <- preProcess(training,
           rangeBounds = c(0, 1)) # 2-element numeric interval for range transformation
 
 # Apply tranformation
-train_Transformed <- predict(preProcValues, training)
-test_Transformed <- predict(preProcValues, test)
-a1_meta_Transformed <- predict(preProcValues, a1_meta)
+
+# Combine the original first four columns with the transformed columns
+train_to_predict <- training %>% dplyr::select(c("age", "Triglyceride_lipid_BL", "HDL_Total_Direct_lipid_BL", 
+                     "LDL_Calculated_BL", "Glucose_BL", "Insulin_endo_BL", "HOMA_IR_BL", "outcome_BMI_fnl_BL"))
+test_to_predict <- test %>% dplyr::select(c("age", "Triglyceride_lipid_BL", "HDL_Total_Direct_lipid_BL", 
+                     "LDL_Calculated_BL", "Glucose_BL", "Insulin_endo_BL", "HOMA_IR_BL", "outcome_BMI_fnl_BL"))
+a1_to_predict <- a1_meta %>% dplyr::select(c("age", "Triglyceride_lipid_BL", "HDL_Total_Direct_lipid_BL", 
+                     "LDL_Calculated_BL", "Glucose_BL", "Insulin_endo_BL", "HOMA_IR_BL", "outcome_BMI_fnl_BL"))
+
+train_Transformed <- cbind(training[, 1:4], predict(preProcValues, train_to_predict))
+test_Transformed <- cbind(test[, 1:4], predict(preProcValues, test_to_predict))
+a1_meta_Transformed <- cbind(a1_meta[, 1:4], predict(preProcValues, a1_to_predict))
+
+#train_Transformed <- predict(preProcValues, training)
+#test_Transformed <- predict(preProcValues, test)
+#a1_meta_Transformed <- predict(preProcValues, a1_meta)
 ```
 
 ## Differences w/ Caret
@@ -678,23 +687,19 @@ mosthighlycorrelated(train_Transformed[2:9], 10) # top 10 most correlated variab
 ```
 
 
-
 # {-}
-
-
-
 
 ## Save meta data and splits for samples 
 
 ```{r}
 #write.csv(train_Transformed, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/train_samples_standard_clinical.csv")
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/train_samples_standard_clinical.csv")
 
 #write.csv(test_Transformed, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/test_samples_standard_clinical.csv")
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/test_samples_standard_clinical.csv")
 
 #write.csv(a1_meta_Transformed, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/a1_meta_Transformed_standard_clinical.csv")
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/a1_meta_Transformed_standard_clinical.csv")
 ```
 
 

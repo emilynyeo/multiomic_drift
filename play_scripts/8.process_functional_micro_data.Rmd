@@ -1,0 +1,333 @@
+---
+title: "8.process_functional_micro_data"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+The purpose of this script is to process the taxonomic functional gene pathways. This includes:
+
+1. Removing pathways with below a 10 % prevelance
+2. Removing pathways with below % variance
+3. Splitting into aim 1 (baseline only) testing and training data frames* 
+4. Splitting into aim 2 (all time points) testing and training data frames*
+
+* testing and training was done on a 80 % split that matched the samples split in the meta data processing script. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, tibble, compositions,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor)
+```
+
+# Read in Functional data {.tabset}
+
+Using the Picrust functional data pathways 
+
+```{r}
+# picrust outputs 
+#ko <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/KO_metagenome_out/pred_metagenome_unstrat_descrip.tsv")
+
+#ko_ab <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/KO_metagenome_out/pred_metagenome_unstrat.tsv")
+
+pathways <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/pathways_out/path_abun_unstrat_descrip.tsv")
+
+# Testing and training meta data 
+train_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/train_samples_standard_clinical.csv")
+
+test_Transformed  <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1/test_samples_standard_clinical.csv")
+```
+
+remove those with very low variability. Make sure it's normal. Look into CLR transform.
+Ask John or Jennifer. 
+Micom - standard center scale T
+
+## Split data 
+
+Edit pathway data frame
+```{r}
+pathways_1 <- pathways[, -1]  # Remove the first column (pathway)
+pathways_2 <- t(pathways_1)
+pathways_3 <- as.data.frame(pathways_2) %>% 
+              row_to_names(1) %>% 
+              rownames_to_column("SampleID")
+# Only baseline samples
+sample_names <- pathways_3$SampleID
+baseline_samples <- pathways_3$SampleID[grep("\\.BL$", sample_names)]
+
+# All time samples 
+path_all_time <- pathways_3
+
+# Convert all columns except the first one to numeric
+path_all_time[-1] <- lapply(path_all_time[-1], as.numeric)
+
+rm(pathways_1, pathways_2, pathways_3, sample_names, sp.clr, sp.count, sp.data)
+```
+
+# {-}
+
+# Remove variables with low presence thresholds {.tabset}
+
+```{r}
+# Set the threshold for percentage of zeros
+threshold <- 0.20
+
+# Calculate the percentage of zeros for each column
+zero_percentage <- colSums(path_all_time == 0, na.rm = TRUE) / nrow(path_all_time)
+
+# Keep only columns with less than 20% zeros
+path_all_time_cleaned <- path_all_time[, zero_percentage < threshold]
+
+# View the cleaned dataframe
+dim(path_all_time_cleaned) # 124 removed 
+```
+
+## Only baseline
+
+```{r}
+path_BL <- path_all_time %>% 
+           filter(SampleID %in% baseline_samples)
+```
+
+#### Plot only baseline
+```{r}
+# Reshape the data to long format
+long_data_BL <- path_BL %>%
+  pivot_longer(cols = -SampleID, 
+               names_to = "Pathway", 
+               values_to = "pathway_counts")
+colnames(long_data_BL)
+
+# Step 1: Identify the top 10 pathways for each SampleID
+top_pathways_each_sample <- long_data_BL %>%
+  #dplyr::group_by(SampleID, Pathway) %>%
+  #summarize(Total_Abundance = sum(Relative_Abundance, na.rm = TRUE), .groups = "drop") %>%
+  group_by(SampleID) %>%
+  top_n(10, pathway_counts) %>%
+  ungroup()
+
+# Step 2: Calculate proportions for the top pathways
+proportional_data <- top_pathways_each_sample %>%
+  group_by(SampleID) %>%
+  mutate(Proportion = pathway_counts / sum(pathway_counts)) %>%
+  ungroup()
+
+# Step 3: Create the proportional bar plot
+# Select a subset of samples (e.g., first 15)
+subset_data <- proportional_data %>%
+  filter(SampleID %in% unique(SampleID)[1:100])  # Change 1:15 to whatever range you want
+
+p <- ggplot(subset_data, aes(x = SampleID, y = Proportion, fill = Pathway)) +
+  geom_bar(stat = "identity", position = "fill") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Proportion of Top 10 Pathways (First 15 Samples)",
+       x = "Sample ID",
+       y = "Proportion of Relative Abundance")
+
+# Extract the legend
+legend <- get_legend(p + theme(legend.position = "right"))
+plot <- p + theme(legend.position = "none")
+legend
+plot
+```
+
+# {-}
+
+# Remove variable with low variance {.tabset}
+
+nearZeroVar diagnoses predictors with 1 unique value (i.e. zero variance predictors) or predictors that are have both of the following characteristics: 
+
+1. Very few unique values relative to sample numbers
+2. Ratio of the frequency of the most common value / frequency of the 2nd most common value is large.
+
+checkConditionalX looks at the distribution of the columns of x conditioned on the levels of y and identifies columns of x that are sparse within groups of y.
+
+```{r}
+nzv <- nearZeroVar(path_BL, saveMetrics= TRUE)
+nzv[nzv$nzv,][2:10,]
+
+nzv_all <- nearZeroVar(path_all_time,
+  freqCut = 95/5, # cutoff ratio of most common value to 2nd most common value
+  uniqueCut = 10, # cutoff % distinct values out of number of total samples
+  saveMetrics = FALSE,
+  names = FALSE,
+  foreach = FALSE,
+  allowParallel = TRUE)
+
+nzv_BL <- nearZeroVar(path_BL,
+  freqCut = 95/5,
+  uniqueCut = 10,
+  saveMetrics = FALSE,
+  names = FALSE,
+  foreach = FALSE,
+  allowParallel = TRUE)
+
+path_no_nzv_all <- path_all_time[, -nzv_all]
+path_no_nzv_BL <- path_BL[, -nzv_BL]
+
+# Number of near zero variance variables for just baseline samples 
+length(setdiff(colnames(path_all_time), colnames(path_no_nzv_all)))
+
+# Number of near zero variance variables for just baseline samples 
+length(setdiff(colnames(path_BL), colnames(path_no_nzv_BL)))
+```
+
+## Plot
+
+```{r}
+# Combine original and transformed data for easy comparison
+melted_all <- melt(path_no_nzv_all)
+melted_BL <- melt(path_no_nzv_BL)
+
+# Plot histograms across all time
+ggplot(melted_all, aes(x = value, fill = variable)) + 
+    geom_histogram(bins = 30, alpha = 0.5) + 
+    ggtitle("Histograms of functional gene pathways across all timepoints") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+
+# across just baseline samples 
+ggplot(melted_BL, aes(x = value, fill = variable)) + 
+    geom_histogram(bins = 30, alpha = 0.5) + 
+    ggtitle("Histograms of functional gene pathways baseline") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+```
+
+## Density plots 
+
+```{r}
+ggplot(melted_all, aes(x = value, color = variable)) +
+    geom_density() +
+    ggtitle("Density Plots of All Functional Genes Across all Time Points") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+
+ggplot(melted_BL, aes(x = value, color = variable)) +
+    geom_density() +
+    ggtitle("Density Plots of All Functional Genes Across just BL") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+```
+
+# Transformations 
+
+Apply log transformation
+```{r}
+log_all_melt <- path_no_nzv_all %>%
+  mutate(across(-1, log1p)) %>%  # Apply log1p to all columns except the first
+  melt(id.vars = colnames(path_no_nzv_all)[1])  # Melt the dataframe, keeping the first column as identifier
+
+log_BL_melt <- path_no_nzv_BL %>%
+  mutate(across(-1, log1p)) %>%  # Apply log1p to all columns except the first
+  melt(id.vars = colnames(path_no_nzv_all)[1])  # Melt the dataframe, keeping the first column as identifier
+```
+
+Voom SM Normalizations 
+
+clr transformations 
+
+```{r}
+clr_path_all <- path_no_nzv_all
+clr_path_all[,2:327] <- clr(clr_path_all[,2:327])
+clr_melt_path_all <- melt(clr_path_all)
+
+clr_path_BL <- path_no_nzv_BL
+clr_path_BL[,2:327] <- clr(clr_path_BL[,2:327])
+clr_melt_path_BL <- melt(clr_path_BL)
+```
+
+plot clr transformations
+```{r}
+ggplot(clr_melt_path_all, aes(x = value, color = variable)) +
+    geom_density() +
+    ggtitle("Density Plots of All Functional Genes Across all Time Points") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+
+ggplot(clr_melt_path_BL, aes(x = value, color = variable)) +
+    geom_density() +
+    ggtitle("Density Plots of All Functional Genes Baseline") +
+    theme_minimal() + 
+    theme(legend.position = "none")
+```
+
+## Split into training and testing to match meta 
+
+```{r}
+# Function to process the names BL
+process_names_bl <- function(names) {
+  bl_names <- grep("\\.BL$", names, value = TRUE) # ending with "BL"
+  extracted_numbers_BL <- sub(".*-(\\d+)\\.BL$", 
+                           "\\1", bl_names) # Numbers after "-", before "."
+  cleaned_numbers_bl <- sub("^0+", "", extracted_numbers_BL) # Remove leading zeros
+  cleaned_numbers_bl} # Return the cleaned numbers
+
+# Function to process the names BL
+process_names_all <- function(names) {
+  all_names <- grep("\\..*$", names, value = TRUE) # all samples 
+  extracted_numbers_all <- sub(".*-(\\d+)\\..*$", 
+                           "\\1", all_names) 
+  cleaned_numbers_all <- sub("^0+", "", extracted_numbers_all) # Remove leading zeros
+  cleaned_numbers_all} # Return the cleaned numbers
+###
+# Function to process the names, ensuring no mismatches
+process_names_all <- function(names) {
+  cleaned_numbers_all <- character(length(names)) #vector to store cleaned numbers
+  all_names <- grep("\\..*$", names, value = TRUE) #names matching the pattern
+  for (i in seq_along(names)) { # Extract numbers and remove leading zeros
+    if (names[i] %in% all_names) {
+      extracted_number <- sub(".*-(\\d+)\\..*$", "\\1", names[i])
+      cleaned_number <- sub("^0+", "", extracted_number)
+      cleaned_numbers_all[i] <- cleaned_number
+    } else {
+      # If the name does not match, keep the original
+      cleaned_numbers_all[i] <- names[i]
+    }
+  }
+  return(cleaned_numbers_all)  # Return the cleaned numbers
+}
+
+# Apply the function to the sample names
+clr_path_BL$bl_samples <- process_names_bl(clr_path_BL$SampleID)
+clr_path_all$all_samples <- process_names_all(clr_path_all$SampleID)
+
+# Make training & testing to match the samples in training and testing of ANCOMBC
+training_sample_names <- train_Transformed$record_id
+testing_sample_names <- test_Transformed$record_id
+
+# Filter rows in BL_clr that match training and testing samples 
+# Step 1: Make column names unique
+colnames(clr_path_BL) <- make.names(colnames(clr_path_BL), unique = TRUE)
+# Step 2: Filter the data
+BL_clr_testing <- clr_path_BL %>% filter(bl_samples %in% testing_sample_names)
+BL_clr_training <- clr_path_BL %>% filter(bl_samples %in% training_sample_names)
+
+# Step 1: Make column names unique
+colnames(clr_path_all) <- make.names(colnames(clr_path_all), unique = TRUE)
+# Step 2: Filter the data
+all_clr_training <- clr_path_all %>% filter(all_samples %in% training_sample_names)
+all_clr_testing <- clr_path_all %>% filter(all_samples %in% testing_sample_names)
+```
+
+## Save files 
+
+```{r}
+# aim 1 files
+# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_training.csv")
+# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_testing.csv")
+# write.csv(clr_path_BL, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/clr_path_BL.csv")
+# 
+# # aim 2 files
+# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/all_clr_training.csv")
+# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/all_clr_testing.csv")
+# write.csv(clr_path_all, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/clr_taxa_all.csv")
+```
+
+
+
+
+

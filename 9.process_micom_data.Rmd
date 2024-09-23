@@ -1,0 +1,32 @@
+---
+title: "9.process_micom_data"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev, cowplot,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor)
+```
+
+# Load Micom data
+
+```{r}
+micom <- load("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/WD_Cplex/products_all.RData")
+```
+
+# Fliter those on a western diet
+
+```{r}
+western <- products.all %>%
+  dplyr::filter(diet == "Western") %>%
+  dplyr::filter(timepoint2 %in% c("BL", "6m", "12m"))
+```
+
+
