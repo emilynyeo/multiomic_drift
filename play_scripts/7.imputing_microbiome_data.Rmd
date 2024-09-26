@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
                readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
                AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
-               summarytools, grid, mice, plyr, mlmRev, cowplot, ape,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, ape, purr, tibble,
                jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
                MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
                RColorBrewer, DT, ggpubr, microbiomeutilities, compositions)
@@ -45,10 +45,9 @@ rm(drift.phy.count.r21116, drift.phy.ra, genus.clr, genus.count, genus.ra,
 ## Taxa info
 
 ```{r}
-summarize_phyloseq(drift.phy.count)
+sps <- summarize_phyloseq(drift.phy.count)
 print_ps(drift.phy.count)
 ```
-
 
 ## Taxa reads by timepoint
 
@@ -69,20 +68,21 @@ plot
 Remove taxa not seen more than 2 times in at least 20% of the samples. 
 This protects against an OTU with small mean & trivially large C.V.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # With clr data - don't think it's accurate to use clr instead of count for this 
 GP_clr = filter_taxa(drift.phy.clr, 
                  function(x) sum(x > 3) > (0.1*length(x)), TRUE)
-ntaxa(GP_clr)
+print(paste0("Number of Taxa with at least 3 counts in min of 10% of samples if using CLR: ", ntaxa(GP_clr)))
+
 # With count data
 GP_count = filter_taxa(drift.phy.count, 
                  function(x) sum(x > 3) > (0.1*length(x)), TRUE)
-ntaxa(GP_count)
+print(paste0("Number of Taxa with at least 3 counts in min of 10% of samples if using count: ", ntaxa(GP_count)))
+
 # with core function
 # must be detected in at least 3 counts across all samples
 ps_ct <- core(drift.phy.count, detection = 3, prevalence = 20 / 100)
-
-ntaxa(ps_ct)
+print(paste0("Number of Taxa with at least 3 counts in min of 20% of samples using the Core function: ", ntaxa(ps_ct)))
 ```
 
 ## look at variation
@@ -91,37 +91,100 @@ Coefficient of variation (C.V), i.e. sd(x)/mean(x)
 Filter the taxa using a cutoff of 1.0 for the Coefficient of Variation
 So you are selecting taxa based on their variability relative to their mean abundance across samples.
 
-```{r}
-gpsf = filter_taxa(ps_ct, 
-                   function(x) sd(x)/mean(x) > 1.0, 
-                   TRUE)
-ntaxa(gpsf)
+```{r message=FALSE, warning=FALSE}
+gpsf_clr = filter_taxa(GP_clr, function(x) sd(x)/mean(x) > 1.0, TRUE)
+gpsf_count = filter_taxa(GP_count, function(x) sd(x)/mean(x) > 1.0, TRUE)
+gpsf_ps_ct = filter_taxa(ps_ct, function(x) sd(x)/mean(x) > 1.0, TRUE)
+print(paste0("Number of Taxa with a coefficient of variation greater than 10 if using clr: ", ntaxa(gpsf_clr)))
+print(paste0("Number of Taxa with a coefficient of variation greater than 10 if using count: ", ntaxa(gpsf_count)))
+print(paste0("Number of Taxa with a coefficient of variation greater than 10 if using ps_ct: ", ntaxa(gpsf_ps_ct)))
 ```
 
-log transformations and distribuitions of count data
+log transformations and distribuitions of count data (doing clr instead)
 
 ```{r}
-p1 <- plot_taxa_cv(gpsf, plot.type = "scatter")
+p1 <- plot_taxa_cv(gpsf_count, plot.type = "scatter")
 p1_count <- p1 + scale_x_log10()
-
-p1
-p1_count
 ```
 
-## Convert new filtered df to clr 
+## Convert new filtered count df to clr 
+First create taxa tables, then make the columns unique by adding a numer to the end of the duplicates, then turn into relative abundance, then transform into clr.
 clr from compositions package used. 
 center log ratio transformation seems do-able with log(df$count + k) - mean(log(df$count + k)), where k is a small constant. 
 
-```{r warning=FALSE, include=FALSE}
-tax <- tax_glom(gpsf, "Genus")
-genus_filtered_count <- otu_table(tax) 
+```{r warning=FALSE, message=FALSE, include=FALSE}
+# For genus
+tax_genus <- tax_glom(gpsf_count, "Genus")
+genus_filtered_count <- otu_table(tax_genus) 
 genus_filtered_count <- t(genus_filtered_count) %>% as.data.frame()
-colnames(genus_filtered_count) <- as.data.frame(tax_table(tax))$Genus
+colnames(genus_filtered_count) <- as.data.frame(tax_table(tax_genus))$Genus
 
-
-# Perform CLR transformation
-clr_transformed <- apply(genus_filtered_count, 2, clr) %>% as.data.frame()
+# For species
+tax_species <- tax_glom(gpsf_count, "Species")
+species_filtered_count <- otu_table(tax_species) 
+species_filtered_count <- t(species_filtered_count) %>% as.data.frame()
+colnames(species_filtered_count) <- as.data.frame(tax_table(tax_species))$Species
 ```
+
+Some species and taxa genus names are duplicated "S__" and "G__". This function adds
+a number to the end of each duplicate.
+
+```{r}
+# Function to make column names unique
+make_unique_names <- function(names) {
+  name_counts <- table(names)  # Create a table of name counts
+  occurrence <- integer(length(names)) # Vector to track occurrences
+  
+  # Loop through each name and assign a unique suffix if necessary
+  for (i in seq_along(names)) {
+    if (name_counts[names[i]] > 1) {
+      occurrence[i] <- sum(names[1:i] == names[i])  # Count occurrences up to current index
+      names[i] <- paste0(names[i], "_", occurrence[i])  # Append the occurrence number
+    }
+  }
+  
+  # Ensure unique names
+  for (i in seq_along(names)) {
+    while (sum(names[i] == names) > 1) {
+      occurrence[i] <- occurrence[i] + 1
+      names[i] <- sub("_\\d+$", "", names[i])  # Remove existing suffix
+      names[i] <- paste0(names[i], "_", occurrence[i])  # Append new occurrence number
+    }
+  }
+  return(names)
+}
+
+# Apply the function to rename the columns of both dataframes
+colnames(genus_filtered_count) <- make_unique_names(colnames(genus_filtered_count))
+colnames(species_filtered_count) <- make_unique_names(colnames(species_filtered_count))
+```
+
+#### Turn into relative abundance 
+```{r}
+# first make it relative abundance
+Genus_relative_abundance <- genus_filtered_count %>%
+  rownames_to_column(var = "subject_id") %>%  # Convert row names to a column
+  dplyr::rowwise() %>%
+  mutate(total = sum(c_across(g__Parabacteroides_B_862066:`g__Massilistercora`), na.rm = TRUE)) %>%
+  mutate(across(g__Parabacteroides_B_862066:`g__Massilistercora`, ~ .x / total)) %>%
+  dplyr::select(-total) %>%
+  column_to_rownames(var = "subject_id")
+
+Species_relative_abundance <- species_filtered_count %>%
+  rownames_to_column(var = "subject_id") %>%  # Convert row names to a column
+  dplyr::rowwise() %>%
+  mutate(total = sum(c_across(2:265), na.rm = TRUE)) %>%
+  mutate(across(2:265, ~ .x / total)) %>%
+  dplyr::select(-total) %>%
+  column_to_rownames(var = "subject_id")
+```
+
+#### Perform CLR transformation
+```{r}
+species_clr_transformed <- apply(Species_relative_abundance, 2, clr) %>% as.data.frame()
+genus_clr_transformed <- apply(Genus_relative_abundance, 2, clr) %>% as.data.frame()
+```
+
 
 ## Make it match testing and training sets of metadata
 
@@ -140,10 +203,12 @@ CLR for RF.
 16S sometimes wide eye for genus
 
 ```{r}
+clr_transformed <- genus_clr_transformed
+
 # All samples 
 sample_names <- rownames(clr_transformed)
 
-# make just baselnie
+# make just baseline
 baseline_samples <- rownames(clr_transformed)[grep("\\.BL$", sample_names)] %>% 
   unique()
 
@@ -192,14 +257,14 @@ all_clr_testing <- clr_transformed %>% filter(all_samples %in% testing_sample_na
 
 ```{r}
 # aim 1 files
-# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/BL_clr_training.csv")
-# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/BL_clr_testing.csv")
-# write.csv(bl_clr, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/BL_clr_taxa_all.csv")
+# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_training.csv")
+# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_testing.csv")
+# write.csv(bl_clr, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_taxa_all.csv")
 # 
 # # aim 2 files
-# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/aim2_clr_training.csv")
-# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/aim2_clr_testing.csv")
-# write.csv(clr_transformed, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/clr_taxa_all.csv")
+# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/aim2_clr_training.csv")
+# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/aim2_clr_testing.csv")
+# write.csv(clr_transformed, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/clr_taxa_all.csv")
 ```
 
 

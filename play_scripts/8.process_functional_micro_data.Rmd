@@ -54,6 +54,7 @@ pathways_2 <- t(pathways_1)
 pathways_3 <- as.data.frame(pathways_2) %>% 
               row_to_names(1) %>% 
               rownames_to_column("SampleID")
+
 # Only baseline samples
 sample_names <- pathways_3$SampleID
 baseline_samples <- pathways_3$SampleID[grep("\\.BL$", sample_names)]
@@ -226,21 +227,50 @@ log_BL_melt <- path_no_nzv_BL %>%
   melt(id.vars = colnames(path_no_nzv_all)[1])  # Melt the dataframe, keeping the first column as identifier
 ```
 
-Voom SM Normalizations 
+Voom SM Normalizations : CLR is ideal for compositional data, while Boom SM normalization is more versatile for adjusting various forms of high-dimensional data.
 
-clr transformations 
+### clr transformations 
+
+##### First turn into relative abundance before clr
+```{r}
+# Replace spaces with underscores in column names
+colnames(path_no_nzv_BL) <- gsub(" ", "_", colnames(path_no_nzv_all))
+all_path_relative_abundance <- path_no_nzv_all %>%
+  #rownames_to_column(var = "subject_id") %>%  # Convert row names to a column
+  dplyr::rowwise() %>%
+  dplyr::mutate(total = sum(c_across(2:327), na.rm = TRUE)) %>%
+  dplyr::mutate(across(2:327, ~ .x / total)) %>%
+  dplyr::select(-total)# %>%
+  #column_to_rownames(var = "SampleID")
+
+# Replace spaces with underscores in column names
+colnames(path_no_nzv_BL) <- gsub(" ", "_", colnames(path_no_nzv_BL))
+bl_path_relative_abundance <- path_no_nzv_BL %>%
+  #rownames_to_column(var = "subject_id") %>%  # Convert row names to a column
+  dplyr::rowwise() %>%
+  dplyr::mutate(total = sum(c_across(2:327), na.rm = TRUE)) %>%
+  dplyr::mutate(across(2:327, ~ .x / total)) %>%
+  dplyr::select(-total) #%>%
+  #column_to_rownames(var = "SampleID")
+```
+
+
+Purpose: The CLR transformation is primarily used to handle compositional data, where the data represents proportions or parts of a whole (e.g., relative abundances of species)
+
+This transformation helps to stabilize the variance and makes the data more suitable for statistical analysis by removing the effects of the relative scale of measurements.
 
 ```{r}
-clr_path_all <- path_no_nzv_all
+clr_path_all <- all_path_relative_abundance
 clr_path_all[,2:327] <- clr(clr_path_all[,2:327])
 clr_melt_path_all <- melt(clr_path_all)
 
-clr_path_BL <- path_no_nzv_BL
+clr_path_BL <- bl_path_relative_abundance
 clr_path_BL[,2:327] <- clr(clr_path_BL[,2:327])
 clr_melt_path_BL <- melt(clr_path_BL)
 ```
 
 plot clr transformations
+
 ```{r}
 ggplot(clr_melt_path_all, aes(x = value, color = variable)) +
     geom_density() +
@@ -266,14 +296,14 @@ process_names_bl <- function(names) {
   cleaned_numbers_bl <- sub("^0+", "", extracted_numbers_BL) # Remove leading zeros
   cleaned_numbers_bl} # Return the cleaned numbers
 
-# Function to process the names BL
+# Function to process the names All
 process_names_all <- function(names) {
   all_names <- grep("\\..*$", names, value = TRUE) # all samples 
   extracted_numbers_all <- sub(".*-(\\d+)\\..*$", 
                            "\\1", all_names) 
   cleaned_numbers_all <- sub("^0+", "", extracted_numbers_all) # Remove leading zeros
   cleaned_numbers_all} # Return the cleaned numbers
-###
+
 # Function to process the names, ensuring no mismatches
 process_names_all <- function(names) {
   cleaned_numbers_all <- character(length(names)) #vector to store cleaned numbers
@@ -316,7 +346,7 @@ all_clr_testing <- clr_path_all %>% filter(all_samples %in% testing_sample_names
 ## Save files 
 
 ```{r}
-# aim 1 files
+#aim 1 files
 # write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_training.csv")
 # write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_testing.csv")
 # write.csv(clr_path_BL, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/clr_path_BL.csv")

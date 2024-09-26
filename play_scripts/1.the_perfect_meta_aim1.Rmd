@@ -508,7 +508,7 @@ training_old <- training %>%
 
 # Combine original and transformed data for easy comparison
 original_melted_training_old <- melt(training_old)
-transformed_melted <- melt(train_Transformed)
+transformed_melted <- melt(train_Transformed[5:12])
 
 # Plot histograms
 ggplot(original_melted_training_old, aes(x = value, fill = variable)) + 
@@ -555,8 +555,8 @@ ggplot(transformed_melted, aes(x = variable, y = value, fill = variable)) +
 corr heatmaps
 ```{r}
 # Compute correlations
-original_cor <- cor(training, use = "pairwise.complete.obs")
-transformed_cor <- cor(train_Transformed, use = "pairwise.complete.obs")
+original_cor <- cor(training[4:12], use = "pairwise.complete.obs")
+transformed_cor <- cor(train_Transformed[4:12], use = "pairwise.complete.obs")
 
 # Plot correlation heatmaps
 corrplot(original_cor, method = "color", 
@@ -683,7 +683,7 @@ printMeanAndSdByGroup(train_Transformed[2:10],train_Transformed[3])
 ## Correlation when transformed 
 
 ```{r}
-mosthighlycorrelated(train_Transformed[2:9], 10) # top 10 most correlated variables
+mosthighlycorrelated(train_Transformed[4:12], 8) # top most correlated variables
 ```
 
 
@@ -703,80 +703,82 @@ mosthighlycorrelated(train_Transformed[2:9], 10) # top 10 most correlated variab
 ```
 
 
-# Model training with imputed data {.tabset}
+# Ignore below {.tabset}
 
-### random forest with imputed training data 
+## Model training with imputed data
+
+## random forest with imputed training data 
  mtry is a hyperparameter that controls the number of variables (predictors) that are randomly selected for consideration at each split in the decision trees that make up the forest.
 ```{r}
-fitControl <- trainControl(## 10-fold CV
-                           method = "repeatedcv",
-                           number = 10,
-                           repeats = 10, ## k-fold repeated ten times
-                           p = 0.80,
-                           verboseIter = TRUE,
-                           summaryFunction = defaultSummary,
-                           selectionFunction = "best",
-                           savePredictions = "final")
-
-gbmFit1 <- train(outcome_BMI_fnl_BL ~ ., data = train_Transformed, 
-                 method = "rf", 
-                 trControl = fitControl,
-                 verbose = TRUE)
-
-gbmFit1
-plot(gbmFit1)
+# fitControl <- trainControl(## 10-fold CV
+#                            method = "repeatedcv",
+#                            number = 10,
+#                            repeats = 10, ## k-fold repeated ten times
+#                            p = 0.80,
+#                            verboseIter = TRUE,
+#                            summaryFunction = defaultSummary,
+#                            selectionFunction = "best",
+#                            savePredictions = "final")
+# 
+# gbmFit1 <- train(outcome_BMI_fnl_BL ~ ., data = train_Transformed, 
+#                  method = "rf", 
+#                  trControl = fitControl,
+#                  verbose = TRUE)
+# 
+# gbmFit1
+# plot(gbmFit1)
 ```
 
 ```{r}
-gbmFit1$bestTune
-head(gbmFit1$results)
+# gbmFit1$bestTune
+# head(gbmFit1$results)
 ```
 
 ```{r}
-trellis.par.set(caretTheme())
-plot(gbmFit1, metric = "Rsquared")
+# trellis.par.set(caretTheme())
+# plot(gbmFit1, metric = "Rsquared")
 ```
 
 ```{r}
-ggplot(gbmFit1) 
+#ggplot(gbmFit1) 
 ```
 
-### Variable importances
+## Variable importances
 
 The function automatically scales the importance scores to be between 0 and 100. 
 Using scale = FALSE avoids this normalization step.
 
 ```{r}
-gbmImp <- varImp(gbmFit1, scale = TRUE)
-plot(gbmImp)
+# gbmImp <- varImp(gbmFit1, scale = TRUE)
+# plot(gbmImp)
 ```
 
-### Feature selections
+## Feature selections
 
 ```{r}
-# define the control using a random forest selection function
-control <- rfeControl(functions=rfFuncs, method="cv", number=10)
-# run the RFE algorithm
-results <- rfe(train_Transformed[,2:30], 
-               train_Transformed[,31], sizes=c(1:16), 
-               rfeControl=control)
-# summarize the results
-print(results)
-predictors(results) # list the chosen features
-plot(results, type=c("g", "o")) # plot the results
+# # define the control using a random forest selection function
+# control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+# # run the RFE algorithm
+# results <- rfe(train_Transformed[,2:30], 
+#                train_Transformed[,31], sizes=c(1:16), 
+#                rfeControl=control)
+# # summarize the results
+# print(results)
+# predictors(results) # list the chosen features
+# plot(results, type=c("g", "o")) # plot the results
 ```
 
-### Changing tolerance
+## Changing tolerance
 
 Tolerance selects the least complex model within some % tolerance of the best value.
 Less complex model based on (x-xbest)/xbestx 100, which is the % difference. 
 For example, to select parameter values based on a 12% loss of performance:
 
 ```{r}
-whichTwoPct <- tolerance(gbmFit1$results, metric = "Rsquared", 
-                         tol = 12, maximize = TRUE)  
-cat("best model within 12 pct of best:\n")
-gbmFit1$results[whichTwoPct,1:6]
+# whichTwoPct <- tolerance(gbmFit1$results, metric = "Rsquared", 
+#                          tol = 12, maximize = TRUE)  
+# cat("best model within 12 pct of best:\n")
+# gbmFit1$results[whichTwoPct,1:6]
 ```
 
 so then the simpler model is better (just 2 variables)
@@ -800,115 +802,115 @@ to do
 Lots of settings here 
 
 ```{r eval=FALSE, include=TRUE}
-trn_ctrl_1 <- trainControl(method = "cv", # cross val
-                         #number = "10", # 10 fold
-                         #repeats = 5, # no. complete sets of folds to compute
-                         number = ifelse(grepl("cv", "cv"), 10, 25),
-                         repeats = ifelse(grepl("[d_]cv$", "cv"), 1, NA),
-                         p = 0.80, # the training percentage
-                         search = "grid", # tuning parameter grid determination,
-                         verboseIter = TRUE, # print log
-                         returnData = TRUE, # save data
-                         #returnResamp = "all", # resampling summary metrics saved
-                         savePredictions = "all", # final would save the optimal
-                         classProbs = FALSE, # for classification models 
-                         summaryFunction = defaultSummary,
-                         selectionFunction = "best", # for best tuning parameter
-                         preProcOptions = list("scaling", "centering", "knn",
-                                               thresh = 0.95, 
-                                               ICAcomp = 3, 
-                                               k = 5, freqCut = 95/5, 
-                                               uniqueCut = 10, 
-                                               cutoff = 0.9),
-                         sampling = NULL,
-                         index = NULL,
-                         indexOut = NULL,
-                         indexFinal = NULL,
-                         timingSamps = 0,
-                         predictionBounds = rep(FALSE, 2),
-                         seeds = NA,
-                         adaptive = list(min = 5, 
-                                         alpha = 0.05, 
-                                         method = "gls",
-                                         complete = TRUE),
-                         trim = FALSE,
-                         allowParallel = TRUE)
+# trn_ctrl_1 <- trainControl(method = "cv", # cross val
+#                          #number = "10", # 10 fold
+#                          #repeats = 5, # no. complete sets of folds to compute
+#                          number = ifelse(grepl("cv", "cv"), 10, 25),
+#                          repeats = ifelse(grepl("[d_]cv$", "cv"), 1, NA),
+#                          p = 0.80, # the training percentage
+#                          search = "grid", # tuning parameter grid determination,
+#                          verboseIter = TRUE, # print log
+#                          returnData = TRUE, # save data
+#                          #returnResamp = "all", # resampling summary metrics saved
+#                          savePredictions = "all", # final would save the optimal
+#                          classProbs = FALSE, # for classification models 
+#                          summaryFunction = defaultSummary,
+#                          selectionFunction = "best", # for best tuning parameter
+#                          preProcOptions = list("scaling", "centering", "knn",
+#                                                thresh = 0.95, 
+#                                                ICAcomp = 3, 
+#                                                k = 5, freqCut = 95/5, 
+#                                                uniqueCut = 10, 
+#                                                cutoff = 0.9),
+#                          sampling = NULL,
+#                          index = NULL,
+#                          indexOut = NULL,
+#                          indexFinal = NULL,
+#                          timingSamps = 0,
+#                          predictionBounds = rep(FALSE, 2),
+#                          seeds = NA,
+#                          adaptive = list(min = 5, 
+#                                          alpha = 0.05, 
+#                                          method = "gls",
+#                                          complete = TRUE),
+#                          trim = FALSE,
+#                          allowParallel = TRUE)
 ```
 
 ## Train Control 2
 
 ```{r eval=FALSE, include=TRUE}
-trn_ctrl_2 <- trainControl(
-  method = "cv",                  # Use cross-validation
-  number = 10,                    # Number of folds
-  p = 0.80,                       # % of data used for training (only applicable for some methods)
-  search = "grid",                # Grid search for tuning
-  verboseIter = TRUE,             # Print iteration details
-  returnData = TRUE,              # Return the data used for resampling
-  savePredictions = "all",        # Save all predictions
-  classProbs = FALSE,             # Whether to compute class probabilities (for classification)
-  summaryFunction = defaultSummary,  # Function to summarize model performance
-  selectionFunction = "best",     # Select the best tuning parameter
-  allowParallel = TRUE)            # Allow parallel processing
-
-# Define trainControl with cross-validation
-trn_ctrl_3 <- trainControl(
-  method = "cv",                  # Cross-validation
-  number = 10,                    # 10-fold cross-validation
-  savePredictions = "all",        # Save all predictions
-  classProbs = FALSE,             # Not a classification problem
-  summaryFunction = defaultSummary,
-  allowParallel = TRUE,
-  preProcOptions = list("scaling", 
-                        "centering", 
-                        "knn",
-                         thresh = 0.95, 
-                         ICAcomp = 3, 
-                         k = 5, freqCut = 95/5, 
-                         uniqueCut = 10, 
-                         cutoff = 0.9)) # Enable parallel processing
+# trn_ctrl_2 <- trainControl(
+#   method = "cv",                  # Use cross-validation
+#   number = 10,                    # Number of folds
+#   p = 0.80,                       # % of data used for training (only applicable for some methods)
+#   search = "grid",                # Grid search for tuning
+#   verboseIter = TRUE,             # Print iteration details
+#   returnData = TRUE,              # Return the data used for resampling
+#   savePredictions = "all",        # Save all predictions
+#   classProbs = FALSE,             # Whether to compute class probabilities (for classification)
+#   summaryFunction = defaultSummary,  # Function to summarize model performance
+#   selectionFunction = "best",     # Select the best tuning parameter
+#   allowParallel = TRUE)            # Allow parallel processing
+# 
+# # Define trainControl with cross-validation
+# trn_ctrl_3 <- trainControl(
+#   method = "cv",                  # Cross-validation
+#   number = 10,                    # 10-fold cross-validation
+#   savePredictions = "all",        # Save all predictions
+#   classProbs = FALSE,             # Not a classification problem
+#   summaryFunction = defaultSummary,
+#   allowParallel = TRUE,
+#   preProcOptions = list("scaling", 
+#                         "centering", 
+#                         "knn",
+#                          thresh = 0.95, 
+#                          ICAcomp = 3, 
+#                          k = 5, freqCut = 95/5, 
+#                          uniqueCut = 10, 
+#                          cutoff = 0.9)) # Enable parallel processing
 ```
 
 ## Train RF model 
 
 ```{r eval=FALSE, include=TRUE}
-indep_var = colnames(a1_meta) != "outcome_BMI_fnl_BL"
-model_rf = train(x = a1_meta[indep_var], 
-                 y = a1_meta$outcome_BMI_fnl_BL,
-                 method = "rf",   # Random Forest method
-                 metric = "RMSE",                # Performance metric
-                 maximize = FALSE,               # Whether to maximize the metric
-                 trControl = trn_ctrl_2,           # Control parameters
-                 tuneGrid = NULL,                # Grid for tuning parameters
-                 tuneLength = 3,
-                 preProcess = list("scaling", 
-                        "centering", 
-                        "knnIm")) # Number of tuning parameters to try
-
-model <- train(x = a1_meta[indep_var], 
-               y = a1_meta$outcome_BMI_fnl_BL,             # Outcome variable
-               method = "rf",                  # Random Forest method
-               metric = "RMSE",                # Performance metric
-               maximize = FALSE,               # Whether to maximize the metric
-               trControl = trn_ctrl_1,           # Control parameters
-               tuneGrid = NULL,                # Grid for tuning parameters
-               tuneLength = 3)                # Number of tuning parameters to try
-
-# Train the model
-model <- train(
-  outcome_BMI_fnl_BL ~ .,         # Formula specifying the outcome
-  data = a1_meta,                 # Dataset
-  method = "rf",                  # Random forest method
-  metric = "RMSE",                # Performance metric
-  maximize = FALSE,               # Minimize RMSE
-  trControl = trn_ctrl,
-)
+# indep_var = colnames(a1_meta) != "outcome_BMI_fnl_BL"
+# model_rf = train(x = a1_meta[indep_var], 
+#                  y = a1_meta$outcome_BMI_fnl_BL,
+#                  method = "rf",   # Random Forest method
+#                  metric = "RMSE",                # Performance metric
+#                  maximize = FALSE,               # Whether to maximize the metric
+#                  trControl = trn_ctrl_2,           # Control parameters
+#                  tuneGrid = NULL,                # Grid for tuning parameters
+#                  tuneLength = 3,
+#                  preProcess = list("scaling", 
+#                         "centering", 
+#                         "knnIm")) # Number of tuning parameters to try
+# 
+# model <- train(x = a1_meta[indep_var], 
+#                y = a1_meta$outcome_BMI_fnl_BL,             # Outcome variable
+#                method = "rf",                  # Random Forest method
+#                metric = "RMSE",                # Performance metric
+#                maximize = FALSE,               # Whether to maximize the metric
+#                trControl = trn_ctrl_1,           # Control parameters
+#                tuneGrid = NULL,                # Grid for tuning parameters
+#                tuneLength = 3)                # Number of tuning parameters to try
+# 
+# # Train the model
+# model <- train(
+#   outcome_BMI_fnl_BL ~ .,         # Formula specifying the outcome
+#   data = a1_meta,                 # Dataset
+#   method = "rf",                  # Random forest method
+#   metric = "RMSE",                # Performance metric
+#   maximize = FALSE,               # Minimize RMSE
+#   trControl = trn_ctrl,
+# )
 ```
 
 
 #{-}
 _________________________________________________________________________________________
-# Ok take 2
+### Ok take 2
 
 I was confused about imputation with k-fold cross validation. 
 Should this be done before or after or on each split. 
@@ -937,24 +939,24 @@ a1_meta_imp <-predict(a1_meta_pre, a1_meta)
 
 
 
-# Take 3
+### Take 3
 
 ```{r}
-library(randomForest)
-rf_model <- randomForest(outcome_BMI_fnl_BL ~ ., 
-                         data=train_Transformed, importance=TRUE)
-
-# Evaluate the model:
-predictions <- predict(rf_model, newdata=test_Transformed)
-confusion_matrix <- table(test_Transformed$outcome_BMI_fnl_BL, predictions)
-print(confusion_matrix)
-
-# Calculate accuracy
-accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
-print(accuracy)
-
-# Feature importance 
-importance(rf_model)
-varImpPlot(rf_model)
+# library(randomForest)
+# rf_model <- randomForest(outcome_BMI_fnl_BL ~ ., 
+#                          data=train_Transformed, importance=TRUE)
+# 
+# # Evaluate the model:
+# predictions <- predict(rf_model, newdata=test_Transformed)
+# confusion_matrix <- table(test_Transformed$outcome_BMI_fnl_BL, predictions)
+# print(confusion_matrix)
+# 
+# # Calculate accuracy
+# accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+# print(accuracy)
+# 
+# # Feature importance 
+# importance(rf_model)
+# varImpPlot(rf_model)
 ```
 
