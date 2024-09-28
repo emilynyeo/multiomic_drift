@@ -1,0 +1,307 @@
+---
+title: "Meta data random forest and shap"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, compositions,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
+               treeshap, Metrics, randomForest)
+```
+
+# Read in Aim 1 meta
+
+```{r}
+m1_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1"
+
+# Create the full file path using paste
+test <- read.csv(paste(m1_dir, "test_samples_standard_clinical.csv", sep = "/"))
+train <- read.csv(paste(m1_dir, "train_samples_standard_clinical.csv", sep = "/"))
+all_m <- read.csv(paste(m1_dir, "a1_meta_Transformed_standard_clinical.csv", sep = "/"))
+```
+
+# Working on models {.tabset}
+
+There seem to be a million ways to do this. So here I am exploring it 
+
+## randomForest package 
+
+<https://modeloriented.github.io/treeshap/>
+
+```{r}
+rf <-randomForest(outcome_BMI_fnl_BL~.,data=train, ntree=500) 
+print(rf)
+```
+
+In this case, the number of variables tried at each split is based on
+the following formula: -1 is used as dataset contains dependent variable
+as well.
+
+```{r}
+floor(sqrt(ncol(train) - 1))
+```
+
+The number of variables selected at each split is denoted by mtry in
+randomforest function. Step III : Find the optimal mtry value Select
+mtry value with minimum out of bag(OOB) error.
+
+```{r}
+mtry <- tuneRF(train[4:12],train$outcome_BMI_fnl_BL, ntreeTry=500,
+               stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1]
+print(mtry)
+print(best.m)
+```
+
+In this case, mtry = 2 is the best mtry as it has least OOB error. mtry
+= 2 was also used as default mtry.
+
+Parameters in **tuneRF** function above
+
+-   The stepFactor specifies at each iteration, mtry is inflated (or
+    deflated) by this value
+
+-   The improve specifies the (relative) improvement in OOB error must
+    be by this much for the search to continue
+
+-   The trace specifies whether to print the progress of the search
+
+-   The plot specifies whether to plot the OOB error as function of mtry
+
+```{r}
+set.seed(71)
+rf <-randomForest(outcome_BMI_fnl_BL~.,data=train[4:13], mtry=best.m, 
+                  importance=TRUE,ntree=500)
+print(rf)
+#Evaluate variable importance
+importance(rf)
+varImpPlot(rf)
+```
+
+For each tree, the prediction accu- racy on the out-of-bag portion of the data is recorded. Then the same is done after permuting each predictor variable. The difference between the two accuracies are then averaged over all trees, and normalized by the standard error. For regression, the MSE is computed on the out-of-bag data for each tree, and then the same computed after permuting a variable. The differences are averaged and normalized by the standard error. If the standard error is equal to 0 for a variable, the division is not done.” varImp.randomForest is a simple wrapper around the importance function from that package. Similarly, for RandomForest objects, varImp is a wrapper around varimp in the party package.
+
+### Prediction and Calculate Performance Metrics
+
+```{r}
+# Get predictions
+pred1 <- predict(rf)
+
+# Evaluate regression performance
+rmse_value <- rmse(train$outcome_BMI_fnl_BL, pred1)
+print(paste("RMSE:", rmse_value))
+
+# Fit a linear model between actual and predicted 
+model <- lm(pred1 ~ train$outcome_BMI_fnl_BL)
+plot(train$outcome_BMI_fnl_BL, pred1, 
+     xlab = "Outcome BMI", 
+     ylab = "Predicted Values", 
+     main = "Scatter Plot with Linear Trend Line") +
+  abline(model, col = "blue", lwd = 2)
+```
+
+## RF with Caret 
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 10, ## k-fold repeated ten times
+                           p = 0.80,
+                           verboseIter = TRUE,
+                           summaryFunction = defaultSummary,
+                           selectionFunction = "best",
+                           savePredictions = "final")
+
+gbmFit1 <- train(outcome_BMI_fnl_BL ~ ., data = train[4:13],
+                 method = "rf",
+                 trControl = fitControl,
+                 verbose = TRUE)
+
+gbmFit1
+```
+
+```{r}
+plot(gbmFit1)
+```
+
+Two predictors is definitely best
+
+### What is the best mtry parameter 
+```{r}
+gbmFit1$bestTune
+head(gbmFit1$results)
+```
+
+### Variable Importance
+```{r}
+gbmImp <- varImp(gbmFit1, scale = TRUE)
+plot(gbmImp)
+```
+
+### Feature selections
+
+Using simple backwards selection, a.k.a. recursive feature elimination (RFE), algorithm
+
+```{r}
+# define the control using a random forest selection function
+control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+# run the RFE algorithm
+results <- rfe(train[,4:12],
+               train[,13], 
+               sizes=c(4:13),
+               rfeControl=control)
+
+print(results)
+```
+
+```{r}
+chosen_features <- predictors(results) # list the chosen features
+print(paste0("The chosen features are: ", chosen_features))
+```
+
+The plot may highlight the optimal number of features that gives the best model performance. 
+
+```{r}
+plot(results, type=c("g", "o")) # plot the results
+```
+
+
+### Changing tolerance
+
+Tolerance selects the least complex model within some % tolerance of the best value.
+Less complex model based on (x-xbest)/xbestx 100, which is the % difference. 
+For example, to select parameter values based on a 12% loss of performance:
+
+## Using mtry grid search algorithms
+
+From this tutorial:
+https://machinelearningmastery.com/tune-machine-learning-algorithms-in-r/
+
+```{r}
+dataset <- train
+x <- dataset[,4:12]
+y <- dataset[,13]
+
+# Create model with default paramters
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+seed <- 7
+metric <- "RMSE"
+set.seed(seed)
+mtry <- sqrt(ncol(x))
+tunegrid <- expand.grid(.mtry=mtry)
+rf_default <- train(outcome_BMI_fnl_BL ~., data=dataset[4:13], 
+                    method="rf", 
+                    metric=metric, 
+                    tuneGrid=tunegrid, 
+                    trControl=control)
+print(rf_default)
+```
+
+### Rtrying wuth random search mtry
+
+3 is still the best mtry value 
+
+```{r}
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="random")
+set.seed(seed)
+mtry <- sqrt(ncol(x))
+rf_random <- train(outcome_BMI_fnl_BL~., data=dataset[4:13], 
+                   method="rf", 
+                   metric=metric, 
+                   tuneLength=15, trControl=control)
+print(rf_random)
+plot(rf_random)
+```
+
+### tuning using grid search
+
+Using this method. It appears 2 is the best mtry parameter
+
+```{r message=FALSE, warning=FALSE}
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+set.seed(seed)
+tunegrid <- expand.grid(.mtry=c(1:15))
+rf_gridsearch <- train(outcome_BMI_fnl_BL~., data=dataset[4:13], 
+                       method="rf", metric=metric, 
+                       tuneGrid=tunegrid, trControl=control)
+print(rf_gridsearch)
+plot(rf_gridsearch)
+```
+
+## Tune using tuneRF algorithms
+
+Some algorithms provide tools for tuning the parameters of the algorithm.
+
+For example, the random forest algorithm implementation in the randomForest package provides the tuneRF() function that searches for optimal mtry values given your data.
+
+```{r}
+# Algorithm Tune (tuneRF)
+set.seed(seed)
+bestmtry <- tuneRF(x, y, stepFactor=1.5, improve=1e-5, ntree=500)
+print(bestmtry)
+```
+
+This does not really match up with what we saw in the caret repeated cross validation experiment above. 
+Nevertheless, it is an alternate way to tune the algorithm.
+
+## Tune Manually 
+
+We want to keep using caret because it provides a direct point of comparison to our previous models (apples to apples, even the same data splits) and because of the repeated cross validation test harness that we like as it reduces the severity of overfitting.
+
+One approach is to create many caret models for our algorithm and pass in a different parameters directly to the algorithm manually. Here I am looking at different ntree values while keeping mtry constant. 
+
+```{r}
+# Manual Search
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+tunegrid <- expand.grid(.mtry=c(sqrt(ncol(x))))
+modellist <- list()
+for (ntree in c(1000, 1500, 2000, 2500)) {
+	set.seed(seed)
+	fit <- train(outcome_BMI_fnl_BL~., data=dataset[4:13], 
+	             method="rf", 
+	             metric=metric, 
+	             tuneGrid=tunegrid, 
+	             trControl=control, 
+	             ntree=ntree)
+	key <- toString(ntree)
+	modellist[[key]] <- fit
+}
+# compare results
+results <- resamples(modellist)
+```
+
+##### Compare the models
+
+```{r}
+summary(results)
+```
+
+- Model 1000 has the best MAE, indicating it had the smallest average error in predictions.
+
+- Model 2500 has the best RMSE, suggesting it performs well in terms of variance and larger errors.
+
+- Model 2000 has the highest R-squared, which shows it explains more variability in the data compared to the others.
+Conclusion
+
+No single model is the best across all metrics. However, if you prioritize minimizing average errors, Model 1000 is the best choice. If you're more concerned with overall predictive performance and capturing variability, Model 2000 might be preferable. If the goal is to minimize the impact of larger errors, then Model 2500 would be the best option.
+
+```{r}
+dotplot(results)
+```
+
+## Extend Caret Algorithms 
+
+
+
+
+
+# {-}
+
+
+
