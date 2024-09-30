@@ -12,7 +12,7 @@ pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
                summarytools, grid, mice, plyr, mlmRev, cowplot, compositions,
                jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
                MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
-               treeshap, Metrics, randomForest)
+               treeshap, Metrics, randomForest, xgboost, Ckmeans.1d.dp)
 ```
 
 # Read in Aim 1 meta
@@ -28,9 +28,9 @@ all_m <- read.csv(paste(m1_dir, "a1_meta_Transformed_standard_clinical.csv", sep
 
 # Working on models {.tabset}
 
-There seem to be a million ways to do this. So here I am exploring it 
+There seem to be a million ways to do this. So here I am exploring it
 
-## randomForest package 
+## randomForest package
 
 <https://modeloriented.github.io/treeshap/>
 
@@ -84,7 +84,17 @@ importance(rf)
 varImpPlot(rf)
 ```
 
-For each tree, the prediction accu- racy on the out-of-bag portion of the data is recorded. Then the same is done after permuting each predictor variable. The difference between the two accuracies are then averaged over all trees, and normalized by the standard error. For regression, the MSE is computed on the out-of-bag data for each tree, and then the same computed after permuting a variable. The differences are averaged and normalized by the standard error. If the standard error is equal to 0 for a variable, the division is not done.” varImp.randomForest is a simple wrapper around the importance function from that package. Similarly, for RandomForest objects, varImp is a wrapper around varimp in the party package.
+For each tree, the prediction accu- racy on the out-of-bag portion of
+the data is recorded. Then the same is done after permuting each
+predictor variable. The difference between the two accuracies are then
+averaged over all trees, and normalized by the standard error. For
+regression, the MSE is computed on the out-of-bag data for each tree,
+and then the same computed after permuting a variable. The differences
+are averaged and normalized by the standard error. If the standard error
+is equal to 0 for a variable, the division is not done.”
+varImp.randomForest is a simple wrapper around the importance function
+from that package. Similarly, for RandomForest objects, varImp is a
+wrapper around varimp in the party package.
 
 ### Prediction and Calculate Performance Metrics
 
@@ -105,7 +115,7 @@ plot(train$outcome_BMI_fnl_BL, pred1,
   abline(model, col = "blue", lwd = 2)
 ```
 
-## RF with Caret 
+## RF with Caret
 
 ```{r}
 fitControl <- trainControl(## 10-fold CV
@@ -132,13 +142,15 @@ plot(gbmFit1)
 
 Two predictors is definitely best
 
-### What is the best mtry parameter 
+### What is the best mtry parameter
+
 ```{r}
 gbmFit1$bestTune
 head(gbmFit1$results)
 ```
 
 ### Variable Importance
+
 ```{r}
 gbmImp <- varImp(gbmFit1, scale = TRUE)
 plot(gbmImp)
@@ -146,7 +158,8 @@ plot(gbmImp)
 
 ### Feature selections
 
-Using simple backwards selection, a.k.a. recursive feature elimination (RFE), algorithm
+Using simple backwards selection, a.k.a. recursive feature elimination
+(RFE), algorithm
 
 ```{r}
 # define the control using a random forest selection function
@@ -165,23 +178,24 @@ chosen_features <- predictors(results) # list the chosen features
 print(paste0("The chosen features are: ", chosen_features))
 ```
 
-The plot may highlight the optimal number of features that gives the best model performance. 
+The plot may highlight the optimal number of features that gives the
+best model performance.
 
 ```{r}
 plot(results, type=c("g", "o")) # plot the results
 ```
 
-
 ### Changing tolerance
 
-Tolerance selects the least complex model within some % tolerance of the best value.
-Less complex model based on (x-xbest)/xbestx 100, which is the % difference. 
-For example, to select parameter values based on a 12% loss of performance:
+Tolerance selects the least complex model within some % tolerance of the
+best value. Less complex model based on (x-xbest)/xbestx 100, which is
+the % difference. For example, to select parameter values based on a 12%
+loss of performance:
 
 ## Using mtry grid search algorithms
 
 From this tutorial:
-https://machinelearningmastery.com/tune-machine-learning-algorithms-in-r/
+<https://machinelearningmastery.com/tune-machine-learning-algorithms-in-r/>
 
 ```{r}
 dataset <- train
@@ -205,7 +219,7 @@ print(rf_default)
 
 ### Rtrying wuth random search mtry
 
-3 is still the best mtry value 
+3 is still the best mtry value
 
 ```{r}
 control <- trainControl(method="repeatedcv", number=10, repeats=3, search="random")
@@ -236,9 +250,12 @@ plot(rf_gridsearch)
 
 ## Tune using tuneRF algorithms
 
-Some algorithms provide tools for tuning the parameters of the algorithm.
+Some algorithms provide tools for tuning the parameters of the
+algorithm.
 
-For example, the random forest algorithm implementation in the randomForest package provides the tuneRF() function that searches for optimal mtry values given your data.
+For example, the random forest algorithm implementation in the
+randomForest package provides the tuneRF() function that searches for
+optimal mtry values given your data.
 
 ```{r}
 # Algorithm Tune (tuneRF)
@@ -247,14 +264,20 @@ bestmtry <- tuneRF(x, y, stepFactor=1.5, improve=1e-5, ntree=500)
 print(bestmtry)
 ```
 
-This does not really match up with what we saw in the caret repeated cross validation experiment above. 
-Nevertheless, it is an alternate way to tune the algorithm.
+This does not really match up with what we saw in the caret repeated
+cross validation experiment above. Nevertheless, it is an alternate way
+to tune the algorithm.
 
-## Tune Manually 
+## Tune Manually
 
-We want to keep using caret because it provides a direct point of comparison to our previous models (apples to apples, even the same data splits) and because of the repeated cross validation test harness that we like as it reduces the severity of overfitting.
+We want to keep using caret because it provides a direct point of
+comparison to our previous models (apples to apples, even the same data
+splits) and because of the repeated cross validation test harness that
+we like as it reduces the severity of overfitting.
 
-One approach is to create many caret models for our algorithm and pass in a different parameters directly to the algorithm manually. Here I am looking at different ntree values while keeping mtry constant. 
+One approach is to create many caret models for our algorithm and pass
+in a different parameters directly to the algorithm manually. Here I am
+looking at different ntree values while keeping mtry constant.
 
 ```{r}
 # Manual Search
@@ -282,26 +305,356 @@ results <- resamples(modellist)
 summary(results)
 ```
 
-- Model 1000 has the best MAE, indicating it had the smallest average error in predictions.
+-   Model 1000 has the best MAE, indicating it had the smallest average
+    error in predictions.
 
-- Model 2500 has the best RMSE, suggesting it performs well in terms of variance and larger errors.
+-   Model 2500 has the best RMSE, suggesting it performs well in terms
+    of variance and larger errors.
 
-- Model 2000 has the highest R-squared, which shows it explains more variability in the data compared to the others.
-Conclusion
+-   Model 2000 has the highest R-squared, which shows it explains more
+    variability in the data compared to the others. Conclusion
 
-No single model is the best across all metrics. However, if you prioritize minimizing average errors, Model 1000 is the best choice. If you're more concerned with overall predictive performance and capturing variability, Model 2000 might be preferable. If the goal is to minimize the impact of larger errors, then Model 2500 would be the best option.
+No single model is the best across all metrics. However, if you
+prioritize minimizing average errors, Model 1000 is the best choice. If
+you're more concerned with overall predictive performance and capturing
+variability, Model 2000 might be preferable. If the goal is to minimize
+the impact of larger errors, then Model 2500 would be the best option.
 
 ```{r}
 dotplot(results)
 ```
 
-## Extend Caret Algorithms 
+## Extend Caret Algorithms
+
+Not feeling like this is something to dabble with right
+
+#  {.unnumbered}
+
+# Baruta and SHAP {.tabset}
+
+This is still something I'm figuring out. But doesn't look too bad.
+
+## Boruta
+
+You could consider increasing the maxRuns parameter if tentative
+features are left. However, note that you can also provide values of
+mtry and ntree parameters, which will be passed to randomForest()
+function.
+
+```{r}
+library(Boruta)
+set.seed(111)
+boruta.bank_train <- Boruta(outcome_BMI_fnl_BL~., 
+                            data = train[4:13], 
+                            doTrace = 2)
+print(boruta.bank_train)
+```
+
+Double check the TGs tentative:
+
+The boruta package also contains a TentativeRoughFix() function, which
+can be used to fill missing decisions by simple comparison of the median
+feature Z-score with the median Z-score of the most important shadow
+feature:
+
+```{r}
+#take a call on tentative features
+boruta.bank <- TentativeRoughFix(boruta.bank_train)
+print(boruta.bank)
+```
+
+Plot features:
+
+```{r}
+plot(boruta.bank, xlab = "", xaxt = "n")
+
+lz <- lapply(1:ncol(boruta.bank$ImpHistory), function(i) {
+  boruta.bank$ImpHistory[is.finite(boruta.bank$ImpHistory[, i]), i]
+})
+
+names(lz) <- colnames(boruta.bank$ImpHistory)
+Labels <- sort(sapply(lz, median))
+
+# Create the axis without labels
+axis(side = 1, at = 1:ncol(boruta.bank$ImpHistory), labels = FALSE)
+
+# Add labels at a 45-degree angle
+text(x = 1:ncol(boruta.bank$ImpHistory), 
+     y = par("usr")[3] - 0.5,  # Adjust the y position as needed
+     labels = names(Labels), 
+     srt = 45, 
+     adj = 1, 
+     xpd = TRUE, 
+     cex = 0.7)
+```
+
+The y axis label Importance represents the Z score of every feature in
+the shuffled dataset.
+
+The blue boxplots correspond to minimal, average and maximum Z score of
+a shadow feature, while the red and green boxplots represent Z scores of
+rejected and confirmed features, respectively. As you can see the red
+boxplots have lower Z score than that of maximum Z score of shadow
+feature which is precisely the reason they were put in unimportant
+category.
+
+Summary of confirmed features:
+
+```{r}
+bank_df <- attStats(boruta.bank)
+print(bank_df)
+```
+
+## BORUTA and SHAP
+
+Based on this tutorial:
+<https://amirali-n.github.io/BorutaFeatureSelectionWithShapAnalysis/> ,
+which in turn relies on this :
+<https://amirali-n.github.io/ExtremeGradientBoosting/>
+
+Assuming a tunned xgBoost algorithm is already fitted to a training data
+set, (e.g., look at my own implementation) the next step is to identify
+feature importances. Although, feature importances can be evalutated
+directly from the boosted trees, these importances have been shown to be
+local and inconsistent; see Scott Lundberg et. al. (2019).
+
+Scott Lundberg’s paper proposed a new method to interpret the result of
+machine learning algorithms, particularyly boosting methods, that
+produce feature importance scores. They show that feature importance,
+although averaged over boosted trees, may be inconsistent for different
+observations. To overcome this inconsistency, they propose a SHAP score
+inspired by Shapley values which combines different explanation models,
+e.g., LIME, with Shapley values. The result is a global feature
+importance score that is consistent across different test sets.
+
+However, other than to arbitrarily select an importance threshold beyond
+which features are considered unimportant, SHAP analysis does not offer
+an algorithmic way to filter a large feature set to a limited set of
+important features.
+
+To that end, a selection wrapper algorithm known as Boruta is proposed
+that iterates over an extended set of features and judges their
+importance. In each iteration of the algorithm, a number of features are
+copied by shuffling their values. This is used to fit another learner
+and to re-evaluate feature importances. If importance of an original
+feature is significantly greater than its shuffled copy, that features
+is deemed important.
+
+## First run the X boost Model
+
+Before "SHAP'ing"
+For tunning the xgboost hyperparameters, the caret grid search method is
+used.
+
+Learning rate or eta, maximum depth of trees, and minimum child weight
+which measures the number of instances in a node before the algorithm
+decides to partition before. gamma denotes the minimum loss reduction
+required to make a further partition. subsample and colsample_bytree
+indicate the proportion of the training data set and features,
+respectively, used in training the algorithm. Before training the
+xgboost model, a parallel backend must be registered.
+
+```{r}
+xgb.grid=expand.grid(nrounds=100, 
+                     eta=seq(0.1, 1, 0.2),
+                     max_depth=c(3, 5, 10),
+                     gamma = 0, 
+                     subsample = 0.7,
+                     min_child_weight = c(1, 3, 5), 
+                     colsample_bytree = 1)
+library(parallel)
+library(doParallel)
+myCl=makeCluster(detectCores()-1)
+registerDoParallel(myCl)
+
+xgb.control=trainControl(method = "cv",
+                         number = 5,
+                         verboseIter = TRUE,
+                         returnData = FALSE,
+                         returnResamp = "none",
+                         classProbs = TRUE,
+                         allowParallel = TRUE)
+
+xgb.train = train(x = train[4:13],
+                  y = train$outcome_BMI_fnl_BL,
+                  trControl = xgb.control,
+                  tuneGrid = xgb.grid,
+                  method = "xgbTree")
+                  #scale_pos_weight=sumwneg/sumwpos)
+
+stopCluster(myCl)
+```
+
+The result of the grid search for tunning the xgBoost hyperparamaters
+are given below. This is the best configuration of The best
+configuration of eta, max_depth, and min_child_weight is given by:
+
+```{r}
+xgb.train$bestTune
+```
+
+Using these parameters, a cross-validated training is done with
+nrounds=500 to identify the best iteration, i.e., nrounds. The algorithm
+can stop early if the test accuracy is not improved for
+early_stopping_rounds number of iterations
+
+```{r}
+label <- train$outcome_BMI_fnl_BL  # Extract the target variable
+# Convert the feature data frame to a matrix
+train_matrix <- as.matrix(train[4:12])
+
+# Set up parameters
+params <- list(
+  "eta" = xgb.train$bestTune$eta,
+  "max_depth" = xgb.train$bestTune$max_depth,
+  "gamma" = xgb.train$bestTune$gamma,
+  "min_child_weight" = xgb.train$bestTune$min_child_weight,
+  "nthread" = 4,
+  "objective" = "reg:squarederror")
+```
+
+**eta:** The learning rate, which controls how much to change the model
+in response to the estimated error each time the model weights are
+updated.
+
+**max_depth:** The maximum depth of a tree, which can prevent
+overfitting by limiting the model complexity.
+
+**gamma:** A regularization parameter that specifies the minimum loss
+reduction required to make a further partition on a leaf node.
+
+**min_child_weight:** Minimum sum of instance weight (hessian) needed in
+a child. This parameter controls overfitting.
+
+**nthread:** Number of threads to use for training, which can speed up
+the training process. objective: Specifies the learning task and
+corresponding objective function; here, it's set for regression tasks.
+
+```{r}
+# Perform cross-validation
+xgb.crv <- xgb.cv(
+  params = params,
+  data = train_matrix,
+  label = label,
+  nrounds = 500, # The maximum number of boosting rounds to be run.
+  nfold = 10, # folds for cross-validation
+  showsd = TRUE, # Shows standard deviation of evaluation metric across folds
+  metrics = "rmse",
+  stratified = FALSE, # generally used for classification
+  verbose = TRUE,
+  print_every_n = 1L,
+  early_stopping_rounds = 50)
+```
+
+Highest accuracy on the 500th iteration: 
+```{r}
+xgb.crv$best_iteration
+```
+
+#### Feature Importance with x boost
+
+To produce feature importances, an instance of the xgBoost learner is run with the optimized parameters of the grid search xgb.train and the cross-validated training xgb.crv.
+
+```{r}
+xgb.mod=xgboost(data = train_matrix, 
+                label = label, 
+                max.depth=xgb.train$bestTune$max_depth, 
+                eta=xgb.train$bestTune$eta, 
+                nthread=4, 
+                min_child_weight=xgb.train$bestTune$min_child_weight,
+                #scale_pos_weight=sumwneg/sumwpos, 
+                eval_metric="rmse", 
+                nrounds=xgb.crv$best_iteration, 
+                objective="reg:squarederror")
+```
+
+The top 5 features with the highest importance are selected here:
+
+```{r}
+importance=xgb.importance(feature_names = colnames(train[4:12]), 
+                          model = xgb.mod)
+importance$Feature[1:5]
+```
+
+#### Plot top 5 xboost features 
+
+The top 20 feautre importances are plotted here. xgBoost records three measures of importance for trees;  
+
+- Gain  which measure the contribution of each feature to optimization of the objective function, 
+
+- Cover  counts the number of observations assigned to the feature, and  
+
+- Weight  which denotes the number of times the feature was selected for a tree. 
+
+The following plot shows the importances with respect to Gain and has undergon a little ggplot treatment.The clustering shows the variables of similar importance. 
+
+```{r}
+# relabel features for the plot 
+feature.label=importance$Feature[1:5]
+feature.label=c("BL Insulin", "BL TGs Lipid", "BL Glucose", "Age", "BL HOMA IR")
+
+(gg=xgb.ggplot.importance(importance_matrix = importance[1:5,],
+                          rel_to_first = FALSE,
+                          n_clusters = c(1:3)))
+```
+
+## BORUTA on x boost RF model
+
+Now we can move on to Boruta, feature selection and SHAP. 
+https://amirali-n.github.io/BorutaFeatureSelectionWithShapAnalysis/
+
+SHAP analysis does not offer an algorithmic way to filter a large feature set to a limited set of important features.
+
+Boruta iterates over an extended set of features and judges their importance. In each iteration of the algorithm, a number of features are copied by shuffling their values. This is used to fit another learner and to re-evaluate feature importances. If importance of an original feature is significantly greater than its shuffled copy, that features is deemed important.
+
+```{r}
+xgb.boruta=Boruta(train[4:12],
+                  y=train$outcome_BMI_fnl_BL,
+                  maxRuns=100, 
+                  doTrace=2,
+                  holdHistory=TRUE,
+                  getImp=getImpXgboost,
+                  max.depth=xgb.train$bestTune$max_depth, 
+                  eta=xgb.train$bestTune$eta, 
+                  nthread=4, 
+                  min_child_weight=xgb.train$bestTune$min_child_weight,
+                  #scale_pos_weight=sumwneg/sumwpos, 
+                  #eval_metric="auc", 
+                  eval_metric="rmse", 
+                  #eval_metric="logloss",
+                  gamma=xgb.train$bestTune$gamma,
+                  nrounds=xgb.crv$best_iteration, 
+                  objective="reg:squarederror",
+                  tree_method="hist",
+                  lambda=0,
+                  alpha=0)
+```
+
+```{r}
+#extract Boruta's decision
+boruta_dec=attStats(xgb.boruta)
+boruta_dec[boruta_dec$decision!="Rejected",]
+```
+
+SHAP score inspired by Shapley values which combines different explanation models, e.g., LIME, with Shapley values. The result is a global feature importance score that is consistent across different test sets
 
 
 
+## NOT Show
 
+```{r}
+# use a RF model from above 
 
-# {-}
+# Calculate SHAP values using the 'iml' package
+# predictor <- Predictor$new(rf_model, 
+#                            data = data[, -which(names(data) == "target")], 
+#                            type = "prob")
+# 
+# shapley_values <- Shapley$new(predictor, x.interest = data[1, -which(names(data) == "target")]) # Example for one instance
+# 
+# # Plot SHAP values
+# plot(shapley_values)
 
+```
 
-
+#  {.unnumbered}
