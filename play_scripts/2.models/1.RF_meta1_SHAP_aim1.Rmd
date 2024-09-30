@@ -12,7 +12,8 @@ pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
                summarytools, grid, mice, plyr, mlmRev, cowplot, compositions,
                jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
                MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
-               treeshap, Metrics, randomForest, xgboost, Ckmeans.1d.dp)
+               treeshap, Metrics, randomForest, xgboost, Ckmeans.1d.dp, caret,
+               SHAPforxgboost, doParallel, parallel)
 ```
 
 # Read in Aim 1 meta
@@ -76,8 +77,10 @@ Parameters in **tuneRF** function above
 
 ```{r}
 set.seed(71)
-rf <-randomForest(outcome_BMI_fnl_BL~.,data=train[4:13], mtry=best.m, 
-                  importance=TRUE,ntree=500)
+rf <-randomForest(outcome_BMI_fnl_BL~.,data=train[4:13], 
+                  mtry=best.m, 
+                  importance=TRUE,
+                  ntree=500)
 print(rf)
 #Evaluate variable importance
 importance(rf)
@@ -91,7 +94,7 @@ averaged over all trees, and normalized by the standard error. For
 regression, the MSE is computed on the out-of-bag data for each tree,
 and then the same computed after permuting a variable. The differences
 are averaged and normalized by the standard error. If the standard error
-is equal to 0 for a variable, the division is not done.â€
+is equal to 0 for a variable, the division is not done.â€?
 varImp.randomForest is a simple wrapper around the importance function
 from that package. Similarly, for RandomForest objects, varImp is a
 wrapper around varimp in the party package.
@@ -124,9 +127,9 @@ fitControl <- trainControl(## 10-fold CV
                            repeats = 10, ## k-fold repeated ten times
                            p = 0.80,
                            verboseIter = TRUE,
-                           summaryFunction = defaultSummary,
-                           selectionFunction = "best",
-                           savePredictions = "final")
+                           summaryFunction = defaultSummary, # report performance 
+                           selectionFunction = "best", # select optimal tuning
+                           savePredictions = "final") # "final" saves the predictions for the optimal tuning parameters.
 
 gbmFit1 <- train(outcome_BMI_fnl_BL ~ ., data = train[4:13],
                  method = "rf",
@@ -140,7 +143,7 @@ gbmFit1
 plot(gbmFit1)
 ```
 
-Two predictors is definitely best
+Two predictors is definitely best. This matches Boruta SHAPs suggestion at the end
 
 ### What is the best mtry parameter
 
@@ -149,12 +152,16 @@ gbmFit1$bestTune
 head(gbmFit1$results)
 ```
 
+mtry of 2 seems to be best. 
+
 ### Variable Importance
 
 ```{r}
 gbmImp <- varImp(gbmFit1, scale = TRUE)
 plot(gbmImp)
 ```
+
+HOMA_IR and Insulin seem to be teh best variables. This is different from BORUTA SHAP at the end of this script, which suggests Insulin and Triglycerides. 
 
 ### Feature selections
 
@@ -163,23 +170,30 @@ Using simple backwards selection, a.k.a. recursive feature elimination
 
 ```{r}
 # define the control using a random forest selection function
-control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+# library(doParallel)
+# # Set up a parallel backend
+# cl <- makeCluster(detectCores() - 1)  # Leave one core free
+# registerDoParallel(cl)
+
+control <- rfeControl(functions=rfFuncs, 
+                      method="cv", 
+                      number=10,
+                      repeats = 10,
+                      p = 0.80,
+                      returnResamp = "final",
+                      saveDetails = TRUE)
+
 # run the RFE algorithm
 results <- rfe(train[,4:12],
-               train[,13], 
+               train[,13],
                sizes=c(4:13),
                rfeControl=control)
 
 print(results)
 ```
 
-```{r}
-chosen_features <- predictors(results) # list the chosen features
-print(paste0("The chosen features are: ", chosen_features))
-```
-
 The plot may highlight the optimal number of features that gives the
-best model performance.
+best model performance. Here it seems 4 variables would be best. This is different from 2. 
 
 ```{r}
 plot(results, type=c("g", "o")) # plot the results
@@ -198,28 +212,39 @@ From this tutorial:
 <https://machinelearningmastery.com/tune-machine-learning-algorithms-in-r/>
 
 ```{r}
+# Don't know why but apparently I need cores
+# stopCluster(cl)
+detectCores(all.tests = FALSE, logical = TRUE)
+cl <- makeCluster(2)
+cl
+registerDoParallel(cl)
+
 dataset <- train
 x <- dataset[,4:12]
 y <- dataset[,13]
 
 # Create model with default paramters
-control <- trainControl(method="repeatedcv", number=10, repeats=3)
+control <- trainControl(method="repeatedcv", number=10, repeats=10)
 seed <- 7
 metric <- "RMSE"
 set.seed(seed)
 mtry <- sqrt(ncol(x))
 tunegrid <- expand.grid(.mtry=mtry)
+
 rf_default <- train(outcome_BMI_fnl_BL ~., data=dataset[4:13], 
                     method="rf", 
                     metric=metric, 
                     tuneGrid=tunegrid, 
                     trControl=control)
+
 print(rf_default)
 ```
 
+With grid search algorithm, the number of variables at each split seems to be 3. 
+
 ### Rtrying wuth random search mtry
 
-3 is still the best mtry value
+Now using random search instead of grid search it seems the best mtry value is 2, so not 3. 
 
 ```{r}
 control <- trainControl(method="repeatedcv", number=10, repeats=3, search="random")
@@ -228,7 +253,8 @@ mtry <- sqrt(ncol(x))
 rf_random <- train(outcome_BMI_fnl_BL~., data=dataset[4:13], 
                    method="rf", 
                    metric=metric, 
-                   tuneLength=15, trControl=control)
+                   tuneLength=15, 
+                   trControl=control)
 print(rf_random)
 plot(rf_random)
 ```
@@ -238,7 +264,9 @@ plot(rf_random)
 Using this method. It appears 2 is the best mtry parameter
 
 ```{r message=FALSE, warning=FALSE}
-control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+control <- trainControl(method="repeatedcv", 
+                        number=10, 
+                        repeats=10, search="grid")
 set.seed(seed)
 tunegrid <- expand.grid(.mtry=c(1:15))
 rf_gridsearch <- train(outcome_BMI_fnl_BL~., data=dataset[4:13], 
@@ -248,32 +276,23 @@ print(rf_gridsearch)
 plot(rf_gridsearch)
 ```
 
-## Tune using tuneRF algorithms
-
-Some algorithms provide tools for tuning the parameters of the
-algorithm.
-
-For example, the random forest algorithm implementation in the
-randomForest package provides the tuneRF() function that searches for
-optimal mtry values given your data.
+## Compare
+Compare the 3 methofs for finding parameters above. 
+1. grid search algorithm
+2. RF default model
+3. RF random search
 
 ```{r}
-# Algorithm Tune (tuneRF)
-set.seed(seed)
-bestmtry <- tuneRF(x, y, stepFactor=1.5, improve=1e-5, ntree=500)
-print(bestmtry)
+rf_gridsearch[["finalModel"]]
+rf_default[["finalModel"]]
+rf_random[["finalModel"]]
 ```
-
-This does not really match up with what we saw in the caret repeated
-cross validation experiment above. Nevertheless, it is an alternate way
-to tune the algorithm.
 
 ## Tune Manually
 
-We want to keep using caret because it provides a direct point of
+I want to keep using caret because it provides a direct point of
 comparison to our previous models (apples to apples, even the same data
-splits) and because of the repeated cross validation test harness that
-we like as it reduces the severity of overfitting.
+splits) and because of the repeated cross validation test reduces the severity of overfitting.
 
 One approach is to create many caret models for our algorithm and pass
 in a different parameters directly to the algorithm manually. Here I am
@@ -281,10 +300,16 @@ looking at different ntree values while keeping mtry constant.
 
 ```{r}
 # Manual Search
-control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+control <- trainControl(method="repeatedcv", 
+                        number=10, 
+                        repeats=10, 
+                        search="grid")
+
 tunegrid <- expand.grid(.mtry=c(sqrt(ncol(x))))
 modellist <- list()
-for (ntree in c(1000, 1500, 2000, 2500)) {
+
+# What is the best ntree value 
+for (ntree in c(500, 1000, 1500, 2000, 2500)) {
 	set.seed(seed)
 	fit <- train(outcome_BMI_fnl_BL~., data=dataset[4:13], 
 	             method="rf", 
@@ -318,7 +343,7 @@ No single model is the best across all metrics. However, if you
 prioritize minimizing average errors, Model 1000 is the best choice. If
 you're more concerned with overall predictive performance and capturing
 variability, Model 2000 might be preferable. If the goal is to minimize
-the impact of larger errors, then Model 2500 would be the best option.
+the impact of larger errors, then Model 2500 would be the best option. They are all very similar though. So for computation, sticking with 500 seems good. 
 
 ```{r}
 dotplot(results)
@@ -350,7 +375,7 @@ boruta.bank_train <- Boruta(outcome_BMI_fnl_BL~.,
 print(boruta.bank_train)
 ```
 
-Double check the TGs tentative:
+Double check any values that were left in tentative selection categories:
 
 The boruta package also contains a TentativeRoughFix() function, which
 can be used to fill missing decisions by simple comparison of the median
@@ -363,12 +388,13 @@ boruta.bank <- TentativeRoughFix(boruta.bank_train)
 print(boruta.bank)
 ```
 
-Plot features:
+Plot features selected vs. not-selected features:
 
 ```{r}
 plot(boruta.bank, xlab = "", xaxt = "n")
 
-lz <- lapply(1:ncol(boruta.bank$ImpHistory), function(i) {
+lz <- lapply(1:ncol(boruta.bank$ImpHistory), 
+             function(i) {
   boruta.bank$ImpHistory[is.finite(boruta.bank$ImpHistory[, i]), i]
 })
 
@@ -464,15 +490,16 @@ xgb.grid=expand.grid(nrounds=100,
                      colsample_bytree = 1)
 library(parallel)
 library(doParallel)
-myCl=makeCluster(detectCores()-1)
+myCl=makeCluster(detectCores()-4)
 registerDoParallel(myCl)
 
 xgb.control=trainControl(method = "cv",
-                         number = 5,
+                         number = 10,
+                         repeats = 10,
                          verboseIter = TRUE,
                          returnData = FALSE,
                          returnResamp = "none",
-                         classProbs = TRUE,
+                         classProbs = FALSE,
                          allowParallel = TRUE)
 
 xgb.train = train(x = train[4:13],
@@ -546,7 +573,7 @@ xgb.crv <- xgb.cv(
   early_stopping_rounds = 50)
 ```
 
-Highest accuracy on the 500th iteration: 
+Highest accuracy on the 12 th iteration: 
 ```{r}
 xgb.crv$best_iteration
 ```
@@ -629,6 +656,7 @@ xgb.boruta=Boruta(train[4:12],
                   lambda=0,
                   alpha=0)
 ```
+Borutas selected variables: 
 
 ```{r}
 #extract Boruta's decision
@@ -652,8 +680,13 @@ boruta.imp.df=cbind.data.frame(boruta.imp.df,
                                decision=boruta_dec$decision[match(boruta.imp.df$variable, 
                                                                  row.names(boruta_dec))])
 #reorder features data frame by the importance median value
-feature_order=with(boruta.imp.df, reorder(variable, value, median, order = TRUE))
-boruta.imp.df$variable=factor(boruta.imp.df$variable, levels = levels(feature_order))
+feature_order=with(boruta.imp.df, 
+                   reorder(variable, 
+                           value, 
+                           median, 
+                           order = TRUE))
+boruta.imp.df$variable=factor(boruta.imp.df$variable, 
+                              levels = levels(feature_order))
 
 # Create the box plot
 ggplot(boruta.imp.df, aes(x = variable, y = value, fill = decision)) +
@@ -667,45 +700,82 @@ ggplot(boruta.imp.df, aes(x = variable, y = value, fill = decision)) +
         legend.title = element_blank())  # Remove legend title
 ```
 
+## SHAP time
+
+Boruta is very effective in reducing the number of features from more than 700 to just 10. However, these importances may not be consistent with respect to the test set. SHAP values take each data point into consideration when evaluating the importance of a feature. The below code snippet, takes the outcome of an xgBoost fitted model in xgb.mod and evaluates its SHAP values.
+
+```{r}
+# Convert test set to a matrix
+test_matrix <- as.matrix(test[4:12])
+
+shap_values=shap.values(xgb_model = xgb.mod, 
+                        X_train = test_matrix)
+
+# These scores quantify the contribution of each feature to the model's predictions for a specific instance. 
+#Higher absolute SHAP values indicate greater importance of the feature in influencing the prediction.
+
+shap_values$mean_shap_score[1:9]
+```
+
+the order of importance for those features which re deemed as importance by both methods is not consistent. The code snippet below limits the shap score and test set to the features selected by the Boruta method and plots SHAP values for each data point in test set diluted by a factor of 20.
+
+```{r}
+shap.feat=unique(boruta.imp.df$variable)
+X=data.frame(as.matrix(test[4:12]))
+X=X[, names(X) %in% shap.feat]
+
+#shap summary for boruta features
+shap_score_filtered=data.frame(shap_values$shap_score)
+
+#plot
+shap.plot.summary.wrap2(shap_score = shap_score_filtered, 
+                        X = X)
+                        #dilute=)
+```
+
+
 ## Final Model 
+
+So this would be based on the iterations and tuning that was explored. 
 
 ```{r}
 
 ```
 
+# {-}
 
 # Model prediction and performance {.tabset}
 
 ```{r}
-predict(xgb.train$finalModel, newdata = test)[1:5]
-
-predict(svmFit, newdata = testDescr)[1:5]
-models <- list(svm = svmFit,
-               gbm = gbmFit)
-testPred <- predict(models, newdata = testDescr)
-lapply(testPred,
-       function(x) x[1:5])
-predValues <- extractPrediction(
-                                models,
-                                testX = testDescr,
-                                testY = testClass)
-
-testValues <- subset(
-                     predValues,
-                     dataType == "Test")
-head(testValues)
-table(testValues$model)
-nrow(testDescr)
-
-probValues <- extractProb(
-                          models,
-                          testX = testDescr,
-                          testY = testClass)
-
-testProbs <- subset(
-                    probValues,
-                    dataType == "Test")
-str(testProbs)
+# predict(xgb.train$finalModel, newdata = test)[1:5]
+# 
+# predict(svmFit, newdata = testDescr)[1:5]
+# models <- list(svm = svmFit,
+#                gbm = gbmFit)
+# testPred <- predict(models, newdata = testDescr)
+# lapply(testPred,
+#        function(x) x[1:5])
+# predValues <- extractPrediction(
+#                                 models,
+#                                 testX = testDescr,
+#                                 testY = testClass)
+# 
+# testValues <- subset(
+#                      predValues,
+#                      dataType == "Test")
+# head(testValues)
+# table(testValues$model)
+# nrow(testDescr)
+# 
+# probValues <- extractProb(
+#                           models,
+#                           testX = testDescr,
+#                           testY = testClass)
+# 
+# testProbs <- subset(
+#                     probValues,
+#                     dataType == "Test")
+# str(testProbs)
 ```
 
 # {-}
