@@ -638,23 +638,74 @@ boruta_dec[boruta_dec$decision!="Rejected",]
 
 SHAP score inspired by Shapley values which combines different explanation models, e.g., LIME, with Shapley values. The result is a global feature importance score that is consistent across different test sets
 
+```{r}
+#get the names of each feature
+#imp_features=row.names(boruta_dec)[which(boruta_dec$decision!="Rejected")]
+#get feature importance history
+boruta.imp.df=as.data.frame(xgb.boruta$ImpHistory)
+#keep only confirmed and tentative features
+#boruta.imp.df=boruta.imp.df[,names(boruta.imp.df)%in%imp_features]
+#transform the data to a data frame with two columns: feature and importance value
+boruta.imp.df=melt(boruta.imp.df)
+#create a data frame by adding the decision for each feature as well
+boruta.imp.df=cbind.data.frame(boruta.imp.df, 
+                               decision=boruta_dec$decision[match(boruta.imp.df$variable, 
+                                                                 row.names(boruta_dec))])
+#reorder features data frame by the importance median value
+feature_order=with(boruta.imp.df, reorder(variable, value, median, order = TRUE))
+boruta.imp.df$variable=factor(boruta.imp.df$variable, levels = levels(feature_order))
 
+# Create the box plot
+ggplot(boruta.imp.df, aes(x = variable, y = value, fill = decision)) +
+  geom_boxplot(outlier.shape = NA) +  # Avoid plotting outliers
+  coord_flip() +  # Flip coordinates for better readability
+  labs(title = "Boruta Importance Evaluation",
+       x = "Features",
+       y = "Importance Value") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10),  # Adjust text size
+        legend.title = element_blank())  # Remove legend title
+```
 
-## NOT Show
+## Final Model 
 
 ```{r}
-# use a RF model from above 
-
-# Calculate SHAP values using the 'iml' package
-# predictor <- Predictor$new(rf_model, 
-#                            data = data[, -which(names(data) == "target")], 
-#                            type = "prob")
-# 
-# shapley_values <- Shapley$new(predictor, x.interest = data[1, -which(names(data) == "target")]) # Example for one instance
-# 
-# # Plot SHAP values
-# plot(shapley_values)
 
 ```
 
-#  {.unnumbered}
+
+# Model prediction and performance {.tabset}
+
+```{r}
+predict(xgb.train$finalModel, newdata = test)[1:5]
+
+predict(svmFit, newdata = testDescr)[1:5]
+models <- list(svm = svmFit,
+               gbm = gbmFit)
+testPred <- predict(models, newdata = testDescr)
+lapply(testPred,
+       function(x) x[1:5])
+predValues <- extractPrediction(
+                                models,
+                                testX = testDescr,
+                                testY = testClass)
+
+testValues <- subset(
+                     predValues,
+                     dataType == "Test")
+head(testValues)
+table(testValues$model)
+nrow(testDescr)
+
+probValues <- extractProb(
+                          models,
+                          testX = testDescr,
+                          testY = testClass)
+
+testProbs <- subset(
+                    probValues,
+                    dataType == "Test")
+str(testProbs)
+```
+
+# {-}
