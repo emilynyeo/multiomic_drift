@@ -1,0 +1,342 @@
+---
+title: "3.RF_taxa_aim1"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, compositions,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
+               treeshap, Metrics, randomForest, xgboost, Ckmeans.1d.dp, caret,
+               SHAPforxgboost, doParallel, parallel, tibble)
+
+BL_clr_species_test <- read_csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/species/BL_clr_testing.csv")
+BL_clr_species_train <- read_csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/species/BL_clr_training.csv")
+
+# meta
+m1_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1"
+test <- read.csv(paste(m1_dir, "test_samples_standard_clinical.csv", sep = "/"))
+train <- read.csv(paste(m1_dir, "train_samples_standard_clinical.csv", sep = "/"))
+
+# Merge 
+test <- test %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+train <- train %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+train_tax <- merge(BL_clr_species_train, train, 
+                   by.x = "bl_samples", by.y = "record_id")
+test_tax <- merge(BL_clr_species_test, test, 
+                   by.x = "bl_samples", by.y = "record_id")
+rm(BL_clr_species_test, BL_clr_species_train, test, train)
+```
+
+```{r}
+cl <- makeCluster(detectCores() - 4)  # Leave one core free
+registerDoParallel(cl)
+```
+
+Tutorials:
+https://chiliubio.github.io/microeco_tutorial/other-examples-1.html#tidy_taxonomy-function
+
+Supervised learning for multi-omics
+https://microbiome.github.io/course_2022_FindingPheno/supervised-learning.html
+
+Caret training and tuning
+https://topepo.github.io/caret/model-training-and-tuning.html
+
+# First RF model
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           repeats = 10, ## k-fold repeated ten times
+                           p = 0.80,
+                           verboseIter = TRUE,
+                           summaryFunction = defaultSummary, # report performance 
+                           selectionFunction = "best", # select optimal tuning
+                           savePredictions = "final")
+
+RF1 <- train(outcome_BMI_fnl_BL ~ ., data = train_tax[3:268],
+                 method = "rf",
+                 trControl = fitControl,
+                 verbose = TRUE)
+
+RF1
+```
+
+```{r}
+plot(RF1)
+```
+
+#### Variable importance 
+
+```{r}
+RF1_Imp <- varImp(RF1, scale = TRUE)
+
+# Convert to a data frame for easier manipulation
+RF1_Imp_df <- data.frame(Variable = rownames(RF1_Imp$importance), 
+                          Importance = RF1_Imp$importance[, 1])
+# Sort by importance and select the top 30
+top_30_imp <- RF1_Imp_df[order(-RF1_Imp_df$Importance), ][1:30, , drop = FALSE]
+
+ggplot(top_30_imp, aes(x = reorder(Variable, Importance), y = Importance)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    labs(x = "Variables", y = "Importance", 
+         title = "Top 30 Variable Importances") +
+    theme_minimal()
+```
+
+### Feature selections wit RF
+
+Using simple backwards selection, a.k.a. recursive feature elimination
+(RFE), algorithm
+
+```{r}
+control <- rfeControl(functions=rfFuncs, 
+                      method="cv", 
+                      number=10,
+                      repeats = 10,
+                      p = 0.80,
+                      returnResamp = "final",
+                      saveDetails = TRUE,
+                      timingSamps = 10)
+
+# run the RFE algorithm
+rfe_predictors <- rfe(train_tax[,3:267],
+                  train_tax[,268],
+                  #sizes=c(4:13),
+                  rfeControl=control)
+
+print(rfe_predictors)
+plot(rfe_predictors, type=c("g", "o"))
+```
+
+
+## Do xgb RF then Boruta {.tabset}
+
+Then compare to the method above. Each of these builds on the other. 
+
+### x boost 
+
+The train function sets up a grid of tuning parameters for a number of classification and regression routines, fits each model and calculates a resampling based performance measure.
+
+```{r}
+# Create a Data Frame from All Combinations of Factor Variables
+xgb.grid=expand.grid(nrounds=100, 
+                     eta=seq(0.1, 1, 0.2),
+                     max_depth=c(3, 5, 10),
+                     gamma = 0, 
+                     subsample = 0.7,
+                     min_child_weight = c(1, 3, 5), 
+                     colsample_bytree = 1)
+
+# Control the computational nuances of the train function
+xgb.control=trainControl(method = "cv",
+                         number = 10,
+                         repeats = 10,
+                         verboseIter = TRUE,
+                         returnData = FALSE,
+                         returnResamp = "final",
+                         classProbs = FALSE,
+                         allowParallel = TRUE)
+
+xgb.train = train(x = train_tax[3:268],
+                  y = train_tax$outcome_BMI_fnl_BL,
+                  trControl = xgb.control,
+                  tuneGrid = xgb.grid,
+                  method = "xgbTree")
+```
+
+Perform Cross Validation
+
+```{r}
+label <- train_tax$outcome_BMI_fnl_BL  # Extract the target variable
+train_matrix <- as.matrix(train_tax[3:267]) # convert to df 
+
+# Set up parameters that were best 
+params <- list(
+  "eta" = xgb.train$bestTune$eta,
+  "max_depth" = xgb.train$bestTune$max_depth,
+  "gamma" = xgb.train$bestTune$gamma,
+  "min_child_weight" = xgb.train$bestTune$min_child_weight,
+  "nthread" = 4,
+  "objective" = "reg:squarederror")
+
+# Perform cross-validation
+xgb.crv <- xgb.cv(
+  params = params,
+  data = train_matrix,
+  label = label,
+  nrounds = 500, # The maximum number of boosting rounds to be run.
+  nfold = 10, # folds for cross-validation
+  showsd = TRUE, # Shows standard deviation of evaluation metric across folds
+  metrics = "rmse",
+  stratified = FALSE, # generally used for classification
+  verbose = TRUE,
+  print_every_n = 1L,
+  early_stopping_rounds = 50)
+```
+
+Final xgboost model
+```{r}
+xgb.mod=xgboost(data = train_matrix, 
+                label = label, 
+                max.depth=xgb.train$bestTune$max_depth, 
+                eta=xgb.train$bestTune$eta, 
+                nthread=4, 
+                min_child_weight=xgb.train$bestTune$min_child_weight,
+                #scale_pos_weight=sumwneg/sumwpos, 
+                eval_metric="rmse", 
+                nrounds=xgb.crv$best_iteration, 
+                objective="reg:squarederror")
+```
+
+xgBoost feature selection
+```{r}
+importance=xgb.importance(feature_names = colnames(train_tax[3:267]), 
+                          model = xgb.mod)
+importance$Feature[1:20]
+```
+
+Plot top 20 features selected by boost 
+```{r}
+# relabel features for the plot 
+#feature.label=importance$Feature[1:5]
+#feature.label=c("BL Insulin", "BL TGs Lipid", "BL Glucose", "Age", "BL HOMA IR")
+
+(gg=xgb.ggplot.importance(importance_matrix = importance[1:20,],
+                          rel_to_first = FALSE,
+                          n_clusters = c(1:3)))
+```
+
+### Boruta
+
+```{r}
+xgb.boruta=Boruta(train_tax[3:267],
+                  y=train_tax$outcome_BMI_fnl_BL,
+                  pValue = 0.01,
+                  mcAdj = TRUE,
+                  maxRuns=100, 
+                  doTrace=2,
+                  holdHistory=TRUE,
+                  getImp=getImpXgboost,
+                  max.depth=xgb.train$bestTune$max_depth, 
+                  eta=xgb.train$bestTune$eta, 
+                  nthread=4, 
+                  min_child_weight=xgb.train$bestTune$min_child_weight,
+                  #scale_pos_weight=sumwneg/sumwpos, 
+                  #eval_metric="auc", 
+                  eval_metric="rmse", 
+                  #eval_metric="logloss",
+                  gamma=xgb.train$bestTune$gamma,
+                  nrounds=xgb.crv$best_iteration, 
+                  objective="reg:squarederror",
+                  tree_method="hist",
+                  lambda=0,
+                  alpha=0.9)
+
+#extract Boruta's decision
+boruta_dec=attStats(xgb.boruta)
+boruta_dec[boruta_dec$decision!="Rejected",]
+```
+
+Box plot of selected
+
+```{r}
+#get the names of each feature
+imp_features=row.names(boruta_dec)[which(boruta_dec$decision!="Rejected")]
+#get feature importance history
+boruta.imp.df=as.data.frame(xgb.boruta$ImpHistory)
+#keep only confirmed and tentative features
+boruta.imp.df=boruta.imp.df[,names(boruta.imp.df)%in%imp_features]
+#transform the data to a data frame with two columns: feature and importance value
+boruta.imp.df=melt(boruta.imp.df)
+
+#create a data frame by adding the decision for each feature as well
+boruta.imp.df=cbind.data.frame(boruta.imp.df, 
+                               decision=boruta_dec$decision[match(boruta.imp.df$variable, 
+                                                                 row.names(boruta_dec))])
+#reorder features data frame by the importance median value
+feature_order=with(boruta.imp.df, 
+                   reorder(variable, 
+                           value, 
+                           median, 
+                           order = TRUE))
+boruta.imp.df$variable=factor(boruta.imp.df$variable, 
+                              levels = levels(feature_order))
+
+# Create the box plot
+ggplot(boruta.imp.df, aes(x = variable, y = value, fill = decision)) +
+  geom_boxplot(outlier.shape = NA) +  # Avoid plotting outliers
+  coord_flip() +  # Flip coordinates for better readability
+  labs(title = "Boruta Importance Evaluation",
+       x = "Features",
+       y = "Importance Value") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10),  # Adjust text size
+        legend.title = element_blank())  # Remove legend title
+```
+
+
+### SHAP
+
+# {-}
+
+## Repeat RF with rfe selected features
+
+## Repeat RF with Boruta selected features 
+
+```{r}
+print(xgb.boruta)
+```
+
+```{r}
+opt.vars1 <- getSelectedAttributes(xgb.boruta, withTentative = T)
+opt.vars2 <- getSelectedAttributes(xgb.boruta, withTentative = F)
+
+train.min1 <- train_tax %>% dplyr::select(one_of(opt.vars1), outcome_BMI_fnl_BL)
+train.min2 <- train_tax %>% dplyr::select(one_of(opt.vars2), outcome_BMI_fnl_BL)
+
+opt.rf1<- randomForest(outcome_BMI_fnl_BL~., data=train.min1)
+opt.rf2<- randomForest(outcome_BMI_fnl_BL~., data=train.min2)
+
+imp.vars1<- opt.rf1$importance %>%
+  as.data.frame()%>%
+  #arrange(-MeanDecreaseGini) %>%
+  rownames_to_column('Variable')
+
+imp.vars2<- opt.rf2$importance %>%
+  as.data.frame()%>%
+  #arrange(-MeanDecreaseGini) %>%
+  rownames_to_column('Variable')
+
+post.test1<- postResample(predict(opt.rf1, test_tax[3:268]), test_tax$outcome_BMI_fnl_BL)
+post.test2<- postResample(predict(opt.rf2, test_tax[3:268]), test_tax$outcome_BMI_fnl_BL)
+
+err.1 <- opt.rf1$err.rate[nrow(opt.rf1$err.rate),]
+err.2 <- opt.rf2$err.rate[nrow(opt.rf2$err.rate),]
+
+output.bor<- data.frame(y='outcome_BMI_fnl_BL', 
+                        #time=time_pt,
+                        Variables1 =length(opt.vars1),
+                        t(data.frame(err.1)), 
+                        t(data.frame(post.test1)),
+Variables2 = length(opt.vars2), 
+             t(data.frame(err.2)), 
+             t(data.frame(post.test2)),
+             optvars1=paste(opt.vars1, collapse=', '),
+             optvars2=paste(opt.vars2, collapse=', '))
+
+print(opt.rf1)
+print(opt.rf2)
+```
+
+
+## Decide on best model 
+

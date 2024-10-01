@@ -747,8 +747,36 @@ So this would be based on the iterations and tuning that was explored.
 # Model prediction and performance {.tabset}
 
 ```{r}
-# predict(xgb.train$finalModel, newdata = test)[1:5]
-# 
+predictions <- predict(xgb.boruta, newdata = test)
+
+result <- test
+result['actual_BL_BMI'] <- test$outcome_BMI_fnl_BL
+result['prediction']<-  predictions
+
+ggplot(  ) + 
+  geom_point(aes(x = result$Insulin_endo_BL, 
+                 y = result$actual_BL_BMI, 
+                 color = 'red', alpha = 0.5) ) + 
+  geom_point(aes(x = result$Insulin_endo_BL , 
+                 y = result$prediction, 
+                 color = 'blue',  alpha = 0.5)) + 
+  labs(x = "Insulin", y = "BL BMI", color = "", alpha = 'Transperency') +
+  scale_color_manual(labels = c( "Predicted", "Real"), values = c("blue", "red"))
+
+```
+
+This looks suspiciously good. DOnt trust it. 
+
+```{r}
+# Import library for Metrics
+##     precision, recall
+print(paste0('MAE: ' , mae(result$actual_BL_BMI,predictions) ))
+print(paste0('MSE: ' ,caret::postResample(predictions , result$actual_BL_BMI)['RMSE']^2 ))
+print(paste0('R2: ' ,caret::postResample(predictions , result$actual_BL_BMI)['Rsquared'] ))
+```
+
+
+```{r}
 # predict(svmFit, newdata = testDescr)[1:5]
 # models <- list(svm = svmFit,
 #                gbm = gbmFit)
