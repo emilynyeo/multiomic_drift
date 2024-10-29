@@ -1,0 +1,54 @@
+---
+title: "4.RF_KO_func_aim1"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, compositions,
+               jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
+               treeshap, Metrics, randomForest, xgboost, Ckmeans.1d.dp, caret,
+               SHAPforxgboost, doParallel, parallel, tibble, Boruta)
+```
+
+# Read in Data
+
+```{r}
+# KO pahthway abundance file
+KO_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1"
+path_test <- read.csv(paste(KO_dir, "path_bl_clr_testing.csv", sep = "/")) %>% 
+             dplyr::select(-c(X, SampleID))
+path_train <- read.csv(paste(KO_dir, "path_bl_clr_training.csv", sep = "/")) %>% 
+              dplyr::select(-c(X, SampleID))
+
+# meta
+m1_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim1"
+test <- read.csv(paste(m1_dir, "test_samples_standard_clinical.csv", sep = "/"))
+train <- read.csv(paste(m1_dir, "train_samples_standard_clinical.csv", sep = "/"))
+
+# Merge 
+test <- test %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+train <- train %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+
+train_path <- merge(path_train, 
+                   train, 
+                   by.x = "bl_samples", 
+                   by.y = "record_id")
+
+test_path <- merge(path_test, 
+                  test, 
+                   by.x = "bl_samples", 
+                  by.y = "record_id")
+
+rm(path_test, path_train, test, train)
+```
+
+
+
+

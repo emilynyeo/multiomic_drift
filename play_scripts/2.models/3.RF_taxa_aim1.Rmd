@@ -27,16 +27,23 @@ train <- read.csv(paste(m1_dir, "train_samples_standard_clinical.csv", sep = "/"
 # Merge 
 test <- test %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
 train <- train %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
-train_tax <- merge(BL_clr_species_train, train, 
-                   by.x = "bl_samples", by.y = "record_id")
-test_tax <- merge(BL_clr_species_test, test, 
-                   by.x = "bl_samples", by.y = "record_id")
+
+train_tax <- merge(BL_clr_species_train, 
+                   train, 
+                   by.x = "bl_samples", 
+                   by.y = "record_id")
+
+test_tax <- merge(BL_clr_species_test, 
+                  test, 
+                   by.x = "bl_samples", 
+                  by.y = "record_id")
+
 rm(BL_clr_species_test, BL_clr_species_train, test, train)
 ```
 
 ```{r}
-cl <- makeCluster(detectCores() - 4)  # Leave one core free
-registerDoParallel(cl)
+#cl <- makeCluster(detectCores() - 4)  # Leave one core free
+#registerDoParallel(cl)
 ```
 
 Tutorials:
@@ -218,6 +225,7 @@ Plot top 20 features selected by boost
 ### Boruta
 
 ```{r}
+library(Boruta)
 xgb.boruta=Boruta(train_tax[3:267],
                   y=train_tax$outcome_BMI_fnl_BL,
                   pValue = 0.01,
