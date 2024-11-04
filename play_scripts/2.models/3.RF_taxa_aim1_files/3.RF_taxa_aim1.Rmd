@@ -91,7 +91,8 @@ RF1_Imp_df <- data.frame(Variable = rownames(RF1_Imp$importance),
 # Sort by importance and select the top 30
 top_30_imp <- RF1_Imp_df[order(-RF1_Imp_df$Importance), ][1:30, , drop = FALSE]
 
-ggplot(top_30_imp, aes(x = reorder(Variable, Importance), y = Importance)) +
+ggplot(top_30_imp, 
+    aes(x = reorder(Variable, Importance), y = Importance)) +
     geom_bar(stat = "identity") +
     coord_flip() +
     labs(x = "Variables", y = "Importance", 
@@ -347,4 +348,43 @@ print(opt.rf2)
 
 
 ## Decide on best model 
+
+```{r}
+# List of models and their names for easy referencing
+models <- list(
+  rf = RF1,
+  xgb = xgb.mod
+)
+# Loop through each model
+for (model_name in names(models)) {
+  model <- models[[model_name]]
+  # Get predictions
+  test_predictions <- predict(model, newdata = test_tax)
+  # Calculate performance metrics
+  metrics <- postResample(test_predictions, test_tax$outcome_BMI_fnl_BL)
+  # Print performance metrics
+  cat("\nPerformance Metrics for", model_name, ":\n")
+  print(metrics)
+  # Create a data frame for predicted vs observed
+  pred_obs <- data.frame(predicted = test_predictions, 
+                         observed = test_tax$outcome_BMI_fnl_BL)
+  
+  # Create the plot
+  p <- ggplot(data = pred_obs, aes(x = predicted, y = observed)) + 
+    geom_point(size = 5, color = "orange") + 
+    xlab("Predicted BL BMI") + 
+    ylab("Observed BL BMI") +
+    lims(x = c(0, 5), y = c(0, 5)) + 
+    geom_abline(linetype = 5, color = "blue", size = 1) + # Perfect fit line
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          panel.background = element_blank()) +
+    ggtitle(paste("Predicted vs Observed for", model_name)) + # Add a title
+    # Add annotations for performance metrics
+    annotate("text", x = 4.5, y = 4.5, 
+             label = paste("RMSE:", round(metrics[1], 2), "\nR-squared:", round(metrics[2], 2)),
+             hjust = 1, vjust = 1, size = 5, color = "black", 
+             fontface = "bold", bg = "lightgrey") # Adjust positioning as needed
+  print(p)
+}
+```
 
