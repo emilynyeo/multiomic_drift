@@ -74,6 +74,7 @@ RF1 <- train(outcome_BMI_fnl_BL ~ ., data = train_tax[3:268],
                  verbose = TRUE)
 
 RF1
+RF1[["finalModel"]]
 ```
 
 ```{r}
@@ -203,6 +204,7 @@ xgb.mod=xgboost(data = train_matrix,
                 eval_metric="rmse", 
                 nrounds=xgb.crv$best_iteration, 
                 objective="reg:squarederror")
+print(xgb.mod)
 ```
 
 xgBoost feature selection
@@ -306,44 +308,44 @@ print(xgb.boruta)
 ```
 
 ```{r}
-opt.vars1 <- getSelectedAttributes(xgb.boruta, withTentative = T)
-opt.vars2 <- getSelectedAttributes(xgb.boruta, withTentative = F)
-
-train.min1 <- train_tax %>% dplyr::select(one_of(opt.vars1), outcome_BMI_fnl_BL)
-train.min2 <- train_tax %>% dplyr::select(one_of(opt.vars2), outcome_BMI_fnl_BL)
-
-opt.rf1<- randomForest(outcome_BMI_fnl_BL~., data=train.min1)
-opt.rf2<- randomForest(outcome_BMI_fnl_BL~., data=train.min2)
-
-imp.vars1<- opt.rf1$importance %>%
-  as.data.frame()%>%
-  #arrange(-MeanDecreaseGini) %>%
-  rownames_to_column('Variable')
-
-imp.vars2<- opt.rf2$importance %>%
-  as.data.frame()%>%
-  #arrange(-MeanDecreaseGini) %>%
-  rownames_to_column('Variable')
-
-post.test1<- postResample(predict(opt.rf1, test_tax[3:268]), test_tax$outcome_BMI_fnl_BL)
-post.test2<- postResample(predict(opt.rf2, test_tax[3:268]), test_tax$outcome_BMI_fnl_BL)
-
-err.1 <- opt.rf1$err.rate[nrow(opt.rf1$err.rate),]
-err.2 <- opt.rf2$err.rate[nrow(opt.rf2$err.rate),]
-
-output.bor<- data.frame(y='outcome_BMI_fnl_BL', 
-                        #time=time_pt,
-                        Variables1 =length(opt.vars1),
-                        t(data.frame(err.1)), 
-                        t(data.frame(post.test1)),
-Variables2 = length(opt.vars2), 
-             t(data.frame(err.2)), 
-             t(data.frame(post.test2)),
-             optvars1=paste(opt.vars1, collapse=', '),
-             optvars2=paste(opt.vars2, collapse=', '))
-
-print(opt.rf1)
-print(opt.rf2)
+# opt.vars1 <- getSelectedAttributes(xgb.boruta, withTentative = T)
+# opt.vars2 <- getSelectedAttributes(xgb.boruta, withTentative = F)
+# 
+# train.min1 <- train_tax %>% dplyr::select(one_of(opt.vars1), outcome_BMI_fnl_BL)
+# train.min2 <- train_tax %>% dplyr::select(one_of(opt.vars2), outcome_BMI_fnl_BL)
+# 
+# opt.rf1<- randomForest(outcome_BMI_fnl_BL~., data=train.min1)
+# opt.rf2<- randomForest(outcome_BMI_fnl_BL~., data=train.min2)
+# 
+# imp.vars1<- opt.rf1$importance %>%
+#   as.data.frame()%>%
+#   #arrange(-MeanDecreaseGini) %>%
+#   rownames_to_column('Variable')
+# 
+# imp.vars2<- opt.rf2$importance %>%
+#   as.data.frame()%>%
+#   #arrange(-MeanDecreaseGini) %>%
+#   rownames_to_column('Variable')
+# 
+# post.test1<- postResample(predict(opt.rf1, test_tax[3:268]), test_tax$outcome_BMI_fnl_BL)
+# post.test2<- postResample(predict(opt.rf2, test_tax[3:268]), test_tax$outcome_BMI_fnl_BL)
+# 
+# err.1 <- opt.rf1$err.rate[nrow(opt.rf1$err.rate),]
+# err.2 <- opt.rf2$err.rate[nrow(opt.rf2$err.rate),]
+# 
+# output.bor<- data.frame(y='outcome_BMI_fnl_BL', 
+#                         #time=time_pt,
+#                         Variables1 =length(opt.vars1),
+#                         t(data.frame(err.1)), 
+#                         t(data.frame(post.test1)),
+# Variables2 = length(opt.vars2), 
+#              t(data.frame(err.2)), 
+#              t(data.frame(post.test2)),
+#              optvars1=paste(opt.vars1, collapse=', '),
+#              optvars2=paste(opt.vars2, collapse=', '))
+# 
+# print(opt.rf1)
+# print(opt.rf2)
 ```
 
 
@@ -351,40 +353,40 @@ print(opt.rf2)
 
 ```{r}
 # List of models and their names for easy referencing
-models <- list(
-  rf = RF1,
-  xgb = xgb.mod
-)
-# Loop through each model
-for (model_name in names(models)) {
-  model <- models[[model_name]]
-  # Get predictions
-  test_predictions <- predict(model, newdata = test_tax)
-  # Calculate performance metrics
-  metrics <- postResample(test_predictions, test_tax$outcome_BMI_fnl_BL)
-  # Print performance metrics
-  cat("\nPerformance Metrics for", model_name, ":\n")
-  print(metrics)
-  # Create a data frame for predicted vs observed
-  pred_obs <- data.frame(predicted = test_predictions, 
-                         observed = test_tax$outcome_BMI_fnl_BL)
-  
-  # Create the plot
-  p <- ggplot(data = pred_obs, aes(x = predicted, y = observed)) + 
-    geom_point(size = 5, color = "orange") + 
-    xlab("Predicted BL BMI") + 
-    ylab("Observed BL BMI") +
-    lims(x = c(0, 5), y = c(0, 5)) + 
-    geom_abline(linetype = 5, color = "blue", size = 1) + # Perfect fit line
-    theme(panel.border = element_rect(colour = "black", fill = NA),
-          panel.background = element_blank()) +
-    ggtitle(paste("Predicted vs Observed for", model_name)) + # Add a title
-    # Add annotations for performance metrics
-    annotate("text", x = 4.5, y = 4.5, 
-             label = paste("RMSE:", round(metrics[1], 2), "\nR-squared:", round(metrics[2], 2)),
-             hjust = 1, vjust = 1, size = 5, color = "black", 
-             fontface = "bold", bg = "lightgrey") # Adjust positioning as needed
-  print(p)
-}
+# models <- list(
+#   rf = RF1,
+#   xgb = xgb.mod
+# )
+# # Loop through each model
+# for (model_name in names(models)) {
+#   model <- models[[model_name]]
+#   # Get predictions
+#   test_predictions <- predict(model, newdata = test_tax)
+#   # Calculate performance metrics
+#   metrics <- postResample(test_predictions, test_tax$outcome_BMI_fnl_BL)
+#   # Print performance metrics
+#   cat("\nPerformance Metrics for", model_name, ":\n")
+#   print(metrics)
+#   # Create a data frame for predicted vs observed
+#   pred_obs <- data.frame(predicted = test_predictions, 
+#                          observed = test_tax$outcome_BMI_fnl_BL)
+#   
+#   # Create the plot
+#   p <- ggplot(data = pred_obs, aes(x = predicted, y = observed)) + 
+#     geom_point(size = 5, color = "orange") + 
+#     xlab("Predicted BL BMI") + 
+#     ylab("Observed BL BMI") +
+#     lims(x = c(0, 5), y = c(0, 5)) + 
+#     geom_abline(linetype = 5, color = "blue", size = 1) + # Perfect fit line
+#     theme(panel.border = element_rect(colour = "black", fill = NA),
+#           panel.background = element_blank()) +
+#     ggtitle(paste("Predicted vs Observed for", model_name)) + # Add a title
+#     # Add annotations for performance metrics
+#     annotate("text", x = 4.5, y = 4.5, 
+#              label = paste("RMSE:", round(metrics[1], 2), "\nR-squared:", round(metrics[2], 2)),
+#              hjust = 1, vjust = 1, size = 5, color = "black", 
+#              fontface = "bold", bg = "lightgrey") # Adjust positioning as needed
+#   print(p)
+# }
 ```
 

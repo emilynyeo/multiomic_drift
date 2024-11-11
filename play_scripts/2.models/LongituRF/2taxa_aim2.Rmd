@@ -1,0 +1,231 @@
+---
+title: "2.taxa_aim2"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(knitr, data.table, dplyr, tidyr,readxl,
+               readr, car, LongituRF)
+```
+
+## Load Taxa Data 
+```{r}
+t_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/"
+tax_test <- read.csv(paste(t_dir, "genus/aim2_clr_testing.csv", sep = "/"))
+tax_train <- read.csv(paste(t_dir, "genus/aim2_clr_testing.csv", sep = "/"))
+tax_full <- read.csv(paste(t_dir, "genus/clr_taxa_all.csv", sep = "/"))
+
+m1_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2"
+test <- read.csv(paste(m1_dir, "a2_test_samples_standard_clinical.csv", sep = "/"))
+train <- read.csv(paste(m1_dir, "a2_train_samples_standard_clinical.csv", sep = "/"))
+full <- read.csv(paste(m1_dir, "a2_meta_Transformed_standard_clinical.csv", sep = "/"))
+full_raw <- read.csv(paste(m1_dir, "a2_meta_not_Transformed_standard_clinical.csv", sep = "/"))
+
+# change names 
+tax_full_t <- tax_full %>%
+  separate(X, remove=FALSE, sep="\\.", into=c('character_id','timepoint'))
+
+tax_full_t$t <- ifelse(tax_full_t$timepoint == 'BL', 0, 
+                               ifelse(tax_full_t$timepoint =='3m', 3,
+                                      ifelse(tax_full_t$timepoint == '6m', 6,
+                                             ifelse(tax_full_t$timepoint == '12m', 12, 18))))
+
+tax_full_t <- tax_full_t %>%
+  mutate(x_t = paste(character_id, t, sep = "."))
+
+tax <- tax_full_t %>% 
+       filter(!t == 3) %>% 
+       filter(!t == 18) %>% 
+       dplyr::select(-c(t, timepoint, character_id, X))
+
+rm(tax_full, tax_full_t)
+
+# Make meta long 
+full_long <- full_raw %>%
+  pivot_longer(
+    cols = ends_with(c("BL", "6m", "12m")),  # Select columns that end with BL, 6m, or 12m
+    names_to = c(".value", "time"),          # 2 new cols: .value for measurement types & time points
+    names_pattern = "(.+)_(BL|6m|12m)") %>%  # Regex to separate measurement type and time point
+  mutate(
+    time = case_when(
+      time == "BL" ~ 0,
+      time == "6m" ~ 6,
+      time == "12m" ~ 12,
+      TRUE ~ as.numeric(time)  # In case there are any unexpected values
+    ))
+
+# Make a meta name to match X
+full_long <- full_long %>%
+  mutate(x_t = paste(subject_id, time, sep = "."))
+
+# Merge 
+full <- merge(tax, full_long, by = "x_t")
+test <- test %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+train <- train %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+
+train_tax <- merge(tax_train, 
+                   train, 
+                   by.x = "all_samples", 
+                   by.y = "record_id")
+
+test_tax <- merge(tax_test, 
+                  test, 
+                   by.x = "all_samples", 
+                  by.y = "record_id")
+
+rm(full_raw, tax, tax_test, tax_train, test, train)
+```
+
+### Remove NAs and filter for time 
+```{r}
+# Looking at NAs
+# Find rows with NA values in any column
+rows_with_na <- which(apply(full, 1, function(row) any(is.na(row))))
+na_record_ids <- full[rows_with_na, "record_id"]
+unique(na_record_ids)
+missing <- full %>% filter(record_id %in% na_record_ids)
+full_no_na <- full %>% filter(!record_id %in% na_record_ids)
+rm(missing, full)
+
+demo_train <- full %>% filter(time < 12)
+demo_test <- full %>% filter(time == 12)
+```
+
+## Start Long RF
+```{r}
+# the predictors you want 
+X <- 
+  demo_train %>% 
+  dplyr::select(-time,-x_t, -X,-record_id,-subject_id, -outcome_BMI_fnl, -all_samples,
+    -age,-sex, -race,-Glucose, -HOMA_IR, -Insulin_endo,-HDL_Total_Direct_lipid,-LDL_Calculated, -Triglyceride_lipid) 
+
+list_dat <- 
+  list(
+    X = X, # predictors, level1 and level2
+    Y = as.numeric(pull(demo_train, outcome_BMI_fnl)), # outcome
+    # id variables for each unique school
+    id = as.numeric(pull(demo_train, record_id)), 
+    # random effects (I'm using only a random intercept)
+    Z = as.matrix(rep(1, nrow(demo_train))), 
+    # years where wave 1 = 0, wave 2 = 1, wave 3 = 2
+    time = as.numeric(pull(demo_train, time)))
+```
+
+# MERT, REEMtree & MERF
+```{r}
+mert1 <- 
+  MERT(
+    X = data.frame(list_dat$X),
+    Y = list_dat$Y,
+    id = list_dat$id,
+    Z = list_dat$Z,
+    time = list_dat$time,
+    sto = 'OrnUhl', # Ornstein–Uhlenbeck
+    #iter = 100, 
+    #delta = 0.001)
+  )
+
+# REEMtree
+reemtree1 <- 
+  REEMtree(
+    X = data.frame(list_dat$X),
+    Y = list_dat$Y,
+    id = list_dat$id,
+    Z = list_dat$Z,
+    time = list_dat$time,
+    sto = 'OrnUhl',
+    #iter = 100,
+    #delta = 0.001
+  )
+
+# MERF
+merf1 <- 
+  MERF(
+    X = data.frame(list_dat$X),
+    Y = list_dat$Y,
+    id = list_dat$id,
+    Z = list_dat$Z,
+    time = list_dat$time,
+    sto = 'OrnUhl',
+    #iter = 100,
+    #delta = 0.001
+    #mtry = ceiling(ncol(data.frame(list_dat$X))/3),
+    #ntree = 500
+  )
+```
+```{r}
+plot(merf1$Vraisemblance)
+plot(mert1$Vraisemblance)
+plot(reemtree1$Vraisemblance)
+```
+
+### Prep test data
+
+I don't really get the filter part. 
+```{r}
+X_test <- 
+  demo_test %>% 
+  filter(record_id %in% merf1$id) %>% 
+  dplyr::select(-time,-x_t, -X,-record_id, -subject_id,
+    -outcome_BMI_fnl,-all_samples, -age, -sex, -race, -Glucose, -HOMA_IR,
+    -Insulin_endo, -HDL_Total_Direct_lipid, -LDL_Calculated, -Triglyceride_lipid)
+
+list_test <- 
+  list(
+    X = X_test,
+    Y = as.numeric(demo_test %>% filter(record_id %in% merf1$id) %>% pull(outcome_BMI_fnl)),
+    id = as.numeric(demo_test %>% filter(record_id %in% merf1$id) %>% pull(record_id)),
+    Z = as.matrix(rep(1, nrow(demo_test))), 
+    time = demo_test %>% filter(record_id %in% merf1$id) %>% pull(time))
+```
+
+
+The native prediction function from LongituRF removed the predictions for cases that weren’t observed in the data (i.e., schools which didn’t report data before 2018). For that reason, I made the fixed_prediction_function() (below) that creates a data frame of predictions for all cases. The way we predict cases that are new is simply with the fixed effects.
+
+```{r}
+fixed_prediction_function <- 
+  function(object, X, id, Z, time, new_df, id_var_name, ...)
+  {
+  `%notin%` <- Negate(`%in%`)
+  if("tidyverse" %notin% (.packages())){suppressMessages(library(tidyverse))}
+  
+  preds_existing <- 
+    predict(
+      object = object,
+      X = X,
+      id = id,
+      Z = Z,
+      time = time)
+  
+  temp <- 
+    new_df %>% 
+    filter({{id_var_name}} %notin% object$id) %>% 
+    mutate(predictions = predict(object = object$forest, newdata = .))
+  
+  final_df <- 
+    new_df %>% 
+    filter({{id_var_name}} %in% object$id) %>% 
+    mutate(predictions = preds_existing) %>% 
+    bind_rows(temp) %>% 
+    select(record_id, predictions)
+  return(final_df)
+}
+```
+
+### First using MERT 
+```{r}
+predictions_mert_df <- 
+  fixed_prediction_function(
+    object = mert1,
+    X = data.frame(list_test$X),
+    id = list_test$id,
+    Z = list_test$Z,
+    time = list_test$time, 
+    new_df = demo_test,
+    id_var_name = record_id)
+
+compare_mert <- cbind(predictions_mert_df, demo_test, by = "record_id")
+cor(compare_mert$predictions, compare_mert$outcome_BMI_fnl)^2
