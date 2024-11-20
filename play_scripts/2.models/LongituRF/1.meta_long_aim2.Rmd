@@ -41,10 +41,12 @@ missing <- full_long %>% filter(record_id %in% na_record_ids$record_id)
 full_no_na <- full_long %>% filter(!record_id %in% na_record_ids$record_id)
 ```
 
-
+Does it allow you to have different number of repeated observations across individuals?
+If so, I wonder if you could include all timepoints for the training data and only BL for the test set.?
+ 
 ```{r}
-demo_train <- full_no_na %>% filter(time < 12)
-demo_test <- full_no_na %>% filter(time == 12)
+demo_train <- full_no_na #%>% filter(time < 12)
+demo_test <- full_no_na %>% filter(time == 0)
 ```
 
 # Long RF {.tabset}
@@ -52,6 +54,16 @@ demo_test <- full_no_na %>% filter(time == 12)
  Nice Tutorial to Follow 
 
 https://www.christopherloan.com/blog/running-longitudinal-random-forests-with-longiturf/
+
+Could try Python:
+https://github.com/manifoldai/merf
+
+In the algorithm you're describing, it seems to be an EM (Expectation-Maximization)-like method, iterating between:
+- Estimating fixed effects (likely via tree-based methods).
+- Estimating random effects and a mean behavior function f.
+The algorithm iterates between these steps, updating the estimates of the model parameters each time. The process continues until convergence is reached, meaning:
+
+The estimates of the model parameters (like Z and ω, which might represent random effects or latent variables) are no longer changing significantly.The mean behavior function ff stabilizes, and the likelihood function stops improving (or stops improving beyond a very small margin).
 
 ## Set up meta 
 

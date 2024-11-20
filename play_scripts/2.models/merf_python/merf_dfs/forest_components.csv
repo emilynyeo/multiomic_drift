@@ -1,0 +1,102 @@
+,0
+estimator,DecisionTreeRegressor()
+n_estimators,100
+estimator_params,"('criterion', 'max_depth', 'min_samples_split', 'min_samples_leaf', 'min_weight_fraction_leaf', 'max_features', 'max_leaf_nodes', 'min_impurity_decrease', 'random_state', 'ccp_alpha', 'monotonic_cst')"
+bootstrap,True
+oob_score,True
+n_jobs,-1
+random_state,
+verbose,0
+warm_start,False
+class_weight,
+max_samples,
+criterion,squared_error
+max_depth,
+min_samples_split,2
+min_samples_leaf,1
+min_weight_fraction_leaf,0.0
+max_features,1.0
+max_leaf_nodes,
+min_impurity_decrease,0.0
+ccp_alpha,0.0
+monotonic_cst,
+n_features_in_,10
+_n_samples,291
+n_outputs_,1
+_n_samples_bootstrap,291
+estimator_,DecisionTreeRegressor()
+estimators_,"[DecisionTreeRegressor(max_features=1.0, random_state=894185000), DecisionTreeRegressor(max_features=1.0, random_state=442526471), DecisionTreeRegressor(max_features=1.0, random_state=112093332), DecisionTreeRegressor(max_features=1.0, random_state=55321130), DecisionTreeRegressor(max_features=1.0, random_state=1243511435), DecisionTreeRegressor(max_features=1.0, random_state=1309840268), DecisionTreeRegressor(max_features=1.0, random_state=2114709149), DecisionTreeRegressor(max_features=1.0, random_state=1615390872), DecisionTreeRegressor(max_features=1.0, random_state=1960485119), DecisionTreeRegressor(max_features=1.0, random_state=311738643), DecisionTreeRegressor(max_features=1.0, random_state=1554532505), DecisionTreeRegressor(max_features=1.0, random_state=488031834), DecisionTreeRegressor(max_features=1.0, random_state=457257480), DecisionTreeRegressor(max_features=1.0, random_state=1750493949), DecisionTreeRegressor(max_features=1.0, random_state=1887016480), DecisionTreeRegressor(max_features=1.0, random_state=1197769354), DecisionTreeRegressor(max_features=1.0, random_state=1185467745), DecisionTreeRegressor(max_features=1.0, random_state=1989809021), DecisionTreeRegressor(max_features=1.0, random_state=1120044403), DecisionTreeRegressor(max_features=1.0, random_state=19022219), DecisionTreeRegressor(max_features=1.0, random_state=1403480266), DecisionTreeRegressor(max_features=1.0, random_state=590283207), DecisionTreeRegressor(max_features=1.0, random_state=438832490), DecisionTreeRegressor(max_features=1.0, random_state=895357631), DecisionTreeRegressor(max_features=1.0, random_state=1796783779), DecisionTreeRegressor(max_features=1.0, random_state=1358902784), DecisionTreeRegressor(max_features=1.0, random_state=1658578185), DecisionTreeRegressor(max_features=1.0, random_state=1910463370), DecisionTreeRegressor(max_features=1.0, random_state=1894245360), DecisionTreeRegressor(max_features=1.0, random_state=2114237344), DecisionTreeRegressor(max_features=1.0, random_state=1082067305), DecisionTreeRegressor(max_features=1.0, random_state=1526355132), DecisionTreeRegressor(max_features=1.0, random_state=598924950), DecisionTreeRegressor(max_features=1.0, random_state=54788249), DecisionTreeRegressor(max_features=1.0, random_state=718915450), DecisionTreeRegressor(max_features=1.0, random_state=307569709), DecisionTreeRegressor(max_features=1.0, random_state=689467764), DecisionTreeRegressor(max_features=1.0, random_state=135479446), DecisionTreeRegressor(max_features=1.0, random_state=2053844600), DecisionTreeRegressor(max_features=1.0, random_state=1102208640), DecisionTreeRegressor(max_features=1.0, random_state=1509341037), DecisionTreeRegressor(max_features=1.0, random_state=1529464713), DecisionTreeRegressor(max_features=1.0, random_state=381145604), DecisionTreeRegressor(max_features=1.0, random_state=1426007874), DecisionTreeRegressor(max_features=1.0, random_state=16375538), DecisionTreeRegressor(max_features=1.0, random_state=237910347), DecisionTreeRegressor(max_features=1.0, random_state=918585108), DecisionTreeRegressor(max_features=1.0, random_state=922932167), DecisionTreeRegressor(max_features=1.0, random_state=812130241), DecisionTreeRegressor(max_features=1.0, random_state=971559430), DecisionTreeRegressor(max_features=1.0, random_state=552743870), DecisionTreeRegressor(max_features=1.0, random_state=1930574346), DecisionTreeRegressor(max_features=1.0, random_state=1797434617), DecisionTreeRegressor(max_features=1.0, random_state=655342465), DecisionTreeRegressor(max_features=1.0, random_state=2048772204), DecisionTreeRegressor(max_features=1.0, random_state=1561755638), DecisionTreeRegressor(max_features=1.0, random_state=408565996), DecisionTreeRegressor(max_features=1.0, random_state=1806738583), DecisionTreeRegressor(max_features=1.0, random_state=596511534), DecisionTreeRegressor(max_features=1.0, random_state=555744919), DecisionTreeRegressor(max_features=1.0, random_state=1888425226), DecisionTreeRegressor(max_features=1.0, random_state=1304927525), DecisionTreeRegressor(max_features=1.0, random_state=892712412), DecisionTreeRegressor(max_features=1.0, random_state=1827215573), DecisionTreeRegressor(max_features=1.0, random_state=1960320720), DecisionTreeRegressor(max_features=1.0, random_state=1902640978), DecisionTreeRegressor(max_features=1.0, random_state=120721021), DecisionTreeRegressor(max_features=1.0, random_state=22668117), DecisionTreeRegressor(max_features=1.0, random_state=1776562784), DecisionTreeRegressor(max_features=1.0, random_state=118195279), DecisionTreeRegressor(max_features=1.0, random_state=13705891), DecisionTreeRegressor(max_features=1.0, random_state=1629227155), DecisionTreeRegressor(max_features=1.0, random_state=299755065), DecisionTreeRegressor(max_features=1.0, random_state=2049413036), DecisionTreeRegressor(max_features=1.0, random_state=1419369380), DecisionTreeRegressor(max_features=1.0, random_state=886057210), DecisionTreeRegressor(max_features=1.0, random_state=1646561419), DecisionTreeRegressor(max_features=1.0, random_state=344676720), DecisionTreeRegressor(max_features=1.0, random_state=2052503079), DecisionTreeRegressor(max_features=1.0, random_state=601835194), DecisionTreeRegressor(max_features=1.0, random_state=1117563038), DecisionTreeRegressor(max_features=1.0, random_state=1051006946), DecisionTreeRegressor(max_features=1.0, random_state=1072901901), DecisionTreeRegressor(max_features=1.0, random_state=1809371207), DecisionTreeRegressor(max_features=1.0, random_state=429954005), DecisionTreeRegressor(max_features=1.0, random_state=1316641272), DecisionTreeRegressor(max_features=1.0, random_state=1444436622), DecisionTreeRegressor(max_features=1.0, random_state=1540713473), DecisionTreeRegressor(max_features=1.0, random_state=272687236), DecisionTreeRegressor(max_features=1.0, random_state=128092009), DecisionTreeRegressor(max_features=1.0, random_state=274052363), DecisionTreeRegressor(max_features=1.0, random_state=1329129435), DecisionTreeRegressor(max_features=1.0, random_state=257242966), DecisionTreeRegressor(max_features=1.0, random_state=892820666), DecisionTreeRegressor(max_features=1.0, random_state=287385104), DecisionTreeRegressor(max_features=1.0, random_state=664225270), DecisionTreeRegressor(max_features=1.0, random_state=861753371), DecisionTreeRegressor(max_features=1.0, random_state=476226806), DecisionTreeRegressor(max_features=1.0, random_state=917244600), DecisionTreeRegressor(max_features=1.0, random_state=1475395295)]"
+oob_prediction_,"[-5.83080416e-02 -2.54066452e-01 -3.70743249e-01  6.34214865e-02
+ -6.58427665e-01 -1.41255493e-01 -4.19850255e-01 -4.51221089e-01
+ -3.42693616e-01  2.25448716e-01 -3.77849372e-01  7.86014894e-02
+  4.48083899e-02  1.34808322e-01  1.29994788e-02  2.50975294e-01
+  4.10035223e-01  1.78187162e-01 -8.15348043e-02 -2.41109603e-01
+ -4.48883854e-01 -2.05019034e-01  4.92009103e-02 -1.08327332e-01
+ -2.74419719e-01 -1.47216114e-01 -1.78010269e-01 -2.60456046e-01
+ -6.18148820e-01 -4.38998958e-02  2.69175907e-01  2.62976209e-01
+  1.67828025e-01 -2.62570107e-01 -6.11726882e-01 -1.72508420e-01
+ -3.03813396e-01  1.91933382e-01 -3.76503566e-02 -4.57840404e-01
+ -4.60117813e-02  1.92377360e-01 -2.79106707e-01 -2.12732578e-01
+  9.48355824e-02  2.60581242e-01 -3.47738317e-02 -3.15357159e-01
+ -5.40791669e-01 -3.36620666e-01 -4.24819034e-01 -4.41583719e-02
+  2.04909086e-01 -1.95347807e-01  2.60869223e-01  1.59397106e-02
+ -1.52717562e-01 -4.95344297e-01 -4.19573913e-01 -4.77772966e-01
+ -3.46365785e-01 -1.82000367e-01 -3.08326564e-01  3.28104695e-02
+  8.84020766e-02  2.04659252e-01 -3.21901989e-01 -1.34295092e-01
+ -2.48820576e-01 -1.96418616e-01  5.38253854e-02  1.98184793e-01
+  2.81976242e-01  3.56165697e-01 -1.80357391e-01  2.32318622e-01
+  1.79958780e-01  8.50980255e-02 -6.04912048e-01 -2.25047028e-01
+ -3.36740535e-01 -2.51005918e-01 -1.74843487e-01  5.21131966e-02
+ -3.00541426e-01 -1.20394808e-01 -1.45129476e-01  2.27696600e-01
+  2.04589366e-01  1.96024833e-01 -4.35043122e-01 -3.29982911e-01
+ -1.97763229e-01  1.44500743e-01  1.38087284e-01 -6.83602413e-02
+ -4.87062310e-01 -4.78917762e-01 -4.34587249e-01 -5.02154988e-01
+ -5.47778786e-01 -2.81592548e-01  2.58040398e-01 -5.42247226e-01
+ -1.97812710e-01  2.20451390e-01  2.56582309e-01  2.83587117e-01
+  1.82763706e-01  2.96028985e-01  3.06603903e-01  3.27201662e-01
+  3.72900973e-01  2.98054586e-01 -2.60132456e-01 -3.12445176e-01
+ -3.28699421e-01 -3.61400297e-01 -5.21458523e-01 -3.98125128e-01
+  8.77686871e-02 -4.57638632e-01 -6.15937151e-02 -2.69986510e-01
+  1.19352073e-01  3.40912652e-02 -3.54529140e-01 -1.00340618e-01
+ -1.69614899e-01 -1.40730599e-01 -8.42312541e-02  1.04951716e-01
+ -2.47506847e-01 -1.67678676e-01 -4.28673062e-01 -1.48257432e-01
+ -3.58949983e-01 -1.78059081e-01 -8.18937033e-03 -2.84617606e-01
+ -1.85426578e-01 -4.07395544e-01 -3.24602625e-01 -2.33625929e-01
+ -2.95890535e-01 -2.52167845e-02  1.51575699e-01 -6.13872903e-01
+ -4.21171666e-01 -5.44374363e-01 -4.08357007e-01  1.45914446e-01
+  1.40000694e-01 -5.09196110e-02  2.44021394e-01  2.07951124e-01
+  1.79743203e-01  1.05640671e-01  1.97080323e-03  6.31811145e-02
+  2.16065333e-02  2.10888617e-01  1.72706531e-01 -5.12067659e-01
+ -1.01424220e-01 -1.19841918e-01 -2.27819124e-02 -3.65182219e-01
+ -1.02081685e-01  2.58192569e-01  2.93497358e-01 -3.17549469e-01
+ -5.37852569e-02 -3.65176906e-01  2.56020935e-01  2.20495796e-01
+  2.08959219e-01  2.15301427e-01  1.50396510e-01  1.92213498e-01
+ -2.02104616e-01 -6.04189260e-02 -3.61444921e-01 -6.12893989e-01
+  9.28439103e-02 -6.02529581e-02  2.00153451e-01  1.07228331e-01
+  3.09906503e-01  1.63211148e-01  1.43828541e-01  2.71157966e-01
+ -2.37263761e-01 -3.70950825e-01  1.57777450e-01  1.48097514e-01
+ -1.98968445e-01 -5.15425833e-04  2.47948835e-01  2.04541064e-01
+  1.65344843e-01  9.57501779e-02 -3.23713612e-02 -1.85002841e-01
+  1.62124975e-01  2.32690491e-01  1.54930425e-01 -1.34162703e-01
+  7.36137491e-02 -3.72254983e-01  1.36242277e-01  8.28044902e-02
+  1.79089251e-01  2.91616064e-02  2.57548669e-01  1.14732188e-01
+  2.62894676e-01 -3.97001100e-01  9.46104937e-02 -6.69626851e-02
+ -2.61237355e-02  1.39257436e-01  4.99452705e-02  1.89518724e-01
+  3.28478949e-01  1.17936307e-01  2.07968451e-01  4.04425994e-02
+  2.46605904e-01  3.02245776e-01  1.87111269e-01  2.47109032e-01
+ -3.07304091e-01 -6.70766605e-01 -7.12908093e-02 -1.07653221e-01
+  5.07847011e-02  1.56398973e-01 -6.57082064e-02  2.69061587e-01
+ -2.83042428e-01 -1.14988145e-01 -3.58954805e-01 -1.67392244e-01
+  1.48676333e-01  2.31046485e-01  2.51166827e-01  2.76928249e-01
+  2.52308117e-01 -3.89120548e-02 -7.57686877e-02 -2.53719550e-01
+  3.65506735e-02  1.72807569e-02  1.14980345e-01  3.38490782e-01
+  1.69980822e-01  1.99026824e-01 -4.68117879e-01 -3.56760500e-01
+ -6.02491886e-01 -1.20452060e-01 -3.35774847e-01 -3.62010910e-01
+ -1.66228246e-01 -3.20746795e-01 -3.24624984e-01 -8.50510524e-02
+ -1.66963223e-01 -2.61006011e-01 -3.72358109e-01 -3.91107405e-01
+ -5.78676711e-01 -1.45511481e-01  1.42192091e-01 -1.13572974e-01
+ -4.54412860e-01 -1.98307651e-01 -4.71779968e-01 -1.55954196e-01
+ -4.52725635e-01 -5.53820018e-01 -5.96842577e-01 -3.39939141e-01
+ -2.99922629e-01  1.38554396e-01 -2.20577441e-01 -1.63614493e-01
+  3.08953799e-01 -4.28635975e-01 -5.41498356e-01]"
+oob_score_,0.3994357630749893

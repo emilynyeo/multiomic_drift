@@ -4,6 +4,7 @@ author: "Emily Yeo"
 date: "`r Sys.Date()`"
 output: html_document
 ---
+# https://www.quantargo.com/help/r/latest/packages/LongituRF/0.9
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -11,41 +12,14 @@ pacman::p_load(knitr, data.table, dplyr, tidyr,readxl,
                readr, car, LongituRF)
 ```
 
-## Load Taxa Data 
+## Functions 
 ```{r}
-t_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/"
-tax_test <- read.csv(paste(t_dir, "genus/aim2_clr_testing.csv", sep = "/"))
-tax_train <- read.csv(paste(t_dir, "genus/aim2_clr_testing.csv", sep = "/"))
-tax_full <- read.csv(paste(t_dir, "genus/clr_taxa_all.csv", sep = "/"))
-
-m1_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2"
-test <- read.csv(paste(m1_dir, "a2_test_samples_standard_clinical.csv", sep = "/"))
-train <- read.csv(paste(m1_dir, "a2_train_samples_standard_clinical.csv", sep = "/"))
-full <- read.csv(paste(m1_dir, "a2_meta_Transformed_standard_clinical.csv", sep = "/"))
-full_raw <- read.csv(paste(m1_dir, "a2_meta_not_Transformed_standard_clinical.csv", sep = "/"))
-
-# change names 
-tax_full_t <- tax_full %>%
-  separate(X, remove=FALSE, sep="\\.", into=c('character_id','timepoint'))
-
-tax_full_t$t <- ifelse(tax_full_t$timepoint == 'BL', 0, 
-                               ifelse(tax_full_t$timepoint =='3m', 3,
-                                      ifelse(tax_full_t$timepoint == '6m', 6,
-                                             ifelse(tax_full_t$timepoint == '12m', 12, 18))))
-
-tax_full_t <- tax_full_t %>%
-  mutate(x_t = paste(character_id, t, sep = "."))
-
-tax <- tax_full_t %>% 
-       filter(!t == 3) %>% 
-       filter(!t == 18) %>% 
-       dplyr::select(-c(t, timepoint, character_id, X))
-
-rm(tax_full, tax_full_t)
-
-# Make meta long 
-full_long <- full_raw %>%
-  pivot_longer(
+read_data <- function(path, file) {
+  read.csv(paste(path, file, sep = "/"))
+}
+# Make data long 
+make_long <- function(wide_data) {
+  wide_data %>% pivot_longer(
     cols = ends_with(c("BL", "6m", "12m")),  # Select columns that end with BL, 6m, or 12m
     names_to = c(".value", "time"),          # 2 new cols: .value for measurement types & time points
     names_pattern = "(.+)_(BL|6m|12m)") %>%  # Regex to separate measurement type and time point
@@ -56,62 +30,269 @@ full_long <- full_raw %>%
       time == "12m" ~ 12,
       TRUE ~ as.numeric(time)  # In case there are any unexpected values
     ))
+}
+# Fix time
+fixed_time <- function(data, timepoint_col) {
+  data[[paste0(timepoint_col, "_time")]] <- ifelse(data[[timepoint_col]] == 'BL', 0,
+                                        ifelse(data[[timepoint_col]] == '3m', 3,
+                                               ifelse(data[[timepoint_col]] == '6m', 6,
+                                                      ifelse(data[[timepoint_col]] == '12m', 12, 
+                                                             18))))
+  return(data)
+}
+# Fix time 
+create_t_column <- function(df) {
+  df$t <- ifelse(df$timepoint == 'BL', 0,
+                 ifelse(df$timepoint == '3m', 3,
+                        ifelse(df$timepoint == '6m', 6,
+                               ifelse(df$timepoint == '12m', 12, 18))))
+}
 
-# Make a meta name to match X
-full_long <- full_long %>%
+# Run models 
+train_all_models <- function(x, y, id_col, z, time_col, sto) {
+  list(
+    mert_model = MERT(X = X, Y = y, id = id, Z = z, time = time, sto = sto),
+    reem_model = REEMtree(X = X, Y = y, id = id, Z = z, time = time, sto = sto),
+    merf_model = MERF(X = X, Y = y, id = id, Z = z, time = time, sto = sto))
+}
+
+# Predict RF Long
+pred_synth_data <- function(object, newdata, type = pred_type) {
+  newdata_names <- list(
+    X = c('X1', 'X2', 'X3', 'X4', 'X5', 'X6'),
+    Z = c('Z1', 'Z2'),
+    id = 'id',
+    time = 'time'
+  )
+  
+  LongituRF:::predict.longituRF(
+    object,
+    X    = newdata[newdata_names$X] |> as.matrix() |> unname(),
+    Z    = newdata[newdata_names$Z] |> as.matrix() |> unname(),
+    id   = newdata[[newdata_names$id]],  # vector 
+    time = newdata[[newdata_names$time]]  # vector
+  )
+}
+```
+
+## Load Taxa Data 
+```{r}
+t_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/"
+tax_test <- read_data(t_dir, "genus/aim2_clr_testing.csv")
+tax_train <- read_data(t_dir, "genus/aim2_clr_training.csv")
+tax_full <- read_data(t_dir, "genus/clr_taxa_all.csv")
+# Load Meta data 
+m1_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2"
+test <- read_data(m1_dir, "a2_test_samples_standard_clinical.csv")
+train <- read_data(m1_dir, "a2_train_samples_standard_clinical.csv")
+full <- read_data(m1_dir, "a2_meta_Transformed_standard_clinical.csv")
+full_raw <- read_data(m1_dir, "a2_meta_not_Transformed_standard_clinical.csv")
+```
+
+# Edit Taxa Input data 
+```{r}
+# FULL
+# change names of tax full
+tax_full_t <- tax_full %>%
+  separate(X, remove=FALSE, sep="\\.", into=c('character_id','timepoint'))
+# make time numeric
+tax_full_t$t <- create_t_column(tax_full_t) %>% as.character()
+# Make a new var to match meta 
+tax_full_t <- tax_full_t %>%
+  mutate(x_t = paste(character_id, t, sep = "."))
+
+tax <- tax_full_t %>% 
+       filter(!t == 3) %>% 
+       filter(!t == 18) %>% 
+       dplyr::select(-c(t, timepoint, character_id, X))
+
+# TAXA TRAINING 
+# change names of tax train
+train_t <- tax_train %>%
+  separate(X, remove=FALSE, sep="\\.", 
+           into=c('character_id','timepoint'))
+
+# make time numeric
+train_t$t  <- create_t_column(train_t) %>% as.character()
+# Make a new var to match meta 
+train_t <- train_t %>%
+  mutate(x_t = paste(character_id, t, sep = ".")) %>% 
+       filter(!t == 3) %>% 
+       filter(!t == 18) # %>% 
+       #dplyr::select(-c(t, timepoint, character_id, X))
+
+# TAXA TESTING
+# change names of tax test 
+test_t <- tax_test %>%
+  separate(X, remove=FALSE, sep="\\.", 
+           into=c('character_id','timepoint'))
+
+# make time numeric
+test_t$t  <- create_t_column(test_t) %>% as.character()
+
+test_t <- test_t %>%
+  mutate(x_t = paste(character_id, t, sep = ".")) %>% 
+       filter(!t == 3) %>% 
+       filter(!t == 18) 
+
+rm(tax_test, tax_train)
+rm(tax, tax_full)
+```
+
+## Make meta long 
+```{r}
+# Make meta long full
+full_long <- make_long(full_raw) %>%
   mutate(x_t = paste(subject_id, time, sep = "."))
 
-# Merge 
-full <- merge(tax, full_long, by = "x_t")
-test <- test %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
-train <- train %>% dplyr::select(c(record_id, outcome_BMI_fnl_BL))
+# Make meta long full for meta training 
+train_long <- make_long(train) %>%
+  mutate(x_t = paste(subject_id, time, sep = "."))
 
-train_tax <- merge(tax_train, 
-                   train, 
-                   by.x = "all_samples", 
-                   by.y = "record_id")
+# Make meta long for meta testing
+test_long <- make_long(test) %>%
+  mutate(x_t = paste(subject_id, time, sep = "."))
 
-test_tax <- merge(tax_test, 
-                  test, 
-                   by.x = "all_samples", 
-                  by.y = "record_id")
+rm(test, train, full_raw, full)
+```
 
-rm(full_raw, tax, tax_test, tax_train, test, train)
+### Merge Meta and Taxa Training and Testing sets 
+
+```{r}
+# select meta
+test_meta <- test_long %>% dplyr::select(c(x_t, outcome_BMI_fnl))
+train_meta <- train_long %>% dplyr::select(c(x_t, outcome_BMI_fnl))
+# # Merge 
+train_tax <- merge(train_t, 
+                   train_meta, 
+                   by = "x_t") %>% 
+                   dplyr::select(-x_t, -X, -character_id, -timepoint)
+
+test_tax <- merge(test_t, 
+                  test_meta, 
+                  by = "x_t") %>% 
+                  dplyr::select(-x_t, -X, -character_id, -timepoint)
+
+full <- merge(tax_full_t, full_long, by = "x_t") %>% 
+        dplyr::select(-X.y, -X.x, -x_t, -randomized_group, -cohort_number, -record_id, 
+                      -subject_id, -character_id, -cohort_number, -age, 
+                      -race, -sex,  -time, -timepoint,
+                      -HOMA_IR, -Insulin_endo, -HDL_Total_Direct_lipid, -Glucose,
+                      -LDL_Calculated, -Triglyceride_lipid)
+
+rm(train_meta, test_meta, test_t, train_t, test_long, train_long, full_long, tax_full_t)
 ```
 
 ### Remove NAs and filter for time 
 ```{r}
-# Looking at NAs
-# Find rows with NA values in any column
-rows_with_na <- which(apply(full, 1, function(row) any(is.na(row))))
-na_record_ids <- full[rows_with_na, "record_id"]
-unique(na_record_ids)
-missing <- full %>% filter(record_id %in% na_record_ids)
-full_no_na <- full %>% filter(!record_id %in% na_record_ids)
-rm(missing, full)
+#full_no_na <- full %>% filter(!record_id %in% na_record_ids)
+full_no_na <- na.omit(full)
+test_tax_no_na <-na.omit(test_tax)
+train_tax_no_na <- na.omit(train_tax)
 
-demo_train <- full %>% filter(time < 12)
-demo_test <- full %>% filter(time == 12)
+#demo_train <- train_tax_no_na %>% filter(t < 12)
+#demo_test <- test_tax_no_na %>% filter(t == 12)
+
+#demo_train <- full_no_na %>% filter(time < 12)
+#demo_test <- full_no_na %>% filter(time == 12)
+```
+
+### Keep those with 3 time entries 
+```{r}
+## this tells us who was here for 3 years
+three_time_ids <- 
+  train_tax_no_na %>% 
+  count(all_samples) %>% 
+  arrange(n) %>% 
+  dplyr::filter(n == 3) %>% 
+  pull(all_samples)
+
+train_time_3 <- 
+  train_tax_no_na %>% 
+  dplyr::filter(all_samples %in% three_time_ids) %>% 
+  pull(t)
+
+train_tax_3 <- 
+  train_tax_no_na %>% 
+  filter(all_samples %in% three_time_ids) %>% 
+  select(-t) %>% 
+  #mutate_if(Negate(is.factor), scale) %>% 
+  mutate(t = train_time_3)
 ```
 
 ## Start Long RF
 ```{r}
+train_set <- train_tax_3
 # the predictors you want 
-X <- 
-  demo_train %>% 
-  dplyr::select(-time,-x_t, -X,-record_id,-subject_id, -outcome_BMI_fnl, -all_samples,
-    -age,-sex, -race,-Glucose, -HOMA_IR, -Insulin_endo,-HDL_Total_Direct_lipid,-LDL_Calculated, -Triglyceride_lipid) 
+X <- train_set %>% 
+  dplyr::select(-t, -outcome_BMI_fnl, -all_samples) 
 
 list_dat <- 
-  list(
-    X = X, # predictors, level1 and level2
-    Y = as.numeric(pull(demo_train, outcome_BMI_fnl)), # outcome
-    # id variables for each unique school
-    id = as.numeric(pull(demo_train, record_id)), 
-    # random effects (I'm using only a random intercept)
-    Z = as.matrix(rep(1, nrow(demo_train))), 
-    # years where wave 1 = 0, wave 2 = 1, wave 3 = 2
-    time = as.numeric(pull(demo_train, time)))
+  list(X = X, # predictors, BL and 6m
+    Y = as.numeric(pull(train_set, outcome_BMI_fnl)), # outcome
+    id = as.vector(pull(train_set, all_samples)), # id variables for each unique 
+    Z = as.matrix(rep(1, nrow(train_set))),  # random effects (I'm using only a random intercept)
+    time = as.numeric(pull(train_set, t)))
+```
+
+# Plot training 
+
+```{r}
+w <- which(list_dat$id == 55)
+# Initialize the plot for the first case (id == 11)
+plot(list_dat$time[w], list_dat$Y[w],
+     type = "h",
+     ylim = c(min(list_dat$Y), 
+                  max(list_dat$Y)), 
+     col = "grey")
+
+# Add lines for all other ids
+for (i in unique(list_dat$id)) {
+  w <- which(list_dat$id == i)
+  lines(list_dat$time[w], list_dat$Y[w], col = 'darkblue')
+}
+```
+
+# For Z
+
+
+
+```{r}
+# For Z value
+data <- DataLongGenerator(n=17, p=6, G=6)
+dat <- DataLongGenerator(n = 96, p = 179, G = 179)
+test_gen_dat <- my_gen_data(n = 96, p = 179, G = 179)
+# When the function DataLongGenerator() creates Z, 
+# it's a random uniform data in a matrix. The actual coding is:
+Z <- as.matrix(cbind(rep(1, length(f)), 2 * runif(length(f))))
+# Where f represents the length of the matrices that represent each of the elements. 
+# In your example, you used 6 groups of 50 participants with 6 fixed effects. That led to a length of 472.
+Z <- matrix(rep(1, nrow(dgp_math)))
+# from chat gpt conversation: https://chatgpt.com/share/6736d106-f744-800c-b835-1d1c223aa3c7
+# Sample data
+df <- data.frame(ID = c(1, 1, 2, 2, 3, 3))
+# Creating the Z matrix using one-hot encoding
+Z <- model.matrix(~ ID - 1, data = df)
+# Display the Z matrix
+print(Z)
+
+
+n <- 96  # number of participants
+t <- 3   # number of timepoints
+length_f <- n * t  # total observations
+
+# Constructing Z
+Z <- as.matrix(cbind(rep(1, length_f), 2 * runif(length_f)))
+```
+
+# Train all models 
+```{r}
+# mods <- train_all_models(data.frame(list_dat$X),
+#                          list_dat$Y,
+#                          list_dat$id,
+#                          list_dat$Z,
+#                          list_dat$time,
+#                          'OrnUhl')
 ```
 
 # MERT, REEMtree & MERF
@@ -156,6 +337,10 @@ merf1 <-
     #ntree = 500
   )
 ```
+
+
+These plots are likely showing the likelihood or log-likelihood of the model (merf1, mert1, reemtree1) over iterations or time.
+The general trend should show how the likelihood increases as the model improves its parameter estimates, eventually plateauing when the model has converged or stabilized.
 ```{r}
 plot(merf1$Vraisemblance)
 plot(mert1$Vraisemblance)
@@ -166,24 +351,31 @@ plot(reemtree1$Vraisemblance)
 
 I don't really get the filter part. 
 ```{r}
+#demo_test_no_na2 <- na.omit(demo_test)
+demo_test_no_na2 <- na.omit(test_tax_no_na)
+
 X_test <- 
-  demo_test %>% 
-  filter(record_id %in% merf1$id) %>% 
-  dplyr::select(-time,-x_t, -X,-record_id, -subject_id,
-    -outcome_BMI_fnl,-all_samples, -age, -sex, -race, -Glucose, -HOMA_IR,
-    -Insulin_endo, -HDL_Total_Direct_lipid, -LDL_Calculated, -Triglyceride_lipid)
+  demo_test_no_na2 %>% 
+  #dplyr::filter(all_samples %in% mert1$id) %>% 
+  dplyr::select(-t, -outcome_BMI_fnl, -all_samples)
 
 list_test <- 
-  list(
-    X = X_test,
-    Y = as.numeric(demo_test %>% filter(record_id %in% merf1$id) %>% pull(outcome_BMI_fnl)),
-    id = as.numeric(demo_test %>% filter(record_id %in% merf1$id) %>% pull(record_id)),
-    Z = as.matrix(rep(1, nrow(demo_test))), 
-    time = demo_test %>% filter(record_id %in% merf1$id) %>% pull(time))
+  list(X = X_test,
+    Y = as.numeric(demo_test_no_na2 %>% 
+                     # dplyr::filter(all_samples %in% merf1$id) %>% 
+                     pull(outcome_BMI_fnl)),
+    id = as.numeric(demo_test_no_na2 %>% 
+                      #dplyr::filter(all_samples %in% merf1$id) %>% 
+                      pull(all_samples)),
+    Z = as.matrix(rep(1, nrow(demo_test_no_na2))), 
+    time = demo_test_no_na2 %>% 
+           # dplyr::filter(all_samples %in% merf1$id) %>% 
+           pull(t))
 ```
 
 
-The native prediction function from LongituRF removed the predictions for cases that weren’t observed in the data (i.e., schools which didn’t report data before 2018). For that reason, I made the fixed_prediction_function() (below) that creates a data frame of predictions for all cases. The way we predict cases that are new is simply with the fixed effects.
+The native prediction function from LongituRF removed the predictions for cases that weren’t observed in the data 
+(i.e., schools which didn’t report data before 2018). For that reason, I made the fixed_prediction_function() (below) that creates a data frame of predictions for all cases. The way we predict cases that are new is simply with the fixed effects.
 
 ```{r}
 fixed_prediction_function <- 
@@ -202,18 +394,61 @@ fixed_prediction_function <-
   
   temp <- 
     new_df %>% 
-    filter({{id_var_name}} %notin% object$id) %>% 
+    dplyr::filter({{id_var_name}} %notin% object$id) %>% 
+    {print(nrow(.)); .} %>%
     mutate(predictions = predict(object = object$forest, newdata = .))
   
   final_df <- 
     new_df %>% 
-    filter({{id_var_name}} %in% object$id) %>% 
+    #dplyr::filter({{id_var_name}} %in% object$id) %>% 
     mutate(predictions = preds_existing) %>% 
     bind_rows(temp) %>% 
-    select(record_id, predictions)
+    select(all_samples, predictions)
   return(final_df)
 }
 ```
+
+### Testing on demo data
+
+```{r}
+set.seed(123)
+pred.REEMF <- DataLongGenerator(n=20) # Generate the data composed by n=20 individuals.
+REEMF <- REEMforest(X=data$X,Y=data$Y,Z=data$Z,
+                    id=data$id,time=data$time,mtry=2,
+                    ntree=500,sto="BM")
+
+# Then we predict on the learning sample :
+pred.REEMF <- predict(REEMF, X=data$X,Z=data$Z,id=data$id, time=data$time)
+# Let's have a look at the predictions
+# the predictions are in red while the real output trajectories are in blue:
+par(mfrow=c(4,5),mar=c(2,2,2,2))
+for (i in unique(data$id)){
+w <- which(data$id==i)
+plot(data$time[w],data$Y[w],type="l",col="blue")
+lines(data$time[w],pred.REEMF[w], col="red")
+}
+
+# Train error :
+mean((pred.REEMF-data$Y)^2)
+# The same function can be used with a fitted SMERF model:
+smerf <-MERF(X=data$X,Y=data$Y,
+             Z=data$Z,id=data$id,
+             time=data$time,
+             mtry=2,ntree=500,sto="BM")
+
+pred.smerf <- predict(smerf, X=data$X,Z=data$Z,id=data$id, time=data$time)
+# Train error :
+mean((pred.smerf-data$Y)^2)
+# This function can be used even on a MERF model (when no stochastic process is specified)
+merf <-MERF(X=data$X,Y=data$Y,Z=data$Z,id=data$id,
+            time=data$time,mtry=2,ntree=500,sto="none")
+
+pred.merf <- predict(merf, X=data$X,Z=data$Z,id=data$id, time=data$time)
+# Train error :
+mean((pred.merf-data$Y)^2)
+```
+
+# How well do the models perform
 
 ### First using MERT 
 ```{r}
@@ -224,8 +459,137 @@ predictions_mert_df <-
     id = list_test$id,
     Z = list_test$Z,
     time = list_test$time, 
-    new_df = demo_test,
-    id_var_name = record_id)
+    new_df = test_tax_no_na2,
+    id_var_name = all_samples)
 
-compare_mert <- cbind(predictions_mert_df, demo_test, by = "record_id")
+pred_mert1 <- predict(mert1, 
+                     X=list_test$X,
+                     Z=Z_test,
+                     id=list_test$id, 
+                     time=list_test$time) # %>% as.data.frame()
+
+compare_mert <- cbind(predictions_mert_df, demo_test_no_na2, by = "record_id")
 cor(compare_mert$predictions, compare_mert$outcome_BMI_fnl)^2
+```
+
+Create Z matrix. Make no cols must be 96 and rows needs to be 63. 
+```{r}
+Z_test <- matrix(0, nrow = 96, ncol = 63)
+```
+
+
+To resolve the error:
+
+Ensure the mert1 model object is properly trained and contains random effects.
+Verify that all test data (list_test$X, list_test$Z, list_test$id, list_test$time) have the correct dimensions and align with the model's requirements.
+Remove or adjust random effects if they're not needed during prediction.
+Check for any missing data (NA) in your test set.
+
+```{r}
+# Save summary of the linear model
+sum_lm <- summary(lm(predictions ~ outcome_BMI_fnl, data = compare_mert))
+coef_lm <- sum_lm$coefficients
+plot(compare_mert$outcome_BMI_fnl,
+     compare_mert$predictions,
+     xlab = "Actual BMI",
+     ylab = "Predicted 12 month BMI",
+     main = "MERT Predicted and actual 12 month BMI based on BL and 6 month predictors") +
+abline(a = coef_lm[1, 1], # Set the abline as the coefficients
+       b = coef_lm[2, 1], 
+       col = "lightpink",
+       lwd = 2) +
+mtext(paste0("R^2 = ", round(sum_lm$r.squared, 2),
+              ", p-value = ", round(coef_lm[2, 4], 2),
+              ", y = ", round(coef_lm[2, 1], 1),
+              "x + ", round(coef_lm[1, 1], 2)),
+      side = 3, line = 0.5)
+```
+
+### Using REEMtree 
+
+```{r}
+predictions_reem_df <- 
+  fixed_prediction_function(
+    object = reemtree1,
+    X = data.frame(list_test$X),
+    id = list_test$id,
+    Z = list_test$Z,
+    time = list_test$time, 
+    new_df = demo_test_no_na2,
+    id_var_name = all_samples)
+
+pred_reem1 <- predict(reemtree1, 
+                     X=list_test$X,
+                     Z=list_test$Z,
+                     id=list_test$id, 
+                     time=list_test$time) %>% as.data.frame()
+
+compare_reem <- cbind(predictions_reem_df, demo_test_no_na2, by = "all_samples")
+
+sum_lm <- summary(lm(predictions ~ outcome_BMI_fnl, data = compare_reem))
+coef_lm <- sum_lm$coefficients
+plot(compare_reem$outcome_BMI_fnl,
+     compare_reem$predictions,
+     xlab = "Actual BMI",
+     ylab = "Predicted 12 month BMI",
+     main = "REEM Predicted and actual 12 month BMI based on BL and 6 month predictors") +
+abline(a = coef_lm[1, 1], # Set the abline as the coefficients
+       b = coef_lm[2, 1], 
+       col = "lightblue",
+       lwd = 2) +
+mtext(paste0("R^2 = ", round(sum_lm$r.squared, 2),
+              ", p-value = ", round(coef_lm[2, 4], 2),
+              ", y = ", round(coef_lm[2, 1], 1),
+              "x + ", round(coef_lm[1, 1], 2)),
+      side = 3, line = 0.5)
+```
+
+
+### Using MERF
+
+```{r}
+pred.merf1 <- predict(merf1, 
+                     X=list_test$X,
+                     Z=list_test$Z,
+                     id=list_test$id, 
+                     time=list_test$time)
+
+#Actual Function
+predictions_merf_df <-
+  fixed_prediction_function(
+    object = merf1,
+    X = data.frame(list_test$X),
+    id = list_test$id,
+    Z = list_test$Z,
+    time = list_test$time,
+    new_df = demo_test_no_na2,
+    id_var_name = all_samples)
+
+compare_merf <- cbind(pred.merf1, demo_test_no_na2, by = "record_id")
+
+sum_lm <- summary(lm(pred.merf1 ~ outcome_BMI_fnl, data = compare_merf))
+coef_lm <- sum_lm$coefficients
+plot(compare_merf$outcome_BMI_fnl,
+     compare_merf$pred.merf1,
+     xlab = "Actual BMI",
+     ylab = "Predicted 12 month BMI",
+     main = "MERF Predicted and actual 12 month BMI based on BL and 6 month predictors") +
+abline(a = coef_lm[1, 1], # Set the abline as the coefficients
+       b = coef_lm[2, 1], 
+       col = "lightgreen",
+       lwd = 2) +
+mtext(paste0("R^2 = ", round(sum_lm$r.squared, 2),
+              ", p-value = ", round(coef_lm[2, 4], 2),
+              ", y = ", round(coef_lm[2, 1], 1),
+              "x + ", round(coef_lm[1, 1], 2)),
+      side = 3, line = 0.5)
+```
+
+
+
+
+
+
+
+
+
