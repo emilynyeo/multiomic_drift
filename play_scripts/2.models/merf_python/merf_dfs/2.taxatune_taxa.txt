@@ -1,0 +1,211 @@
+Processing combination 1/256: (1, None, 2, 2)
+MSE for current iteration: 27.21414182050495
+MSE for current iteration: 36.50612519754264
+MSE for current iteration: 21.886165515222288
+MSE for current iteration: 42.59158419159857
+MSE for current iteration: 39.4575465881794
+MSE for current iteration: 51.03760108683067
+MSE for current iteration: 25.9026553905718
+MSE for current iteration: 21.607373155671933
+MSE for current iteration: 52.736834839176694
+MSE for current iteration: 21.08197321594755
+Processing combination 2/256: (1, None, 2, 3)
+MSE for current iteration: 29.364758794757332
+MSE for current iteration: 36.9591528799565
+MSE for current iteration: 14.471686820897105
+MSE for current iteration: 53.20860153485467
+MSE for current iteration: 36.493205946605414
+MSE for current iteration: 32.25091769464951
+MSE for current iteration: 62.11956072310123
+MSE for current iteration: 32.31781156983913
+MSE for current iteration: 43.615094326449814
+MSE for current iteration: 16.821823427598957
+Processing combination 3/256: (1, None, 2, 10)
+MSE for current iteration: 34.07741080398269
+MSE for current iteration: 35.489587841890156
+MSE for current iteration: 10.840800278098866
+MSE for current iteration: 26.31989660400946
+MSE for current iteration: 46.515859151063516
+MSE for current iteration: 52.93654842898408
+MSE for current iteration: 42.88723875754078
+MSE for current iteration: 26.300849198254095
+MSE for current iteration: 33.86832212934415
+MSE for current iteration: 11.566656824698091
+Processing combination 4/256: (1, None, 2, 20)
+MSE for current iteration: 19.64774382640101
+MSE for current iteration: 16.19708829273869
+MSE for current iteration: 13.072747183040054
+MSE for current iteration: 30.00299155850417
+MSE for current iteration: 34.35604525860965
+MSE for current iteration: 28.30187621096612
+MSE for current iteration: 31.532962242226525
+MSE for current iteration: 20.094008371381147
+MSE for current iteration: 33.79461976606616
+MSE for current iteration: 22.617196496299734
+Processing combination 5/256: (1, None, 5, 2)
+MSE for current iteration: 21.626719751670414
+MSE for current iteration: 32.69253872092496
+MSE for current iteration: 28.796725986240578
+MSE for current iteration: 28.46759437442861
+MSE for current iteration: 32.339120589846715
+MSE for current iteration: 51.855947788345624
+MSE for current iteration: 31.915207405122683
+MSE for current iteration: 13.446568464162452
+MSE for current iteration: 51.4797074222529
+MSE for current iteration: 13.772252409078398
+Processing combination 6/256: (1, None, 5, 3)
+MSE for current iteration: 18.901473014355368
+MSE for current iteration: 20.35772582170334
+MSE for current iteration: 27.759860985159374
+MSE for current iteration: 26.643217519446168
+MSE for current iteration: 33.123352637164764
+MSE for current iteration: 64.7831184358934
+MSE for current iteration: 35.68577166672411
+MSE for current iteration: 10.097609713326559
+MSE for current iteration: 32.56062440109918
+MSE for current iteration: 17.155429477055087
+Processing combination 7/256: (1, None, 5, 10)
+MSE for current iteration: 23.244871826753734
+MSE for current iteration: 32.62337083915773
+MSE for current iteration: 12.338283126272788
+MSE for current iteration: 28.081625388914766
+MSE for current iteration: 22.925850102147216
+MSE for current iteration: 48.091706897308605
+MSE for current iteration: 26.315764229405776
+MSE for current iteration: 15.327650527991247
+MSE for current iteration: 48.409330474613164
+MSE for current iteration: 15.997342588030163
+Processing combination 8/256: (1, None, 5, 20)
+MSE for current iteration: 31.713751698974644
+MSE for current iteration: 28.655528202644422
+MSE for current iteration: 19.073633914432325
+MSE for current iteration: 25.238558860882303
+MSE for current iteration: 27.58352624887704
+MSE for current iteration: 33.56563030445003
+MSE for current iteration: 22.36259848388954
+MSE for current iteration: 16.48258649496184
+MSE for current iteration: 52.43094269249195
+MSE for current iteration: 18.63424307850591
+Processing combination 9/256: (1, None, 10, 2)
+MSE for current iteration: 27.71107475709507
+MSE for current iteration: 31.454433650681757
+MSE for current iteration: 17.410179629428345
+MSE for current iteration: 30.993984023890643
+MSE for current iteration: 26.34787289618407
+MSE for current iteration: 33.2637477634066
+MSE for current iteration: 33.50855404099441
+MSE for current iteration: 28.322077390312952
+MSE for current iteration: 58.11002071487133
+MSE for current iteration: 26.988458661880927
+Processing combination 10/256: (1, None, 10, 3)
+MSE for current iteration: 38.800262431109964
+MSE for current iteration: 19.133968807545706
+MSE for current iteration: 20.21316291771671
+MSE for current iteration: 28.82376182066769
+MSE for current iteration: 25.47170386412343
+MSE for current iteration: 35.98607291425547
+MSE for current iteration: 17.488265844569774
+MSE for current iteration: 20.922346696081153
+MSE for current iteration: 48.747064919978115
+MSE for current iteration: 26.36198805584494
+Processing combination 11/256: (1, None, 10, 10)
+MSE for current iteration: 18.10288768851991
+MSE for current iteration: 20.43405798273611
+MSE for current iteration: 11.959244285032657
+MSE for current iteration: 19.863743958311318
+MSE for current iteration: 29.62522210608395
+MSE for current iteration: 38.88883112290242
+MSE for current iteration: 28.38237111700121
+MSE for current iteration: 9.712809485858328
+MSE for current iteration: 30.404786461855434
+MSE for current iteration: 13.258134204354802
+Processing combination 12/256: (1, None, 10, 20)
+MSE for current iteration: 25.051523207344022
+MSE for current iteration: 21.015297613880836
+MSE for current iteration: 14.811523521378328
+MSE for current iteration: 24.868938856258453
+MSE for current iteration: 26.976366910265448
+MSE for current iteration: 36.324114476727225
+MSE for current iteration: 25.463378529166018
+MSE for current iteration: 18.37449156735422
+MSE for current iteration: 41.71216039976423
+MSE for current iteration: 18.533863839544246
+Processing combination 13/256: (1, None, 20, 2)
+MSE for current iteration: 23.42382951787909
+MSE for current iteration: 33.88801661965718
+MSE for current iteration: 17.64808598707375
+MSE for current iteration: 34.9775030325728
+MSE for current iteration: 29.617756814566583
+MSE for current iteration: 33.61735109256622
+MSE for current iteration: 33.5395643782687
+MSE for current iteration: 26.928261376524826
+MSE for current iteration: 59.6736938994262
+MSE for current iteration: 24.4707520098488
+Processing combination 14/256: (1, None, 20, 3)
+MSE for current iteration: 21.263712242883418
+MSE for current iteration: 24.31812889573573
+MSE for current iteration: 12.8682472135957
+MSE for current iteration: 22.25713450378761
+MSE for current iteration: 21.610198077379888
+MSE for current iteration: 24.630009135755603
+MSE for current iteration: 28.186626674000777
+MSE for current iteration: 22.803567222444965
+MSE for current iteration: 34.04694763254382
+MSE for current iteration: 16.4702269320096
+Processing combination 15/256: (1, None, 20, 10)
+MSE for current iteration: 25.387016401804583
+MSE for current iteration: 26.022856754898086
+MSE for current iteration: 11.801107565291082
+MSE for current iteration: 22.787903862725848
+MSE for current iteration: 22.60811492953576
+MSE for current iteration: 33.58798136818867
+MSE for current iteration: 18.239341373596123
+MSE for current iteration: 15.043199853709213
+MSE for current iteration: 36.11061247397761
+MSE for current iteration: 13.353521892089523
+Processing combination 16/256: (1, None, 20, 20)
+MSE for current iteration: 25.65329693376396
+MSE for current iteration: 22.68705259315455
+MSE for current iteration: 11.48666756550518
+MSE for current iteration: 23.26339122725447
+MSE for current iteration: 24.793966629551417
+MSE for current iteration: 36.922271252638026
+MSE for current iteration: 19.694232576579573
+MSE for current iteration: 11.009117752562409
+MSE for current iteration: 45.21147047840688
+MSE for current iteration: 11.880908859868862
+Processing combination 17/256: (1, 1, 2, 2)
+MSE for current iteration: 22.026703576984364
+MSE for current iteration: 18.033355966240038
+MSE for current iteration: 10.664565993994623
+MSE for current iteration: 20.584349916431453
+MSE for current iteration: 21.986059709678443
+MSE for current iteration: 32.89622070504352
+MSE for current iteration: 16.693451691714582
+MSE for current iteration: 14.78536108365299
+MSE for current iteration: 37.43296802153502
+MSE for current iteration: 14.142259208034364
+Processing combination 18/256: (1, 1, 2, 3)
+MSE for current iteration: 21.017072491842292
+MSE for current iteration: 20.262216401836863
+MSE for current iteration: 13.082236735291032
+MSE for current iteration: 21.42054429341602
+MSE for current iteration: 26.863948032132914
+MSE for current iteration: 26.02384394699934
+MSE for current iteration: 16.386767808846052
+MSE for current iteration: 13.5100842658569
+MSE for current iteration: 33.71355519909968
+MSE for current iteration: 7.796703256979693
+Processing combination 19/256: (1, 1, 2, 10)
+MSE for current iteration: 22.615021719788988
+MSE for current iteration: 22.23119364992659
+MSE for current iteration: 10.47184817217182
+MSE for current iteration: 20.790815620068187
+MSE for current iteration: 23.10040702832106
+MSE for current iteration: 33.09443744101842
+MSE for current iteration: 20.38482613166079
+MSE for current iteration: 10.581985797988121
+MSE for current iteration: 36.46814057665615
+MSE for current iteration: 7.974164963883157
+Processing combination 20/256: (1, 1, 2, 20)
+MSE for current iteration: 20.54108425769783
