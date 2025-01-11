@@ -1,5 +1,5 @@
-__pycache__/
-researchVenv/
+/__pycache__/
+/researchVenv/
 .ipynb_checkpoints/
 merf_plots/
 merf_py_htmls/
