@@ -101,29 +101,36 @@ def plot_predicted_vs_actual_old(x_value, y_value, output_dir, file_name, param_
     plt.savefig(os.path.join(output_dir, file_name + '.png'), dpi=300, bbox_inches='tight')
     plt.show()
 
-def plot_predicted_vs_actual(x_value, y_value, output_dir, file_name, param_grid=None, plot_color='blue'):
+def plot_predicted_vs_actual(x_value, y_value, output_dir, file_name, 
+                             param_grid=None, oob_value=None, plot_color='blue', plot_title = 'Predicted vs Actual Values'):
+    # X - value should be predicted. # Y - value should be training set actual BMI 
     plt.figure(figsize=(7.5, 5.5))
-    plt.scatter(x_value, y_value, alpha=0.5, color=plot_color)
+    plt.scatter(x_value, 
+                y_value, 
+                alpha=0.5, color=plot_color)
     plt.ylabel('Actual BMI Values')
     plt.xlabel('Predicted BMI')
-    plt.title('Predicted vs Actual Values with Trend Line')
+    plt.title(plot_title)
     # Add trend line
     z = np.polyfit(x_value, y_value, 1)
     p = np.poly1d(z)
-    plt.plot(x_value, p(x_value), linestyle='--', color=plot_color, alpha=0.8)  # Fixed line style and color separation
+    plt.plot(x_value, 
+             p(x_value), 
+             linestyle='--', color=plot_color, alpha=0.8)  # Fixed line style and color separation
     plt.grid(True, alpha=0.3)
     # Calculate metrics
-    Y_true = x_value
-    Y_pred = y_value
+    Y_true = y_value
+    Y_pred = x_value
     rmse = np.sqrt(np.mean((Y_true - Y_pred)**2))
     correlation = np.corrcoef(Y_true, Y_pred)[0, 1]
     r2 = 1 - (np.sum((Y_true - Y_pred)**2) / np.sum((Y_true - np.mean(Y_true))**2))
     R_square = r2_score(Y_true, Y_pred) 
+    OOB = oob_value
     # Adjust the plot size and position to make room for the metrics text
     plt.subplots_adjust(bottom=0.5)
     # Print metrics underneath the plot
     plt.text(0.95, 0.05,  # Changed position to bottom right
-             f"Correlation: {correlation:.4f}\nRMSE: {rmse:.4f}\nR-squared: {r2:.4f}\nR_square: {R_square:.4f}", 
+             f"Correlation: {correlation:.4f}\nRMSE: {rmse:.4f}\nOOB: {OOB:.4f}\nR_square: {R_square:.4f}", 
              ha='right', va='bottom', fontsize=9,  # Reduced font size to 9
              transform=plt.gca().transAxes)
     # Print param_grid parameters if provided
@@ -162,13 +169,14 @@ def plot_feature_importances(feature_names, feature_importances, output_dir, out
 
 # Function to plot top 20 feature importances with customizable bar color
 def plot_top_20_feature_importances(feature_names, feature_importances, output_dir, output_file, bar_color='skyblue'):
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(7.5, 5.5))
     sorted_indices = np.argsort(feature_importances)[::-1][:20]
     plt.bar(np.array(feature_names)[sorted_indices], np.array(feature_importances)[sorted_indices], color=bar_color)
-    plt.xlabel('Feature Names')
-    plt.ylabel('Feature Importances')
-    plt.title('Feature Importances for Top 20 Features')
-    plt.xticks(rotation=90)
+    plt.xlabel('Feature Names', fontsize=10)  # Reduced font size for x-axis label
+    plt.ylabel('Feature Importances', fontsize=10)  # Reduced font size for y-axis label
+    plt.title('Feature Importances for Top 20 Features', fontsize=12)  # Reduced font size for title
+    plt.xticks(rotation=45, fontsize=8) 
+    plt.yticks(fontsize=8)  # Reduced font size for y-axis tick marks and text
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, output_file), dpi=300, bbox_inches='tight')
     plt.show()
