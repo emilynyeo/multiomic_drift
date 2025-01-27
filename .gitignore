@@ -5,3 +5,7 @@ mutli-omic-predictions.Rproj
 .Rhistory
 .DS_Store
 .RData
+*.csv
+*.png
+*.rds
+*.pptx
