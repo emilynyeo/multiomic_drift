@@ -1171,7 +1171,8 @@ file_paths <- list(
 )
 
 # Read all data into a named list using lapply
-data_list <- lapply(file_paths, function(path) read.csv(file.path(base_path, path)))
+data_list <- lapply(file_paths, 
+                    function(path) read.csv(file.path(base_path, path)))
 
 # Assign names to the data list based on the file paths
 names(data_list) <- names(file_paths)

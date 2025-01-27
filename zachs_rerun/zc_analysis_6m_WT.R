@@ -7,14 +7,12 @@
 ###############################
 ###     Reading R data files    
 ###############################
-
-# In[1]: Imports ----
 rm(list = ls())
 source("zc_functions.R") 
 library(pacman)
 p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn, caret, caretEnsemble, 
-readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest, glmnet, xgboost, ggplot2, 
-reshape2, scales, gridExtra, plotly, sf, tidyverse)
+       readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest, glmnet, xgboost, ggplot2, 
+       reshape2, scales, gridExtra, plotly, sf, tidyverse)
 
 ###############################
 ###     Data Preprocessing
@@ -145,17 +143,17 @@ path_g_ra_micom_outer <- pathway_df %>%
 
 # Inner join: Keeps only rows with matches in both dataframes
 meta_slim <- meta_data_df %>% 
-             dplyr::select(c("subject_id", "randomized_group", "score_std", 
-                             "cohort_number", "sex", "race", "age", 
-                             "outcome_BMI_fnl_BL", "Glucose_BL", "HOMA_IR_BL",
-                             "Insulin_endo_BL", "HDL_Total_Direct_lipid_BL", 
-                             "LDL_Calculated_BL","Triglyceride_lipid_BL", 
-                             "outcome_BMI_fnl_6m","Glucose_6m", "HOMA_IR_6m", 
-                             "Insulin_endo_6m", "HDL_Total_Direct_lipid_6m", 
-                             "LDL_Calculated_6m", "Triglyceride_lipid_6m", 
-                             "outcome_BMI_fnl_12m","Glucose_12m", "HOMA_IR_12m", 
-                             "Insulin_endo_12m", "HDL_Total_Direct_lipid_12m",
-                             "LDL_Calculated_12m", "Triglyceride_lipid_12m"))
+  dplyr::select(c("subject_id", "randomized_group", "score_std", 
+                  "cohort_number", "sex", "race", "age", 
+                  "outcome_wt_fnl_6m", "Glucose_BL", "HOMA_IR_BL",
+                  "Insulin_endo_BL", "HDL_Total_Direct_lipid_BL", 
+                  "LDL_Calculated_BL","Triglyceride_lipid_BL", 
+                  "outcome_BMI_fnl_6m","Glucose_6m", "HOMA_IR_6m", 
+                  "Insulin_endo_6m", "HDL_Total_Direct_lipid_6m", 
+                  "LDL_Calculated_6m", "Triglyceride_lipid_6m", 
+                  "outcome_BMI_fnl_12m","Glucose_12m", "HOMA_IR_12m", 
+                  "Insulin_endo_12m", "HDL_Total_Direct_lipid_12m",
+                  "LDL_Calculated_12m", "Triglyceride_lipid_12m"))
 
 meta_path_g_ra_micom_inner <- meta_slim %>%
   inner_join(path_g_ra_micom_inner, by = c("subject_id" = "subject_id"))
@@ -175,7 +173,6 @@ columns_to_remove <- c(
   "all_samples",
   "...1.y",
   "TIMEPOINT",
-  "record_id",
   "source",
   "...1.x"
 )
@@ -187,16 +184,16 @@ pattern_12m <- "3m|6m|BL|18m"
 
 # Remove columns from genus dataset
 g_ra_all_BL <- remove_columns(meta_path_g_ra_micom_outer, 
-                                 columns_to_remove = columns_to_remove, 
-                                 pattern = BL_pattern)
+                              columns_to_remove = columns_to_remove, 
+                              pattern = BL_pattern)
 
 g_ra_all_outer <- meta_path_g_ra_micom_outer %>% 
-                  dplyr::select(-c("all_samples", "...1.y", "TIMEPOINT",
-                                    "source", "...1.x"))
+  dplyr::select(-c("all_samples", "...1.y", "TIMEPOINT",
+                   "source", "...1.x"))
 
 g_ra_all_inner <- meta_path_g_ra_micom_inner %>% 
-                  dplyr::select(-c("all_samples", "...1.y", "TIMEPOINT",
-                                   "source", "...1.x"))
+  dplyr::select(-c("all_samples", "...1.y", "TIMEPOINT",
+                   "source", "...1.x"))
 
 # save these dataframes
 save_dir <- "drift_fs/csv/all_omic_processed_data/"
@@ -208,12 +205,12 @@ if (!dir.exists(save_dir)) {
 
 write.csv(g_ra_all_outer, 
           paste0(save_dir, 
-                 "jan18_genus_ra_all_omics_outer.csv"), 
+                 "jan22_wt_6m_genus_ra_all_omics_outer.csv"), 
           row.names = FALSE)
 
 write.csv(g_ra_all_inner, 
           paste0(save_dir, 
-                 "jan18_genus_ra_all_omics_inner.csv"), 
+                 "jan22_wt_6m_genus_ra_all_omics_inner.csv"), 
           row.names = FALSE)
 
 ###############################
@@ -223,14 +220,14 @@ rm(list = ls())
 source("zc_functions.R") 
 # In[2] Load Datasets ----
 data_dir <- "drift_fs/csv/all_omic_processed_data/"
-omic_g_ra_outer <- read_csv(paste0(data_dir, "jan18_genus_ra_all_omics_outer.csv"))
-omic_g_ra_inner <- read_csv(paste0(data_dir, "jan18_genus_ra_all_omics_inner.csv"))
+omic_g_ra_outer <- read_csv(paste0(data_dir, "jan22_wt_6m_genus_ra_all_omics_outer.csv"))
+omic_g_ra_inner <- read_csv(paste0(data_dir, "jan22_wt_6m_genus_ra_all_omics_inner.csv"))
 
 # In[4] Main Analysis ----
 
 # FIRST JUST WITH OUTER JOINED 
 omic_g_ra <- omic_g_ra_outer
-  
+
 ### Make BL , 6m and 12m dfs 
 BL <- omic_g_ra %>%
   filter(grepl("BL$", SampleID)) %>%
@@ -245,40 +242,40 @@ m12 <- omic_g_ra %>%
   select(-matches("_BL$|_6m$"))
 
 ### Latent variables 
-latent_variables_BL <- c(
+latent_variables_m6 <- c(
   "randomized_group", "score_std", "cohort_number", "sex", "race", "age", 
   "Glucose_BL", "HOMA_IR_BL", "Insulin_endo_BL", "HDL_Total_Direct_lipid_BL",             
-  "LDL_Calculated_BL", "Triglyceride_lipid_BL", "outcome_BMI_fnl_BL")
+  "LDL_Calculated_BL", "Triglyceride_lipid_BL", "outcome_wt_fnl_BL")
 
 latent_variables_6m <- c(
   "randomized_group", "score_std", "cohort_number", "sex", "race", "age", 
   "Glucose_6m", "HOMA_IR_6m", "Insulin_endo_6m", "HDL_Total_Direct_lipid_6m",             
-  "LDL_Calculated_6m", "Triglyceride_lipid_6m", "outcome_BMI_fnl_6m")
+  "LDL_Calculated_6m", "Triglyceride_lipid_6m", "outcome_wt_fnl_6m")
 
 latent_variables_12m <- c(
   "randomized_group", "score_std", "cohort_number", "sex", "race", "age", 
   "Glucose_12m", "HOMA_IR_12m", "Insulin_endo_12m", "HDL_Total_Direct_lipid_12m",             
-  "LDL_Calculated_12m", "Triglyceride_lipid_12m", "outcome_BMI_fnl_12m")
+  "LDL_Calculated_12m", "Triglyceride_lipid_12m", "outcome_wt_fnl_12m")
 
 ### Process DFs 
-imputed_BL <- preprocess_data(BL, 
-                           latent_variables_BL, 
-                           "medianImpute")
+imputed_m6 <- preprocess_data(m6, 
+                              latent_variables_6m, 
+                              "medianImpute")
 
 # remove outcome_BMI_fnl_BL from the genus and species dataframes
-tail(colnames(imputed_BL), 300)
-imputed <- remove_columns(imputed_BL, 
-                          columns_to_remove = "subject_id", "SampleID")
+tail(colnames(imputed_m6), 300)
+imputed <- remove_columns(imputed_m6, 
+                          columns_to_remove = c("subject_id", "SampleID", "outcome_BMI_fnl_6m"))
 
 set.seed(123)
 train_control <- trainControl(method = "cv", number = 5, search = "grid")
 
 # In[5] Regression Models ----
-BL_results <- train_and_save_models(
+m6_results <- train_and_save_models(
   imputed,
-  "outcome_BMI_fnl_BL",
+  "outcome_wt_fnl_6m",
   train_control,
-  "BL_all_omic_g_ra_regression")
+  "m6_wt_all_omic_g_ra_regression")
 
 # describe the data
 genus_ra_stats <- describe(omic_g_ra)
@@ -296,10 +293,9 @@ genus_df_imputed_minus_redundant <- remove_columns(imputed,
 # retrain the models
 genus_results <- train_and_save_models(
   genus_df_imputed_minus_redundant,
-  "outcome_BMI_fnl_BL",
+  "outcome_wt_fnl_6m",
   train_control,
-  "BL_all_omic_g_regression_no_redundant"
-)
+  "m6_wt_all_omic_g_regression_no_redundant")
 
 ###############################
 ###
@@ -313,14 +309,14 @@ base_path <- "drift_fs/csv/results"
 # Define file paths in a structured list
 file_paths <- list(
   # genus
-  BL_all_omic_g_ra_regression_beta = "BL_all_omic_g_ra_regression_beta.csv",
-  BL_all_omic_g_ra_regression_feature_importance = "BL_all_omic_g_ra_regression_feature_importance.csv",
-  BL_all_omic_g_ra_regression_metrics = "BL_all_omic_g_ra_regression_metrics.csv",
+  m6_all_omic_g_ra_regression_beta = "m6_wt_all_omic_g_ra_regression_beta.csv",
+  m6_all_omic_g_ra_regression_feature_importance = "m6_wt_all_omic_g_ra_regression_feature_importance.csv",
+  m6_all_omic_g_ra_regression_metrics = "m6_wt_all_omic_g_ra_regression_metrics.csv",
   
   # genus no redundant
-  BL_all_omic_g_ra_regression_no_redundant_beta = "BL_all_omic_g_regression_no_redundant_beta.csv",
-  BL_all_omic_g_ra_regression_no_redundant_feature_importance = "BL_all_omic_g_regression_no_redundant_feature_importance.csv",
-  BL_all_omic_g_ra_regression_no_redundant_metrics = "BL_all_omic_g_regression_no_redundant_metrics.csv"
+  m6_all_omic_g_ra_regression_no_redundant_beta = "m6_wt_all_omic_g_regression_no_redundant_beta.csv",
+  m6_all_omic_g_ra_regression_no_redundant_feature_importance = "m6_wt_all_omic_g_regression_no_redundant_feature_importance.csv",
+  m6_all_omic_g_ra_regression_no_redundant_metrics = "m6_wt_all_omic_g_regression_no_redundant_metrics.csv"
 )
 
 # Read all data into a named list using lapply
@@ -332,25 +328,25 @@ names(data_list) <- names(file_paths)
 
 # In[4]: Process and plot for all datasets ----
 datasets <- list(
-  "BL_all_omics_Genus_ra" = list(
-    beta = data_list$BL_all_omic_g_ra_regression_beta,
-    feature_importance = data_list$BL_all_omic_g_ra_regression_feature_importance,
-    metrics = data_list$BL_all_omic_g_ra_regression_metrics
+  "m6_all_omics_Genus_ra" = list(
+    beta = data_list$m6_all_omic_g_ra_regression_beta,
+    feature_importance = data_list$m6_all_omic_g_ra_regression_feature_importance,
+    metrics = data_list$m6_all_omic_g_ra_regression_metrics
   ),
-  "BL_all_omics_Genus_ra_No_Redundant)" = list(
-    beta = data_list$BL_all_omic_g_ra_regression_no_redundant_beta,
-    feature_importance = data_list$BL_all_omic_g_ra_regression_no_redundant_feature_importance,
-    metrics = data_list$BL_all_omic_g_ra_regression_no_redundant_metrics
+  "m6_all_omics_Genus_ra_No_Redundant)" = list(
+    beta = data_list$m6_all_omic_g_ra_regression_no_redundant_beta,
+    feature_importance = data_list$m6_all_omic_g_ra_regression_no_redundant_feature_importance,
+    metrics = data_list$m6_all_omic_g_ra_regression_no_redundant_metrics
   )
 )
 
 # In[5]: Now from the features, lets do a heatmap for the top 20 features ----
 
 # Get top 20 features for one to test
-top_20_features <- get_top_n_features_all_models(data_list$BL_all_omic_g_ra_regression_feature_importance, 20)
+top_20_features <- get_top_n_features_all_models(data_list$m6_all_omic_g_ra_regression_feature_importance, 20)
 print(top_20_features)
 
-top_20_features_no_r <- get_top_n_features_all_models(data_list$BL_all_omic_g_ra_regression_no_redundant_feature_importance, 20)
+top_20_features_no_r <- get_top_n_features_all_models(data_list$m6_all_omic_g_ra_regression_no_redundant_feature_importance, 20)
 print(top_20_features_no_r)
 
 # In[9]: Metric R ^ 2 for presentation ----
@@ -376,19 +372,19 @@ extract_metrics <- function(dataset) {
   list(metrics = metrics, max_r2 = max_r2)
 }
 
-BL_all_omics_Genus_ra = list(
-    beta = data_list$BL_all_omic_g_ra_regression_beta,
-    feature_importance = data_list$BL_all_omic_g_ra_regression_feature_importance,
-    metrics = data_list$BL_all_omic_g_ra_regression_metrics)
+m6_all_omics_Genus_ra = list(
+  beta = data_list$m6_all_omic_g_ra_regression_beta,
+  feature_importance = data_list$m6_all_omic_g_ra_regression_feature_importance,
+  metrics = data_list$m6_all_omic_g_ra_regression_metrics)
 
-BL_all_omics_Genus_ra_No_Redundant = list(
-    beta = data_list$BL_all_omic_g_ra_regression_no_redundant_beta,
-    feature_importance = data_list$BL_all_omic_g_ra_regression_no_redundant_feature_importance,
-    metrics = data_list$BL_all_omic_g_ra_regression_no_redundant_metrics)
+m6_all_omics_Genus_ra_No_Redundant = list(
+  beta = data_list$m6_all_omic_g_ra_regression_no_redundant_beta,
+  feature_importance = data_list$m6_all_omic_g_ra_regression_no_redundant_feature_importance,
+  metrics = data_list$m6_all_omic_g_ra_regression_no_redundant_metrics)
 
 # Extract metrics and max RÂ² for all datasets
-results_all <- extract_metrics(BL_all_omics_Genus_ra)
-results_allno_re <- extract_metrics(BL_all_omics_Genus_ra_No_Redundant)
+results_all <- extract_metrics(m6_all_omics_Genus_ra)
+results_allno_re <- extract_metrics(m6_all_omics_Genus_ra_No_Redundant)
 
 # Calculate overall max RÂ² for each main category
 max_r2_genus <- results_all$max_r2
@@ -410,20 +406,20 @@ genus_titles_no_redundant <- c("All Omic Variables Non Redundant (genus ra) - Mo
 
 # Generate combined genus plot
 all_omic_plot_genus_ra <- create_plots(all_g_data_list, max_r2, genus_titles)
-pdf("drift_fs/figures/all_omics_genus_ra/jan22_all_g_data_list.pdf", width = 7, height = 7)
+pdf("drift_fs/figures/all_omics_genus_ra/jan22_WT_all_g_data_list.pdf", width = 7, height = 7)
 print(all_omic_plot_genus_ra)
 dev.off()
 
 all_omic_plot_genus_ra_no_redundant <- create_plots(all_g_data_list_no_re, max_r2, genus_titles_no_redundant)
-pdf("drift_fs/figures/all_omics_genus_ra/jan22_all_g_data_list_no_re.pdf", width = 7, height = 7)
+pdf("drift_fs/figures/all_omics_genus_ra/jan22_WT_all_g_data_list_no_re.pdf", width = 7, height = 7)
 print(all_omic_plot_genus_ra_no_redundant)
 dev.off()
 
 # In[10]: Plotting the top 5-10 features ----
 
 # Extract top features from each dataset
-all_omic_genus_features <- extract_top_features(datasets$BL_all_omics_Genus_ra)
-all_omic_genus_no_rendundant_features <- extract_top_features(datasets$`BL_all_omics_Genus_ra_No_Redundant`)
+all_omic_genus_features <- extract_top_features(datasets$m6_all_omics_Genus_ra)
+all_omic_genus_no_rendundant_features <- extract_top_features(datasets$`m6_all_omics_Genus_ra_No_Redundant`)
 
 # rename the column names
 colnames(all_omic_genus_features) <- c("Variable", "Random Forest", "Lasso", "Ridge", "Elastic Net",  "XGBoost")
@@ -452,12 +448,10 @@ all_omic_genus_no_rendundant_features <- all_omic_genus_no_rendundant_features %
 # Create and save plots for each dataset
 create_feature_plot(
   all_omic_genus_features,
-  "Top 10 Features - Non Redundant Genus + All omics",
-  "drift_fs/figures/all_omics_genus_ra/jan22_all_BL_genus_feature_plot.pdf")
+  "Top 10 - WT, Non Redundant Genus + All omics",
+  "drift_fs/figures/all_omics_genus_ra/jan22_WT_all_m6_genus_feature_plot.pdf")
 
 create_feature_plot(
   all_omic_genus_no_rendundant_features,
-  "Top 10 Features - Non Redundant Genus + All omics",
-  "drift_fs/figures/all_omics_genus_ra/jan22_all_BL_genus_no_rendundant_feature_plot.pdf")
-
-# In[12]: Plotting the venn diagrams of the top features ----
+  "Top 10 - WT, Non Redundant Genus + All omics",
+  "drift_fs/figures/all_omics_genus_ra/jan22_WT_all_m6_genus_no_rendundant_feature_plot.pdf")

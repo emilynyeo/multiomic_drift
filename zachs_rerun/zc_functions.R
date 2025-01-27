@@ -13,6 +13,77 @@ load_rdata <- function(file_path) {
 }
 
 
+### Make new columns 
+make_new_columns <- function(data, column_name) {
+  data <- data %>%
+    mutate(
+      subject_id = str_split(column_name, "\\.", simplify = TRUE)[, 1],
+      TIMEPOINT = str_split(column_name, "\\.", simplify = TRUE)[, 2]
+    )
+  return(data)
+}
+
+
+### Filter data
+filter_data <- function(data, column, value) {
+  data <- data %>%
+    filter(column == value)
+  return(data)
+}
+
+
+### Merge data
+merge_data <- function(data1, data2, join_type, columnname) {
+  data <- join_type(data1, data2, by = columnname)
+  
+  # Remove the duplicated columns and rename as necessary
+  data <- data %>%
+    select(-matches(paste0(columnname, "\\.y$"))) %>%
+    rename_with(~ gsub("\\.x$", "", .), ends_with(".x"))
+  
+  return(data)
+}
+
+
+### Remove columns 
+remove_columns <- function(data, columns_to_remove = NULL, pattern = NULL) {
+  # Remove specified columns if provided
+  if (!is.null(columns_to_remove)) {
+    data <- data %>% select(-all_of(columns_to_remove))
+  }
+  
+  # Remove columns matching the pattern if provided
+  if (!is.null(pattern)) {
+    data <- data %>% select(-matches(pattern))
+  }
+  
+  return(data)
+}
+
+
+### Extract columns 
+extract_columns <- function(data, columns_to_extract = NULL, pattern = NULL) {
+  # Case 1: Both columns_to_extract and pattern are specified
+  if (!is.null(columns_to_extract) && !is.null(pattern)) {
+    data <- data %>% 
+      select(all_of(intersect(names(data), 
+                              columns_to_extract)), 
+             matches(pattern))
+    
+    # Case 2: Only pattern is specified
+  } else if (is.null(columns_to_extract) && !is.null(pattern)) {
+    data <- data %>% select(matches(pattern))
+    
+    # Case 3: Only columns_to_extract is specified
+  } else if (!is.null(columns_to_extract) && is.null(pattern)) {
+    data <- data %>% select(all_of(columns_to_extract))
+  }
+  
+  # Return data with the selected columns
+  return(data)
+}
+
+
 ### Function to automatically save all data frames/matrices in an environment as CSV files
 save_env_to_csv <- function(env, output_dir) {
   # Ensure the output directory exists
@@ -224,7 +295,9 @@ train_and_save_models <- function(data, target_var,
     dir.create("drift_fs/csv/results/", recursive = TRUE)
   }
   
-  write.csv(feature_importance, paste0("drift_fs/csv/results/", result_prefix, "_feature_importance.csv"), row.names = FALSE)
+  write.csv(feature_importance, paste0("drift_fs/csv/results/", 
+                                       result_prefix, "_feature_importance.csv"), 
+            row.names = FALSE)
   
   # Extract best betas
   beta_coefficients <- extract_best_betas(
@@ -465,6 +538,7 @@ create_plots <- function(data_list, max_r2, titles) {
         fill = "Model"
       ) +
       coord_cartesian(xlim = c(0, max_r2)) +
+      #coord_cartesian(xlim(0, 0.5)) +
       theme_minimal() +
       scale_fill_viridis_d() +
       theme(
@@ -500,6 +574,7 @@ create_feature_plot <- function(features, title, save_path) {
       fill = "Model"
     ) +
     scale_fill_viridis_d() +
+    xlim(0, 100) +  # Set x-axis range from 0 to 100
     theme_minimal() +
     theme(
       axis.text.x = element_text(size = 13),
@@ -519,7 +594,7 @@ create_feature_plot <- function(features, title, save_path) {
 
 
 ### Function to extract top features
-extract_top_features <- function(dataset, top_n = 10) {
+extract_top_features <- function(dataset, top_n = 15) {
   # Extract columns ending with '_Importance'
   importance_columns <- names(dataset$feature_importance) %>%
     grep("_Importance$", ., value = TRUE)
