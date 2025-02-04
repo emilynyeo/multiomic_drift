@@ -12,9 +12,10 @@
 rm(list = ls())
 source("zc_functions.R") 
 library(pacman)
-p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn, caret, caretEnsemble, 
-       readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest, glmnet, xgboost, ggplot2, 
-       reshape2, scales, gridExtra, plotly, sf, tidyverse)
+p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn, 
+       caret, caretEnsemble, readr, plyr, dplyr, tidyr, purrr, tibble, stringr, 
+       psych, randomForest, glmnet, xgboost, ggplot2, reshape2, scales, 
+       gridExtra, plotly, sf, tidyverse)
 
 ###############################
 ###     Caret Analysis
@@ -36,36 +37,38 @@ colnames(metadata) <- gsub(" \\(6m-BL\\)$", "_BL_6m", colnames(metadata))
 pattern <- "(.*_6m$|.*_12m$|.*_id$|group$|sex$|race$|age$|consent$)"
 meta_filtered <- metadata[, grep(pattern, colnames(metadata))] # Keep only columns whose names match the pattern
 
-meta_filtered$CRP_6m_12m <-  meta_filtered$C_Reactive_Protein_6m - meta_filtered$C_Reactive_Protein_12m
-meta_filtered$cholesterol_6m_12m <- meta_filtered$Cholesterol_lipid_6m - meta_filtered$Cholesterol_lipid_12m
-meta_filtered$ghrelin_6m_12m <- meta_filtered$Ghrelin_6m - meta_filtered$Ghrelin_12m
-meta_filtered$HDL_6m_12m <- meta_filtered$HDL_Total_Direct_lipid_6m - meta_filtered$HDL_Total_Direct_lipid_12m
-meta_filtered$LDL_6m_12m <- meta_filtered$LDL_Calculated_6m - meta_filtered$LDL_Calculated_12m
-meta_filtered$HbA1C_6m_12m <- meta_filtered$Hemoglobin_A1C_6m - meta_filtered$Hemoglobin_A1C_12m
-meta_filtered$insulin_6m_12m <- meta_filtered$Insulin_endo_6m - meta_filtered$Insulin_endo_12m
-meta_filtered$leptin_6m_12m <- meta_filtered$Leptin_6m - meta_filtered$Leptin_12m
-meta_filtered$peptide_yy_6m_12m <- meta_filtered$Peptide_YY_6m - meta_filtered$Peptide_YY_12m
-meta_filtered$tgcyd_6m_12m <- meta_filtered$Triglyceride_lipid_6m - meta_filtered$Triglyceride_lipid_12m
-meta_filtered$homo_ir_6m_12m <- meta_filtered$HOMA_IR_6m - meta_filtered$HOMA_IR_12m
-meta_filtered$BMI_6m_12m <- meta_filtered$outcome_BMI_fnl_6m - meta_filtered$outcome_BMI_fnl_12m
-meta_filtered$Weight_6m_12m <- meta_filtered$outcome_wt_fnl_6m - meta_filtered$outcome_wt_fnl_12m
+meta_filtered$CRP_6m_12m <- meta_filtered$C_Reactive_Protein_12m - meta_filtered$C_Reactive_Protein_6m
+meta_filtered$cholesterol_6m_12m <- meta_filtered$Cholesterol_lipid_12m - meta_filtered$Cholesterol_lipid_6m
+meta_filtered$ghrelin_6m_12m <- meta_filtered$Ghrelin_12m - meta_filtered$Ghrelin_6m
+meta_filtered$HDL_6m_12m <- meta_filtered$HDL_Total_Direct_lipid_12m - meta_filtered$HDL_Total_Direct_lipid_6m
+meta_filtered$LDL_6m_12m <- meta_filtered$LDL_Calculated_12m - meta_filtered$LDL_Calculated_6m
+meta_filtered$HbA1C_6m_12m <- meta_filtered$Hemoglobin_A1C_12m - meta_filtered$Hemoglobin_A1C_6m
+meta_filtered$insulin_6m_12m <- meta_filtered$Insulin_endo_12m - meta_filtered$Insulin_endo_6m
+meta_filtered$leptin_6m_12m <- meta_filtered$Leptin_12m - meta_filtered$Leptin_6m
+meta_filtered$peptide_yy_6m_12m <- meta_filtered$Peptide_YY_12m - meta_filtered$Peptide_YY_6m
+meta_filtered$tgcyd_6m_12m <- meta_filtered$Triglyceride_lipid_12m - meta_filtered$Triglyceride_lipid_6m
+meta_filtered$homo_ir_6m_12m <- meta_filtered$HOMA_IR_12m - meta_filtered$HOMA_IR_6m
+meta_filtered$BMI_6m_12m <- meta_filtered$outcome_BMI_fnl_12m - meta_filtered$outcome_BMI_fnl_6m
+meta_filtered$Weight_6m_12m <- meta_filtered$outcome_wt_fnl_12m - meta_filtered$outcome_wt_fnl_6m
+
+metadata$test_bmi_12m_BL <- metadata$outcome_BMI_fnl_12m - metadata$outcome_BMI_fnl_BL
 
 meta_6m_12m <- meta_filtered %>% 
-               select(c("subject_id", 
-                        "randomized_group", "consent", "age", "sex", "race",
-                        "CRP_6m_12m", "cholesterol_6m_12m", "ghrelin_6m_12m",
-                        "HDL_6m_12m", "LDL_6m_12m", "HbA1C_6m_12m",
-                        "insulin_6m_12m", "leptin_6m_12m", "peptide_yy_6m_12m",
-                        "tgcyd_6m_12m", "homo_ir_6m_12m",
-                        "BMI_6m_12m", "Weight_6m_12m"))
+  select(c("subject_id", 
+           "randomized_group", "consent", "age", "sex", "race",
+           "CRP_6m_12m", "cholesterol_6m_12m", "ghrelin_6m_12m",
+           "HDL_6m_12m", "LDL_6m_12m", "HbA1C_6m_12m",
+           "insulin_6m_12m", "leptin_6m_12m", "peptide_yy_6m_12m",
+           "tgcyd_6m_12m", "homo_ir_6m_12m",
+           "BMI_6m_12m", "Weight_6m_12m"))
 meta_BL_6m <- meta_filtered %>% 
-        select(c("subject_id", "randomized_group", "consent",
-                 "age", "sex", "race",
-                 "BMI_BL_6m", "Weight_BL_6m", 
-                 "C Reactive Protein_BL_6m", "Cholesterol lipid_BL_6m",
-                 "Ghrelin_BL_6m","HDL_BL_6m", "LDL_BL_6m", "HbA1C_BL_6m", 
-                 "Insulin_BL_6m", "Leptin_BL_6m", "Peptide YY_BL_6m", 
-                 "Triglyceride lipid_BL_6m", "HOMA-IR_BL_6m")) %>% 
+  select(c("subject_id", "randomized_group", "consent",
+           "age", "sex", "race",
+           "BMI_BL_6m", "Weight_BL_6m", 
+           "C Reactive Protein_BL_6m", "Cholesterol lipid_BL_6m",
+           "Ghrelin_BL_6m","HDL_BL_6m", "LDL_BL_6m", "HbA1C_BL_6m", 
+           "Insulin_BL_6m", "Leptin_BL_6m", "Peptide YY_BL_6m", 
+           "Triglyceride lipid_BL_6m", "HOMA-IR_BL_6m")) %>% 
   rename(CRP_BL_6m = "C Reactive Protein_BL_6m",
          cholesterol_BL_6m = "Cholesterol lipid_BL_6m",
          ghrelin_BL_6m = "Ghrelin_BL_6m",
@@ -125,19 +128,19 @@ twelvem_base <- gsub("_12m$", "", twelvem_cols)
 for (base in BL_base) {
   # BL - 6m
   if (base %in% sixm_base) {
-    df_BL_6m_12m[[paste0(base, "_BL_6m")]] <- df_BL_6m_12m[[paste0(base, "_BL")]] - df_BL_6m_12m[[paste0(base, "_6m")]]
+    df_BL_6m_12m[[paste0(base, "_BL_6m")]] <- df_BL_6m_12m[[paste0(base, "_6m")]] - df_BL_6m_12m[[paste0(base, "_BL")]]
   }
   
   # BL - 12m
   if (base %in% twelvem_base) {
-    df_BL_6m_12m[[paste0(base, "_BL_12m")]] <- df_BL_6m_12m[[paste0(base, "_BL")]] - df_BL_6m_12m[[paste0(base, "_12m")]]
+    df_BL_6m_12m[[paste0(base, "_BL_12m")]] <- df_BL_6m_12m[[paste0(base, "_12m")]] - df_BL_6m_12m[[paste0(base, "_BL")]]
   }
 }
 
 for (base in sixm_base) {
   # 6m - 12m
   if (base %in% twelvem_base) {
-    df_BL_6m_12m[[paste0(base, "_6m_12m")]] <- df_BL_6m_12m[[paste0(base, "_6m")]] - df_BL_6m_12m[[paste0(base, "_12m")]]
+    df_BL_6m_12m[[paste0(base, "_6m_12m")]] <- df_BL_6m_12m[[paste0(base, "_12m")]] - df_BL_6m_12m[[paste0(base, "_6m")]]
   }
 }
 # debugging the last one 
@@ -148,10 +151,11 @@ print(common_bases)
 count(is.na(df_BL_6m_12m[[paste0(common_bases[1], "_6m")]]))
 count(is.na(df_BL_6m_12m[[paste0(common_bases[1], "_12m")]]))
 
+# first check if there are NAs, then make delta 
 df_BL_6m_12m[[paste0(base, "_6m_12m")]] <- 
   ifelse(is.na(df_BL_6m_12m[[paste0(base, "_6m")]]) | is.na(df_BL_6m_12m[[paste0(base, "_12m")]]),
          NA,
-         df_BL_6m_12m[[paste0(base, "_6m")]] - df_BL_6m_12m[[paste0(base, "_12m")]])
+         df_BL_6m_12m[[paste0(base, "_12m")]] - df_BL_6m_12m[[paste0(base, "_6m")]])
 
 
 # Get the names of the new columns
@@ -169,8 +173,8 @@ all_delta_BL_6m <- df_BL_6m_12m[, c(1:30,
                                             BL_6m_cols))]
 
 all_delta_BL_12m <- df_BL_6m_12m[, c(1:30, 
-                                    which(colnames(df_BL_6m_12m) %in% 
-                                            BL_12m_cols))]
+                                     which(colnames(df_BL_6m_12m) %in% 
+                                             BL_12m_cols))]
 
 all_delta_6m_12m <- df_BL_6m_12m[, c(1:30, 
                                      which(colnames(df_BL_6m_12m) %in% 
@@ -227,9 +231,9 @@ new_m6_12m_meta <- merge(meta_6m_12m, new_m6_12m_filtered, by = "subject_id")
 # Assuming m6_12m is your data frame
 # Get column names from the 17th column onward
 colnames(new_BL_6m_meta)[2:ncol(new_BL_6m_meta)] <- gsub("_BL_6m", "", 
-                                          colnames(new_BL_6m_meta)[2:ncol(new_BL_6m_meta)])
+                                                         colnames(new_BL_6m_meta)[2:ncol(new_BL_6m_meta)])
 colnames(new_m6_12m_meta)[2:ncol(new_m6_12m_meta)] <- gsub("_6m_12m", "", 
-                                          colnames(new_m6_12m_meta)[2:ncol(new_m6_12m_meta)])
+                                                           colnames(new_m6_12m_meta)[2:ncol(new_m6_12m_meta)])
 
 # Step 3: combine dataframes 
 setdiff(colnames(new_BL_6m_meta), colnames(new_m6_12m_meta))
@@ -295,20 +299,14 @@ table(combined_train$consent)
 table(combined_test$consent)
 
 train <- combined_train %>% 
-         select(-c("consent")) %>% 
-         mutate(range = as.numeric(range))
+  select(-c("consent")) %>% 
+  mutate(range = as.numeric(range))
 
 test <- combined_test %>% 
-        select(-c("consent")) %>% 
-        mutate(range = as.numeric(range))
+  select(-c("consent")) %>% 
+  mutate(range = as.numeric(range))
 
-
-save_dir <- "drift_fs/csv/all_omic_processed_data/deltas/"
-#write.csv(train, 
-#          paste0(save_dir, "jan28_all_delta_train.csv"), row.names = FALSE)
-
-#write.csv(test, 
-#          paste0(save_dir, "jan28_all_delta_test.csv"), row.names = FALSE)
+########## Check variances and impute ############
 
 # Look at variance of train set 
 numeric_train <- train[, sapply(train, is.numeric)]
@@ -323,7 +321,7 @@ top_50 <- variance_df_sorted[1:50, ]
 bottom_100 <- variance_df_sorted[(nrow(variance_df_sorted) - 100):nrow(variance_df_sorted), ]
 
 ### Plot the variance of each variable
-ggplot(top_50, aes(x = reorder(variable, variance), y = variance)) +
+ggplot(bottom_100, aes(x = reorder(variable, variance), y = variance)) +
   geom_bar(stat = "identity", fill = "lightgreen") +
   coord_flip() +  # Flip the coordinates for better readability
   labs(title = "Variance of Variables",
@@ -333,7 +331,6 @@ ggplot(top_50, aes(x = reorder(variable, variance), y = variance)) +
 
 ### Remove variables with zero variance
 non_zero_variance_df <- variance_df[variance_df$variance != 0, ]
-train_no_zero_var <- train[, non_zero_variance_df$variable]
 train_no_zero_var <- train[, c("subject_id", non_zero_variance_df$variable)]
 
 gg_miss_var(train_no_zero_var[1:101])
@@ -341,11 +338,10 @@ mis_sum <- miss_var_summary(train_no_zero_var[1:101])
 mis_sum
 
 # impute missing of test set 
-stardardizing_cols <- colnames(train_no_zero_var[6:920])
+stardardizing_cols <- colnames(train_no_zero_var[9:920])
 train_imputed <- preprocess_data(train_no_zero_var, 
                                  stardardizing_cols, 
                                  "medianImpute")
-
 
 # Look at variance of test set 
 numeric_test <- test[, sapply(test, is.numeric)]
@@ -378,7 +374,7 @@ mis_sum
 
 # impute missing of test set 
 stardardizing_cols_test <- colnames(test_no_zero_var[8:825])
-test_imputed <- preprocess_data(test_no_zero_var, 
+test_imputed_novar <- preprocess_data(test_no_zero_var, 
                                 stardardizing_cols_test, 
                                 "medianImpute")
 
@@ -398,9 +394,12 @@ common_cols <- intersect(colnames(train_imputed), colnames(test_imputed))
 train_imputed_trimmed <- train_imputed[, common_cols]
 test_imputed_trimmed <- test_imputed[, common_cols]
 
-#save_dir <- "drift_fs/csv/all_omic_processed_data/deltas/"
-#write.csv(train_imputed_trimmed, 
-#          paste0(save_dir, "jan30_all_train_imputed.csv"), row.names = FALSE)
 
-#write.csv(test_imputed_trimmed, 
-#          paste0(save_dir, "jan30_all_delta_test_imputed.csv"), row.names = FALSE)
+save_dir <- "drift_fs/csv/all_omic_processed_data/deltas/"
+write.csv(train_imputed_trimmed, 
+          paste0(save_dir, "jan30_all_delta_train_imp_varcheck.csv"), 
+          row.names = FALSE)
+
+write.csv(test_imputed_trimmed, 
+          paste0(save_dir, "jan30_all_delta_test_imp_varcheck.csv"), 
+          row.names = FALSE)
