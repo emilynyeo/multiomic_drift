@@ -133,7 +133,20 @@ datasets <- list(
 top_20_features <- get_top_n_features_all_models(data_list$deltas_WT_BL_6m_g_ra_regr_feature_importance, 20)
 print(top_20_features)
 
+# Sort by the importance values and select the top 20 features
+top_20_features <- data_list$m6_all_omic_g_ra_regression_feature_importance %>%
+  dplyr::arrange(desc(RF_Importance)) %>%
+  head(20)
+top_20_feature_names <- top_20_features$Variable
+print(top_20_features)
+
 top_20_features_no_r <- get_top_n_features_all_models(data_list$deltas_WT_BL_6m_g_ra_reg_no_redundant_feature_importance, 20)
+print(top_20_features_no_r)
+
+top_20_features_no_r <- data_list$deltas_WT_BL_6m_g_ra_reg_no_redundant_feature_importance %>%
+  dplyr::arrange(desc(RF_Importance)) %>%
+  head(20)
+top_20_feature_names_no_ra <- top_20_features_no_r$Variable
 print(top_20_features_no_r)
 
 # lets get the testing R^2 for all the different datasets

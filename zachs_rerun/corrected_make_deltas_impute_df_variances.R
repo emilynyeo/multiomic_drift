@@ -395,11 +395,11 @@ train_imputed_trimmed <- train_imputed[, common_cols]
 test_imputed_trimmed <- test_imputed[, common_cols]
 
 
-save_dir <- "drift_fs/csv/all_omic_processed_data/deltas/"
-write.csv(train_imputed_trimmed, 
-          paste0(save_dir, "jan30_all_delta_train_imp_varcheck.csv"), 
-          row.names = FALSE)
+#save_dir <- "drift_fs/csv/all_omic_processed_data/deltas/"
+#write.csv(train_imputed_trimmed, 
+#          paste0(save_dir, "jan30_all_delta_train_imp_varcheck.csv"), 
+#          row.names = FALSE)
 
-write.csv(test_imputed_trimmed, 
-          paste0(save_dir, "jan30_all_delta_test_imp_varcheck.csv"), 
-          row.names = FALSE)
+#write.csv(test_imputed_trimmed, 
+#          paste0(save_dir, "jan30_all_delta_test_imp_varcheck.csv"), 
+#          row.names = FALSE)

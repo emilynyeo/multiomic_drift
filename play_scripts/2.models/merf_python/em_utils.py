@@ -473,7 +473,7 @@ def run_merf_analysis(X, Y, Z, clusters_train,
 # Example of how to call the function
 # run_merf_analysis(X, Y, Z, clusters_train, X_new, Y_new, Z_new, clusters_new, output_dir, r2_out, feature_imp_out)
 
-def run_merf_analysis2(X, Y, Z, clusters_train, 
+def run_merf_analysis_old2(X, Y, Z, clusters_train, 
                       X_new, Y_new, Z_new, clusters_new,
                       df, 
                       output_dir, r2_out, feature_imp_out):
@@ -638,7 +638,166 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
     # Return the R-squared values and the top features DataFrame for further analysis
     return r2_values, top_features_df
 
+def run_merf_analysis2(X, Y, Z, clusters_train, 
+                      X_new, Y_new, Z_new, clusters_new,
+                      df, 
+                      output_dir, r2_out, feature_imp_out, results_filename):
+    import pandas as pd
+    import numpy as np
+    from merf import MERF
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.metrics import r2_score
+    import matplotlib.pyplot as plt
+    
+    # Find the row with the lowest mean_mse_score
+    lowest_mse_row = df.loc[df['mean_mse_score'].idxmin()]
+    print("First 5 columns for the lowest mean_mse_score:")
+    print(lowest_mse_row.iloc[:5])
 
+    # Find the row with the lowest mean_prev_score
+    lowest_prev_row = df.loc[df['mean_prev'].idxmin()]
+    print("First 5 columns for the lowest mean_prev_score:")
+    print(lowest_prev_row.iloc[:5])
+
+    # Find the row with the lowest mean_ptev_score
+    lowest_ptev_row = df.loc[df['mean_ptev'].idxmin()]
+    print("First 5 columns for the lowest mean_ptev_score:")
+    print(lowest_ptev_row.iloc[:5])
+
+    # Find the row with the highest oob_score
+    highest_oob_row = df.loc[df['oob_score'].idxmax()]
+    print("\nFirst 5 columns for the highest oob_score:")
+    print(highest_oob_row.iloc[:5])
+
+    # Create parameter grids from the extracted rows
+    best_mse_param_grid = {
+        'n_estimators': [int(lowest_mse_row['n_estimators'])],
+        'max_depth': [None if pd.isna(lowest_mse_row['max_depth']) else int(lowest_mse_row['max_depth'])],
+        'min_samples_split': [float(lowest_mse_row['min_samples_split'])],
+        'max_iter': [int(lowest_mse_row['max_iter'])],
+        'n_splits': [int(lowest_mse_row['n_splits'])]
+    }
+
+    lowest_prev_param_grid = {
+        'n_estimators': [int(lowest_prev_row['n_estimators'])],
+        'max_depth': [None if pd.isna(lowest_prev_row['max_depth']) else int(lowest_prev_row['max_depth'])],
+        'min_samples_split': [float(lowest_prev_row['min_samples_split'])],
+        'max_iter': [int(lowest_prev_row['max_iter'])],
+        'n_splits': [int(lowest_prev_row['n_splits'])]
+    }
+
+    lowest_ptev_param_grid = {
+        'n_estimators': [int(lowest_ptev_row['n_estimators'])],
+        'max_depth': [None if pd.isna(lowest_ptev_row['max_depth']) else int(lowest_ptev_row['max_depth'])],
+        'min_samples_split': [float(lowest_ptev_row['min_samples_split'])],
+        'max_iter': [int(lowest_ptev_row['max_iter'])],
+        'n_splits': [int(lowest_ptev_row['n_splits'])]
+    }
+
+    highest_oob_param_grid = {
+        'n_estimators': [int(highest_oob_row['n_estimators'])],
+        'max_depth': [None if pd.isna(highest_oob_row['max_depth']) else int(highest_oob_row['max_depth'])],
+        'min_samples_split': [float(highest_oob_row['min_samples_split'])],
+        'max_iter': [int(highest_oob_row['max_iter'])],
+        'n_splits': [int(highest_oob_row['n_splits'])]
+    }
+
+    # Create a DataFrame to store results for each model
+    results_df = pd.DataFrame(columns=['Model', 'y_hat_new', 
+                                       'R_squared', 'Top_15_Feature_Importances', 'Cluster'])  # Added 'Cluster' column
+
+    # Create MERF models for each parameter grid
+    mse_merf = MERF(fixed_effects_model=RandomForestRegressor(
+        n_estimators=best_mse_param_grid['n_estimators'][0],
+        max_depth=best_mse_param_grid['max_depth'][0],
+        min_samples_split=best_mse_param_grid['min_samples_split'][0],
+        n_jobs=1,
+        oob_score=True),
+        gll_early_stop_threshold=None,
+        max_iterations=best_mse_param_grid['max_iter'][0])
+
+    prev_merf = MERF(fixed_effects_model=RandomForestRegressor(
+        n_estimators=lowest_prev_param_grid['n_estimators'][0],
+        max_depth=lowest_prev_param_grid['max_depth'][0],
+        min_samples_split=lowest_prev_param_grid['min_samples_split'][0],
+        n_jobs=1,
+        oob_score=True),
+        gll_early_stop_threshold=None,
+        max_iterations=lowest_prev_param_grid['max_iter'][0])
+
+    ptev_merf = MERF(fixed_effects_model=RandomForestRegressor(
+        n_estimators=lowest_ptev_param_grid['n_estimators'][0],
+        max_depth=lowest_ptev_param_grid['max_depth'][0],
+        min_samples_split=lowest_ptev_param_grid['min_samples_split'][0],
+        n_jobs=1,
+        oob_score=True),
+        gll_early_stop_threshold=None,
+        max_iterations=lowest_ptev_param_grid['max_iter'][0])
+
+    oob_merf = MERF(fixed_effects_model=RandomForestRegressor(
+        n_estimators=highest_oob_param_grid['n_estimators'][0],
+        max_depth=highest_oob_param_grid['max_depth'][0],
+        min_samples_split=highest_oob_param_grid['min_samples_split'][0],
+        n_jobs=1,
+        oob_score=True),
+        gll_early_stop_threshold=None,
+        max_iterations=highest_oob_param_grid['max_iter'][0])
+
+    # Fit models and predict
+    for model_name, merf_model in zip(['MSE Model', 'Prev Model', 'PTEV Model', 'OOB Model'], 
+                                       [mse_merf, prev_merf, ptev_merf, oob_merf]):
+        print(f"---------- RUN {model_name} WITH TUNING PARAMETERS 🌱 ----------")
+        mrf_fit = merf_model.fit(X.select_dtypes(include=[np.number]), Z, pd.Series(clusters_train), Y)
+        y_hat_new = mrf_fit.predict(X_new, Z_new, clusters_new)
+        r2 = r2_score(Y_new, y_hat_new)
+
+        # Get feature importances
+        feature_importances = mrf_fit.trained_fe_model.feature_importances_
+        feature_names = mrf_fit.trained_fe_model.feature_names_in_
+        feature_importance_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Importance': feature_importances
+        })
+        top_features = feature_importance_df.sort_values(by='Importance', ascending=False).head(15)
+
+        # Append results to the DataFrame for each y_hat_new value
+        for y_hat, cluster in zip(y_hat_new, clusters_new):  # Associate each y_hat_new with its corresponding cluster
+            new_row = pd.DataFrame({
+                'Model': [model_name],
+                'y_hat_new': [y_hat],  # Single y_hat_new value
+                'R_squared': [r2],
+                'Top_15_Feature_Importances': [top_features.to_dict(orient='records')],  # Convert to dict for CSV
+                'Cluster': [cluster]  # Added cluster information
+            })
+            results_df = pd.concat([results_df, new_row], ignore_index=True)
+
+    # Save results to CSV
+    results_df.to_csv(os.path.join(output_dir, results_filename), index=False)
+
+    # Calculate R-squared values for each model
+    r2_values = {
+        'MSE Model': r2_score(Y_new, mse_merf.predict(X_new, Z_new, clusters_new)),
+        'Prev Model': r2_score(Y_new, prev_merf.predict(X_new, Z_new, clusters_new)),
+        'PTEV Model': r2_score(Y_new, ptev_merf.predict(X_new, Z_new, clusters_new)),
+        'OOB Model': r2_score(Y_new, oob_merf.predict(X_new, Z_new, clusters_new))
+    }
+
+    # Plot R-squared values
+    plt.figure(figsize=(8, 5))
+    plt.bar(r2_values.keys(), r2_values.values(), color=['#F88F79', '#F0F879', '#ACF0F8', '#86B874'])
+    plt.ylabel('R-squared Value')
+    plt.title('R-squared Comparison of MERF Models')
+    plt.ylim(0, 1)  # Adjusted to show full range of R-squared values
+    plt.xticks(rotation=45)
+    plt.savefig(os.path.join(output_dir, r2_out), dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Determine the model with the highest R-squared value
+    best_model_name = max(r2_values, key=r2_values.get)
+    print(f"Best model: {best_model_name} with R-squared: {r2_values[best_model_name]:.4f}")
+
+    # Return the R-squared values and the top features DataFrame for further analysis
+    return r2_values, results_df
 
 def compare_r2_values1(model_names, *r2_dicts):
     # Create a DataFrame to hold the R-squared values
