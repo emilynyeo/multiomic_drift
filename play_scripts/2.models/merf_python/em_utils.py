@@ -641,7 +641,7 @@ def run_merf_analysis_old2(X, Y, Z, clusters_train,
 def run_merf_analysis2(X, Y, Z, clusters_train, 
                       X_new, Y_new, Z_new, clusters_new,
                       df, 
-                      output_dir, r2_out, feature_imp_out, results_filename):
+                      output_dir, r2_out, feature_imp_out, results_filename, time_new):
     import pandas as pd
     import numpy as np
     from merf import MERF
@@ -761,13 +761,14 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
         top_features = feature_importance_df.sort_values(by='Importance', ascending=False).head(15)
 
         # Append results to the DataFrame for each y_hat_new value
-        for y_hat, cluster in zip(y_hat_new, clusters_new):  # Associate each y_hat_new with its corresponding cluster
+        for y_hat, cluster, time in zip(y_hat_new, clusters_new, time_new):  # Associate each y_hat_new with its corresponding cluster and time
             new_row = pd.DataFrame({
                 'Model': [model_name],
                 'y_hat_new': [y_hat],  # Single y_hat_new value
                 'R_squared': [r2],
                 'Top_15_Feature_Importances': [top_features.to_dict(orient='records')],  # Convert to dict for CSV
-                'Cluster': [cluster]  # Added cluster information
+                'Cluster': [cluster],  # Added cluster information
+                'Time': [time]  # Added time information
             })
             results_df = pd.concat([results_df, new_row], ignore_index=True)
 
