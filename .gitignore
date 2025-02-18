@@ -9,3 +9,6 @@ mutli-omic-predictions.Rproj
 *.png
 *.rds
 *.pptx
+*.numbers
+*.docx
+*.pdf
