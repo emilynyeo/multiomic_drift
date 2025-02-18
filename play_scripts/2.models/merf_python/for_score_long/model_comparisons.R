@@ -104,6 +104,17 @@ stargazer(lm_mse_meta, lm_mse_grs, lm_mse_taxa, lm_mse_micom, lm_mse_pathway,
           title = "Comparison of Single Omics MSE Linear Models",
           out = paste0(out_dir, "MSE_single_model_comparison.html"))
 
+## MODels
+single_mods <- c("Model 1: Meta", 
+                 "Model 2: Taxa", 
+                 "Model 3: Pathway", 
+                 "Model 4: Micom")
+model_titles <- c("Model 1: Meta", 
+                  "Model 2: Meta + GRS", 
+                  "Model 3: Meta + GRS + Taxa", 
+                  "Model 4: Meta + GRS + Taxa + Pathway",
+                  "Model 5: Meta + GRS + Taxa + Pathway + Micom")
+
 # Combined MSE models 
 sjPlot::tab_model(lm_mse_meta, lm_mse_meta_grs, 
                   lm_mse_meta_grs_taxa, lm_mse_meta_grs_taxa_path, 
@@ -112,10 +123,12 @@ sjPlot::tab_model(lm_mse_meta, lm_mse_meta_grs,
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"), 
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
 ### Make linear models OOB
 lm_oob_meta <- lm(bmi ~ y_new_meta, data = df_oob)
@@ -141,14 +154,16 @@ stargazer(lm_oob_meta, lm_oob_grs, lm_oob_taxa, lm_oob_micom, lm_oob_pathway,
 sjPlot::tab_model(lm_oob_meta, lm_oob_meta_grs, 
                   lm_oob_meta_grs_taxa, lm_oob_meta_grs_taxa_path, 
                   lm_oob_all_omic,
-                  title = "Comparing combined models with OOB parameters", 
+                  title = "MERF long combined models with OOB parameters", 
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"),
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
 ### PREV PARAMETER COMPARISONS
 
@@ -176,14 +191,16 @@ stargazer(lm_prev_meta, lm_prev_grs, lm_prev_taxa, lm_prev_micom, lm_prev_pathwa
 sjPlot::tab_model(lm_prev_meta, lm_prev_meta_grs, 
                   lm_prev_meta_grs_taxa, lm_prev_meta_grs_taxa_path, 
                   lm_prev_all_omic,
-                  title = "Comparing combined models with PREV parameters",
+                  title = "MERF long combined models with PREV parameters",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"),
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
 ### PTEV 
 ### Make linear models PTEV ~ # ?lme4 ?nlme ?glm
@@ -232,14 +249,16 @@ stargazer(lm_ptev_meta, lm_ptev_grs, lm_ptev_taxa, lm_ptev_micom, lm_ptev_pathwa
 sjPlot::tab_model(lm_ptev_meta, lm_ptev_meta_grs, 
                   lm_ptev_meta_grs_taxa, lm_ptev_meta_grs_taxa_path, 
                   lm_ptev_all_omic,
-                  title = "Comparing combined models with PTEV parameters",
+                  title = "MERF long combined models with PTEV parameters",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"),
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
 
 anova(lm_ptev_meta, lm_ptev_all_omic)

@@ -20,13 +20,13 @@ meta <- read.csv(file.path(predict_dir, "merf_results_delta_only_meta_feb12.csv"
   distinct() %>% 
   dplyr::rename(y_new_meta = y_hat_new)
 
-taxa <- read.csv(file.path(predict_dir, "merf_results_delta_only_meta_taxa_feb12.csv")) %>% 
+taxa <- read.csv(file.path(predict_dir, "merf_results_delta_only_taxa_feb12.csv")) %>% 
   select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_taxa = y_hat_new)
 
 pathway <- read.csv(file.path(predict_dir, 
-                              "merf_results_delta_meta_taxa_functional_feb12.csv")) %>% 
+                              "merf_results_delta_only_pathway_feb12.csv")) %>% 
   select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_pathway = y_hat_new)
@@ -54,8 +54,11 @@ merged <- merge(merged_all, test,
                 by.y = c("subject_id", "range")) %>% 
   dplyr::rename(bmi = BMI)
 
-rm(merged_df, merged_df_small, test_all, merged_grs_meta,
-   merged_grs_meta_micom, merged_grs_meta_micom_pathway)
+rm(merged_df, merged_all, test_all, merged_grs_meta,
+   merged_meta_micom, merged_meta_micom_pathway, micom, meta, taxa, pathway)
+
+merged$Time <- as.factor(merged$Time)
+merged$Time <- ifelse(merged$Time == -0.991902700743342, 0, 1)
 
 ### Filter MSE
 df_mse <- merged %>%
@@ -74,146 +77,196 @@ df_ptev <- distinct(df_ptev)
 df_oob <- distinct(df_oob)
 
 ### Make linear models MSE
-lm_mse_meta <- lm(bmi ~ y_new_meta, data = df_mse)
-lm_mse_grs <- lm(bmi ~ y_new_grs, data = df_mse)
-lm_mse_taxa <- lm(bmi ~ y_new_taxa, data = df_mse)
-lm_mse_micom <- lm(bmi ~ y_new_micom, data = df_mse)
-lm_mse_pathway <- lm(bmi ~ y_new_micom, data = df_mse)
-### Make combined MSE models 
-lm_mse_meta_grs <- lm(bmi ~ y_new_meta + y_new_grs, data = df_mse)
-lm_mse_meta_grs_taxa <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa, data = df_mse)
-lm_mse_meta_grs_taxa_path <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa +
-                                  y_new_pathway, data = df_mse)
-lm_mse_all_omic <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + 
-                        y_new_pathway + y_new_micom, data = df_mse)
+lmer_mse_meta <- lme(bmi ~ y_new_meta + Time, 
+                      random = ~1|Cluster, data = df_mse)
+lmer_mse_taxa <- lme(bmi ~ y_new_taxa + Time, 
+                     random = ~1|Cluster, data = df_mse)
+lmer_mse_micom <- lme(bmi ~ y_new_micom + Time, 
+                     random = ~1|Cluster, data = df_mse)
+lmer_mse_pathway <- lme(bmi ~ y_new_pathway + Time, 
+                      random = ~1|Cluster, data = df_mse)
 
-# Create a side-by-side comparison table of the models
-out_dir <- '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/for_score_long/'
-
-# Single MSE models 
-stargazer(lm_mse_meta, lm_mse_grs, lm_mse_taxa, lm_mse_micom, lm_mse_pathway, 
-          type = "html", 
-          ci=TRUE, ci.level=0.95,
-          title = "Comparison of Single Omics MSE Linear Models",
-          out = paste0(out_dir, "MSE_single_model_comparison.html"))
-
+### Combined models MSE 
+mse_meta_taxa <- lme(bmi ~ y_new_meta + y_new_taxa + Time, 
+                     random = ~1|Cluster, data = df_mse)
+mse_meta_taxa_path <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway + Time, 
+                          random = ~1|Cluster, data = df_mse)
+mse_meta_taxa_path_micom <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway + 
+                                  y_new_micom + Time, random = ~1|Cluster, data = df_mse)
 # Combined MSE models 
-sjPlot::tab_model(lm_mse_meta, lm_mse_meta_grs, 
-                  lm_mse_meta_grs_taxa, lm_mse_meta_grs_taxa_path, 
-                  lm_mse_all_omic,
-                  title = "Comparing combined models with MSE parameters",
+single_mods <- c("Model 1: Meta", 
+                  "Model 2: Taxa", 
+                   "Model 3: Pathway", 
+                   "Model 4: Micom")
+model_titles <- c("Model 1: Meta", 
+                 "Model 2: Meta + Taxa", 
+                 "Model 3: Meta + Taxa + Pathway", 
+                 "Model 4: Meta + Taxa + Pathway + Micom")
+
+sjPlot::tab_model(lmer_mse_meta, lmer_mse_taxa, 
+                  lmer_mse_pathway, lmer_mse_micom, 
+                  title = "MERF delta single models with MSE parameters",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"), 
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = single_mods,
+                  auto.label = FALSE)
+
+sjPlot::tab_model(lmer_mse_meta, mse_meta_taxa, 
+                  mse_meta_taxa_path, mse_meta_taxa_path_micom, 
+                  title = "MERF delta combined models with MSE parameters",
+                  string.pred = "Predictors",
+                  string.est = "Estimate",
+                  string.std = "std. Beta",
+                  string.ci = "95% CI",
+                  string.se = "std. Error",
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
 ### Make linear models OOB
-lm_oob_meta <- lm(bmi ~ y_new_meta, data = df_oob)
-lm_oob_grs <- lm(bmi ~ y_new_grs, data = df_oob)
-lm_oob_taxa <- lm(bmi ~ y_new_taxa, data = df_oob)
-lm_oob_micom <- lm(bmi ~ y_new_micom, data = df_oob)
-lm_oob_pathway <- lm(bmi ~ y_new_micom, data = df_oob)
+lmer_oob_meta <- lme(bmi ~ y_new_meta + Time,  
+                     random = ~1|Cluster, data = df_oob)
+lmer_oob_taxa <- lme(bmi ~ y_new_taxa + Time, 
+                     random = ~1|Cluster, data = df_oob)
+lmer_oob_micom <- lme(bmi ~ y_new_micom + Time, 
+                      random = ~1|Cluster, data = df_oob)
+lmer_oob_pathway <- lme(bmi ~ y_new_pathway + Time, 
+                        random = ~1|Cluster, data = df_oob)
 
-### Make combined OOB models
-lm_oob_meta_grs <- lm(bmi ~ y_new_meta + y_new_grs, data = df_oob)
-lm_oob_meta_grs_taxa <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa, data = df_oob)
-lm_oob_meta_grs_taxa_path <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + y_new_pathway, data = df_oob)
-lm_oob_all_omic <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + y_new_pathway + y_new_micom, data = df_oob)
+### Combined models OOB 
+oob_meta_taxa <- lme(bmi ~ y_new_meta + y_new_taxa + Time, 
+                     random = ~1|Cluster, data = df_oob)
+oob_meta_taxa_path <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway + Time, 
+                          random = ~1|Cluster, data = df_oob)
+oob_meta_taxa_path_micom <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway +  
+                                  y_new_micom + Time, random = ~1|Cluster, data = df_oob)
 
-# Single OOB models
-stargazer(lm_oob_meta, lm_oob_grs, lm_oob_taxa, lm_oob_micom, lm_oob_pathway,
-          type = "html",
-          ci = TRUE, ci.level = 0.95,
-          title = "Comparison of Single Omics OOB Linear Models",
-          out = paste0(out_dir, "OOB_single_model_comparison.html"))
-
-# Combined OOB models
-sjPlot::tab_model(lm_oob_meta, lm_oob_meta_grs, 
-                  lm_oob_meta_grs_taxa, lm_oob_meta_grs_taxa_path, 
-                  lm_oob_all_omic,
-                  title = "Comparing combined models with OOB parameters", 
+sjPlot::tab_model(lmer_oob_meta, lmer_oob_taxa, 
+                  lmer_oob_pathway, lmer_oob_micom, 
+                  title = "MERF delta single models with OOB parameters",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"),
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = single_mods,
+                  auto.label = FALSE)
 
-### PREV PARAMETER COMPARISONS
+# Combined OOB models 
+sjPlot::tab_model(lmer_oob_meta, oob_meta_taxa, 
+                  oob_meta_taxa_path, oob_meta_taxa_path_micom, 
+                  title = "MERF delta combined models with OOB parameters",
+                  string.pred = "Predictors",
+                  string.est = "Estimate",
+                  string.std = "std. Beta",
+                  string.ci = "95% CI",
+                  string.se = "std. Error",
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
 ### Make linear models PREV
-lm_prev_meta <- lm(bmi ~ y_new_meta, data = df_prev)
-lm_prev_grs <- lm(bmi ~ y_new_grs, data = df_prev)
-lm_prev_taxa <- lm(bmi ~ y_new_taxa, data = df_prev)
-lm_prev_micom <- lm(bmi ~ y_new_micom, data = df_prev)
-lm_prev_pathway <- lm(bmi ~ y_new_micom, data = df_prev)
+lmer_prev_meta <- lme(bmi ~ y_new_meta + Time,  
+                      random = ~1|Cluster, data = df_prev)
+lmer_prev_taxa <- lme(bmi ~ y_new_taxa + Time, 
+                      random = ~1|Cluster, data = df_prev)
+lmer_prev_micom <- lme(bmi ~ y_new_micom + Time, 
+                       random = ~1|Cluster, data = df_prev)
+lmer_prev_pathway <- lme(bmi ~ y_new_pathway + Time, 
+                         random = ~1|Cluster, data = df_prev)
 
-### Make combined PREV models
-lm_prev_meta_grs <- lm(bmi ~ y_new_meta + y_new_grs, data = df_prev)
-lm_prev_meta_grs_taxa <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa, data = df_prev)
-lm_prev_meta_grs_taxa_path <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + y_new_pathway, data = df_prev)
-lm_prev_all_omic <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + y_new_pathway + y_new_micom, data = df_prev)
+### Combined models PREV 
+prev_meta_taxa <- lme(bmi ~ y_new_meta + y_new_taxa + Time, 
+                      random = ~1|Cluster, data = df_prev)
+prev_meta_taxa_path <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway + Time, 
+                           random = ~1|Cluster, data = df_prev)
+prev_meta_taxa_path_micom <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway +  
+                                   y_new_micom + Time, random = ~1|Cluster, data = df_prev)
 
-# Single PREV models
-stargazer(lm_prev_meta, lm_prev_grs, lm_prev_taxa, lm_prev_micom, lm_prev_pathway,
-          type = "html",
-          ci = TRUE, ci.level = 0.95,
-          title = "Comparison of Single Omics PREV Linear Models",
-          out = paste0(out_dir, "PREV_single_model_comparison.html"))
-
-# Combined PREV models
-sjPlot::tab_model(lm_prev_meta, lm_prev_meta_grs, 
-                  lm_prev_meta_grs_taxa, lm_prev_meta_grs_taxa_path, 
-                  lm_prev_all_omic,
-                  title = "Comparing combined models with PREV parameters",
+sjPlot::tab_model(lmer_prev_meta, lmer_prev_taxa, 
+                  lmer_prev_pathway, lmer_prev_micom, 
+                  title = "MERF delta single models with PREV parameters",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"),
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = single_mods,
+                  auto.label = FALSE)
+# Combined PREV models 
+sjPlot::tab_model(lmer_prev_meta, prev_meta_taxa, 
+                  prev_meta_taxa_path, prev_meta_taxa_path_micom, 
+                  title = "MERF delta combined models with PREV parameters",
+                  string.pred = "Predictors",
+                  string.est = "Estimate",
+                  string.std = "std. Beta",
+                  string.ci = "95% CI",
+                  string.se = "std. Error",
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
 
-### PTEV
+
 ### Make linear models PTEV
-lm_ptev_meta <- lm(bmi ~ y_new_meta, data = df_ptev)
-lm_ptev_grs <- lm(bmi ~ y_new_grs, data = df_ptev)
-lm_ptev_taxa <- lm(bmi ~ y_new_taxa, data = df_ptev)
-lm_ptev_micom <- lm(bmi ~ y_new_micom, data = df_ptev)
-lm_ptev_pathway <- lm(bmi ~ y_new_micom, data = df_ptev)
+lmer_ptev_meta <- lme(bmi ~ y_new_meta + Time,  
+                      random = ~1|Cluster, data = df_ptev)
+lmer_ptev_taxa <- lme(bmi ~ y_new_taxa + Time, 
+                      random = ~1|Cluster, data = df_ptev)
+lmer_ptev_micom <- lme(bmi ~ y_new_micom + Time, 
+                       random = ~1|Cluster, data = df_ptev)
+lmer_ptev_pathway <- lme(bmi ~ y_new_pathway + Time, 
+                         random = ~1|Cluster, data = df_ptev)
 
-### Make combined PTEV models
-lm_ptev_meta_grs <- lm(bmi ~ y_new_meta + y_new_grs, data = df_ptev)
-lm_ptev_meta_grs_taxa <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa, data = df_ptev)
-lm_ptev_meta_grs_taxa_path <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + y_new_pathway, data = df_ptev)
-lm_ptev_all_omic <- lm(bmi ~ y_new_meta + y_new_grs + y_new_taxa + y_new_pathway + y_new_micom, data = df_ptev)
+### Combined models PTEV 
+ptev_meta_taxa <- lme(bmi ~ y_new_meta + y_new_taxa + Time, 
+                      random = ~1|Cluster, data = df_ptev)
+ptev_meta_taxa_path <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway + Time, 
+                           random = ~1|Cluster, data = df_ptev)
+ptev_meta_taxa_path_micom <- lme(bmi ~ y_new_meta + y_new_taxa + y_new_pathway +  
+                                   y_new_micom + Time, random = ~1|Cluster, data = df_ptev)
 
-# Single PTEV models
-stargazer(lm_ptev_meta, lm_ptev_grs, lm_ptev_taxa, lm_ptev_micom, lm_ptev_pathway,
-          type = "html",
-          ci = TRUE, ci.level = 0.95,
-          title = "Comparison of Single Omics PTEV Linear Models",
-          out = paste0(out_dir, "PTEV_single_model_comparison.html"))
-
-# Combined PTEV models
-sjPlot::tab_model(lm_ptev_meta, lm_ptev_meta_grs, 
-                  lm_ptev_meta_grs_taxa, lm_ptev_meta_grs_taxa_path, 
-                  lm_ptev_all_omic,
-                  title = "Comparing combined models with PTEV parameters",
+sjPlot::tab_model(lmer_ptev_meta, lmer_ptev_taxa, 
+                  lmer_ptev_pathway, lmer_ptev_micom, 
+                  title = "MERF delta single models with PEV parameters",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
-                  string.ci = "CI",
+                  string.ci = "95% CI",
                   string.se = "std. Error",
-                  p.style = c("numeric_stars"),
-                  p.threshold = c(0.05))
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = single_mods,
+                  auto.label = FALSE)
+# Combined PTEV models 
+sjPlot::tab_model(lmer_ptev_meta, ptev_meta_taxa, 
+                  ptev_meta_taxa_path, ptev_meta_taxa_path_micom, 
+                  title = "MERF delta combined models with PTEV parameters",
+                  string.pred = "Predictors",
+                  string.est = "Estimate",
+                  string.std = "std. Beta",
+                  string.ci = "95% CI",
+                  string.se = "std. Error",
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  dv.labels = model_titles,
+                  auto.label = FALSE)
+
+anova(lmer_ptev_meta, ptev_meta_taxa_path_micom)
+anova(lmer_ptev_meta, ptev_meta_taxa)
+anova(lmer_prev_meta, prev_meta_taxa_path_micom)
+anova(lmer_prev_meta, prev_meta_taxa)
 
 
-anova(lm_ptev_meta, lm_ptev_all_omic)
-anova(lm_prev_meta, lm_prev_all_omic)
-anova(lm_oob_meta, lm_oob_all_omic)
-anova(lm_mse_meta, lm_mse_all_omic)
+

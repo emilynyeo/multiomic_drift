@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<style>body{background-color:white;}</style>
+
+
+</head>
+<body>
+&lt;style&gt;
+html, body { background-color: white; }
+table { border-collapse:collapse; border:none; }
+caption { font-weight: bold; text-align:left; }
+td {  }
+.thead { border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; }
+.tdata { padding:0.2cm; text-align:left; vertical-align:top; }
+.arc { background-color:#f2f2f2; }
+.summary { padding-top:0.1cm; padding-bottom:0.1cm; }
+.summarydata { text-align:left; }
+.fixedparts { font-weight:bold; text-align:left; }
+.randomparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.zeroparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.simplexparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.lasttablerow { border-bottom: double; }
+.firsttablerow {  }
+.firstsumrow { border-top:1px solid; }
+.labelcellborder { border-bottom:1px solid; }
+.depvarhead { text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal; }
+.depvarheadnodv { border-top: double; text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal; }
+.leftalign { text-align:left; }
+.centeralign { text-align:center; }
+.firsttablecol { text-align:left; }
+.footnote { font-style:italic; border-top:double black; text-align:right; }
+.subtitle { font-weight: normal; }
+.modelcolumn1 {  }
+.modelcolumn2 {  }
+.modelcolumn3 {  }
+.modelcolumn4 {  }
+.modelcolumn5 {  }
+.modelcolumn6 {  }
+.modelcolumn7 {  }
+.col1 {  }
+.col2 {  }
+.col3 {  }
+.col4 {  }
+.col5 {  }
+.col6 {  }
+&lt;/style&gt;
+&lt;table&gt;
+&lt;caption&gt;Comparing single omic glmLASSO models&lt;/caption&gt;
+&lt;tr&gt;
+&lt;th class="thead firsttablerow firsttablecol col1"&gt;&amp;nbsp;&lt;/th&gt;
+&lt;th colspan="3" class="thead firsttablerow"&gt;Model 1: Meta&lt;/th&gt;
+&lt;th colspan="3" class="thead firsttablerow"&gt;Model 2: Taxa&lt;/th&gt;
+&lt;th colspan="3" class="thead firsttablerow"&gt;Model 3: Micom&lt;/th&gt;
+&lt;th colspan="3" class="thead firsttablerow"&gt;Model 4: Pathway&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="depvarhead firsttablerow firsttablecol col1"&gt;Predictors&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col2"&gt;Estimate&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col3"&gt;95% CI&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col4"&gt;p&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col5"&gt;Estimate&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col6"&gt;95% CI&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col7"&gt;p&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col8"&gt;Estimate&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col9"&gt;95% CI&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col10"&gt;p&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col11"&gt;Estimate&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col12"&gt;95% CI&lt;/td&gt;
+&lt;td class="depvarhead firsttablerow col13"&gt;p&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="tdata firsttablecol col1"&gt;(Intercept)&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col2"&gt;&amp;#45;0.00&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col3"&gt;&amp;#45;0.22&amp;nbsp;&amp;ndash;&amp;nbsp;0.22&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col4"&gt;1.000&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col5"&gt;0.00&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col6"&gt;&amp;#45;0.30&amp;nbsp;&amp;ndash;&amp;nbsp;0.30&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col7"&gt;1.000&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col8"&gt;0.00&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col9"&gt;&amp;#45;0.29&amp;nbsp;&amp;ndash;&amp;nbsp;0.29&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col10"&gt;1.000&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col11"&gt;0.00&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col12"&gt;&amp;#45;0.30&amp;nbsp;&amp;ndash;&amp;nbsp;0.30&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col13"&gt;1.000&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="tdata firsttablecol col1"&gt;predicted_meta&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col2"&gt;0.69&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col3"&gt;0.47&amp;nbsp;&amp;ndash;&amp;nbsp;0.91&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;strong&gt;&amp;lt;0.001&lt;/strong&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col5"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col6"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col7"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col8"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col9"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col10"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col11"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col12"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col13"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="tdata firsttablecol col1"&gt;predicted_taxa&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col2"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col3"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col5"&gt;0.12&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col6"&gt;&amp;#45;0.18&amp;nbsp;&amp;ndash;&amp;nbsp;0.42&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col7"&gt;0.425&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col8"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col9"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col10"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col11"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col12"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col13"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="tdata firsttablecol col1"&gt;predicted_micom&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col2"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col3"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col5"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col6"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col7"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col8"&gt;0.25&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col9"&gt;&amp;#45;0.05&amp;nbsp;&amp;ndash;&amp;nbsp;0.55&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col10"&gt;0.094&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col11"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col12"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col13"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="tdata firsttablecol col1"&gt;predicted_pathway&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col2"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col3"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col5"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col6"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn2 col7"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col8"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col9"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn3 col10"&gt;&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col11"&gt;&amp;#45;0.13&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col12"&gt;&amp;#45;0.43&amp;nbsp;&amp;ndash;&amp;nbsp;0.17&lt;/td&gt;
+&lt;td class="tdata centeralign modelcolumn4 col13"&gt;0.387&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td colspan="13" class="randomparts"&gt;Random Effects&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td class="tdata leftalign summary"&gt;&amp;sigma;&lt;sup&gt;2&lt;/sup&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.53&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;1.01&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.96&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;1.00&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td class="tdata leftalign summary"&gt;&amp;tau;&lt;sub&gt;00&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+
+&lt;tr&gt;
+&lt;td class="tdata leftalign summary"&gt;N&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;tr&gt;
+&lt;td class="tdata leftalign summary firstsumrow"&gt;Observations&lt;/td&gt;
+&lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+&lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+&lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+&lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td class="tdata leftalign summary"&gt;Marginal R&lt;sup&gt;2&lt;/sup&gt; / Conditional R&lt;sup&gt;2&lt;/sup&gt;&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.474 / NA&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.014 / NA&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.061 / NA&lt;/td&gt;
+&lt;td class="tdata summary summarydata" colspan="3"&gt;0.016 / NA&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;/table&gt;
+
+&lt;html&gt;
+&lt;head&gt;
+&lt;meta http-equiv="Content-type" content="text/html;charset=UTF-8"&gt;
+&lt;style&gt;
+html, body { background-color: white; }
+table { border-collapse:collapse; border:none; }
+caption { font-weight: bold; text-align:left; }
+td {  }
+.thead { border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; }
+.tdata { padding:0.2cm; text-align:left; vertical-align:top; }
+.arc { background-color:#f2f2f2; }
+.summary { padding-top:0.1cm; padding-bottom:0.1cm; }
+.summarydata { text-align:left; }
+.fixedparts { font-weight:bold; text-align:left; }
+.randomparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.zeroparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.simplexparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.lasttablerow { border-bottom: double; }
+.firsttablerow {  }
+.firstsumrow { border-top:1px solid; }
+.labelcellborder { border-bottom:1px solid; }
+.depvarhead { text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal; }
+.depvarheadnodv { border-top: double; text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal; }
+.leftalign { text-align:left; }
+.centeralign { text-align:center; }
+.firsttablecol { text-align:left; }
+.footnote { font-style:italic; border-top:double black; text-align:right; }
+.subtitle { font-weight: normal; }
+.modelcolumn1 {  }
+.modelcolumn2 {  }
+.modelcolumn3 {  }
+.modelcolumn4 {  }
+.modelcolumn5 {  }
+.modelcolumn6 {  }
+.modelcolumn7 {  }
+.col1 {  }
+.col2 {  }
+.col3 {  }
+.col4 {  }
+.col5 {  }
+.col6 {  }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;table&gt;
+&lt;caption&gt;Comparing single omic glmLASSO models&lt;/caption&gt;
+  &lt;tr&gt;
+    &lt;th class="thead firsttablerow firsttablecol col1"&gt;&amp;nbsp;&lt;/th&gt;
+    &lt;th colspan="3" class="thead firsttablerow"&gt;Model 1: Meta&lt;/th&gt;
+    &lt;th colspan="3" class="thead firsttablerow"&gt;Model 2: Taxa&lt;/th&gt;
+    &lt;th colspan="3" class="thead firsttablerow"&gt;Model 3: Micom&lt;/th&gt;
+    &lt;th colspan="3" class="thead firsttablerow"&gt;Model 4: Pathway&lt;/th&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="depvarhead firsttablerow firsttablecol col1"&gt;Predictors&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col2"&gt;Estimate&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col3"&gt;95% CI&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col4"&gt;p&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col5"&gt;Estimate&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col6"&gt;95% CI&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col7"&gt;p&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col8"&gt;Estimate&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col9"&gt;95% CI&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col10"&gt;p&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col11"&gt;Estimate&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col12"&gt;95% CI&lt;/td&gt;
+    &lt;td class="depvarhead firsttablerow col13"&gt;p&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata firsttablecol col1"&gt;(Intercept)&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col2"&gt;&amp;#45;0.00&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col3"&gt;&amp;#45;0.22&amp;nbsp;&amp;ndash;&amp;nbsp;0.22&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col4"&gt;1.000&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col5"&gt;0.00&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col6"&gt;&amp;#45;0.30&amp;nbsp;&amp;ndash;&amp;nbsp;0.30&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col7"&gt;1.000&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col8"&gt;0.00&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col9"&gt;&amp;#45;0.29&amp;nbsp;&amp;ndash;&amp;nbsp;0.29&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col10"&gt;1.000&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col11"&gt;0.00&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col12"&gt;&amp;#45;0.30&amp;nbsp;&amp;ndash;&amp;nbsp;0.30&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col13"&gt;1.000&lt;/td&gt;
+&lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata firsttablecol col1"&gt;predicted_meta&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col2"&gt;0.69&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col3"&gt;0.47&amp;nbsp;&amp;ndash;&amp;nbsp;0.91&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;strong&gt;&amp;lt;0.001&lt;/strong&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col5"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col6"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col7"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col8"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col9"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col10"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col11"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col12"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col13"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata firsttablecol col1"&gt;predicted_taxa&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col2"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col3"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col5"&gt;0.12&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col6"&gt;&amp;#45;0.18&amp;nbsp;&amp;ndash;&amp;nbsp;0.42&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col7"&gt;0.425&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col8"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col9"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col10"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col11"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col12"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col13"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata firsttablecol col1"&gt;predicted_micom&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col2"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col3"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col5"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col6"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col7"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col8"&gt;0.25&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col9"&gt;&amp;#45;0.05&amp;nbsp;&amp;ndash;&amp;nbsp;0.55&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col10"&gt;0.094&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col11"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col12"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col13"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata firsttablecol col1"&gt;predicted_pathway&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col2"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col3"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn1 col4"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col5"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col6"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn2 col7"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col8"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col9"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn3 col10"&gt;&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col11"&gt;&amp;#45;0.13&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col12"&gt;&amp;#45;0.43&amp;nbsp;&amp;ndash;&amp;nbsp;0.17&lt;/td&gt;
+    &lt;td class="tdata centeralign modelcolumn4 col13"&gt;0.387&lt;/td&gt;
+&lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="13" class="randomparts"&gt;Random Effects&lt;/td&gt;
+  &lt;/tr&gt;
+
+  &lt;tr&gt;
+    &lt;td class="tdata leftalign summary"&gt;&amp;sigma;&lt;sup&gt;2&lt;/sup&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.53&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;1.01&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.96&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;1.00&lt;/td&gt;
+  &lt;/tr&gt;
+
+  &lt;tr&gt;
+    &lt;td class="tdata leftalign summary"&gt;&amp;tau;&lt;sub&gt;00&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+
+  &lt;tr&gt;
+    &lt;td class="tdata leftalign summary"&gt;N&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata leftalign summary firstsumrow"&gt;Observations&lt;/td&gt;
+    &lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+    &lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+    &lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+    &lt;td class="tdata summary summarydata firstsumrow" colspan="3"&gt;48&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td class="tdata leftalign summary"&gt;Marginal R&lt;sup&gt;2&lt;/sup&gt; / Conditional R&lt;sup&gt;2&lt;/sup&gt;&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.474 / NA&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.014 / NA&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.061 / NA&lt;/td&gt;
+    &lt;td class="tdata summary summarydata" colspan="3"&gt;0.016 / NA&lt;/td&gt;
+  &lt;/tr&gt;
+
+&lt;/table&gt;
+
+&lt;/body&gt;&lt;/html&gt;
+&lt;table style="border-collapse:collapse; border:none;"&gt;
+&lt;caption style="font-weight: bold; text-align:left;"&gt;Comparing single omic glmLASSO models&lt;/caption&gt;
+&lt;tr&gt;
+&lt;th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; "&gt;&amp;nbsp;&lt;/th&gt;
+&lt;th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; "&gt;Model 1: Meta&lt;/th&gt;
+&lt;th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; "&gt;Model 2: Taxa&lt;/th&gt;
+&lt;th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; "&gt;Model 3: Micom&lt;/th&gt;
+&lt;th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; "&gt;Model 4: Pathway&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; "&gt;Predictors&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;Estimate&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;95% CI&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;p&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;Estimate&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;95% CI&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  col7"&gt;p&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  col8"&gt;Estimate&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  col9"&gt;95% CI&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  0"&gt;p&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  1"&gt;Estimate&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  2"&gt;95% CI&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  3"&gt;p&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;(Intercept)&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.00&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.22&amp;nbsp;&amp;ndash;&amp;nbsp;0.22&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;1.000&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;0.00&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.30&amp;nbsp;&amp;ndash;&amp;nbsp;0.30&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col7"&gt;1.000&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col8"&gt;0.00&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col9"&gt;&amp;#45;0.29&amp;nbsp;&amp;ndash;&amp;nbsp;0.29&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  0"&gt;1.000&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  1"&gt;0.00&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  2"&gt;&amp;#45;0.30&amp;nbsp;&amp;ndash;&amp;nbsp;0.30&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  3"&gt;1.000&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;predicted_meta&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;0.69&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;0.47&amp;nbsp;&amp;ndash;&amp;nbsp;0.91&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;strong&gt;&amp;lt;0.001&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col7"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col8"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col9"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  0"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  1"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  2"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  3"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;predicted_taxa&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;0.12&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.18&amp;nbsp;&amp;ndash;&amp;nbsp;0.42&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col7"&gt;0.425&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col8"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col9"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  0"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  1"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  2"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  3"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;predicted_micom&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col7"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col8"&gt;0.25&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col9"&gt;&amp;#45;0.05&amp;nbsp;&amp;ndash;&amp;nbsp;0.55&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  0"&gt;0.094&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  1"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  2"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  3"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;predicted_pathway&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col7"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col8"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  col9"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  0"&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  1"&gt;&amp;#45;0.13&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  2"&gt;&amp;#45;0.43&amp;nbsp;&amp;ndash;&amp;nbsp;0.17&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  3"&gt;0.387&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td colspan="13" style="font-weight:bold; text-align:left; padding-top:.8em;"&gt;Random Effects&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;"&gt;&amp;sigma;&lt;sup&gt;2&lt;/sup&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.53&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;1.01&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.96&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;1.00&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;"&gt;&amp;tau;&lt;sub&gt;00&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.00 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;"&gt;N&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;24 &lt;sub&gt;subject_id&lt;/sub&gt;&lt;/td&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;"&gt;Observations&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3"&gt;48&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3"&gt;48&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3"&gt;48&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3"&gt;48&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;"&gt;Marginal R&lt;sup&gt;2&lt;/sup&gt; / Conditional R&lt;sup&gt;2&lt;/sup&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.474 / NA&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.014 / NA&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.061 / NA&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3"&gt;0.016 / NA&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;/table&gt;
+
+TRUE
+</body>
+</html>

@@ -1,0 +1,193 @@
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+<style>
+html, body { background-color: white; }
+table { border-collapse:collapse; border:none; }
+caption { font-weight: bold; text-align:left; }
+td {  }
+.thead { border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; }
+.tdata { padding:0.2cm; text-align:left; vertical-align:top; }
+.arc { background-color:#f2f2f2; }
+.summary { padding-top:0.1cm; padding-bottom:0.1cm; }
+.summarydata { text-align:left; }
+.fixedparts { font-weight:bold; text-align:left; }
+.randomparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.zeroparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.simplexparts { font-weight:bold; text-align:left; padding-top:.8em; }
+.lasttablerow { border-bottom: double; }
+.firsttablerow {  }
+.firstsumrow { border-top:1px solid; }
+.labelcellborder { border-bottom:1px solid; }
+.depvarhead { text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal; }
+.depvarheadnodv { border-top: double; text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal; }
+.leftalign { text-align:left; }
+.centeralign { text-align:center; }
+.firsttablecol { text-align:left; }
+.footnote { font-style:italic; border-top:double black; text-align:right; }
+.subtitle { font-weight: normal; }
+.modelcolumn1 {  }
+.modelcolumn2 {  }
+.modelcolumn3 {  }
+.modelcolumn4 {  }
+.modelcolumn5 {  }
+.modelcolumn6 {  }
+.modelcolumn7 {  }
+.col1 {  }
+.col2 {  }
+.col3 {  }
+.col4 {  }
+.col5 {  }
+.col6 {  }
+</style>
+</head>
+<body>
+<table>
+<caption>Comparing single omic glmLASSO models 6m, BL, 12m</caption>
+  <tr>
+    <th class="thead firsttablerow firsttablecol col1">&nbsp;</th>
+    <th colspan="3" class="thead firsttablerow">Model 1: Meta</th>
+    <th colspan="3" class="thead firsttablerow">Model 2: Taxa</th>
+    <th colspan="3" class="thead firsttablerow">Model 3: Micom</th>
+    <th colspan="3" class="thead firsttablerow">Model 4: Pathway</th>
+  </tr>
+  <tr>
+    <td class="depvarhead firsttablerow firsttablecol col1">Predictors</td>
+    <td class="depvarhead firsttablerow col2">Estimate</td>
+    <td class="depvarhead firsttablerow col3">95% CI</td>
+    <td class="depvarhead firsttablerow col4">p</td>
+    <td class="depvarhead firsttablerow col5">Estimate</td>
+    <td class="depvarhead firsttablerow col6">95% CI</td>
+    <td class="depvarhead firsttablerow col7">p</td>
+    <td class="depvarhead firsttablerow col8">Estimate</td>
+    <td class="depvarhead firsttablerow col9">95% CI</td>
+    <td class="depvarhead firsttablerow col10">p</td>
+    <td class="depvarhead firsttablerow col11">Estimate</td>
+    <td class="depvarhead firsttablerow col12">95% CI</td>
+    <td class="depvarhead firsttablerow col13">p</td>
+  </tr>
+  <tr>
+    <td class="tdata firsttablecol col1">(Intercept)</td>
+    <td class="tdata centeralign modelcolumn1 col2">0.04</td>
+    <td class="tdata centeralign modelcolumn1 col3">&#45;0.43&nbsp;&ndash;&nbsp;0.52</td>
+    <td class="tdata centeralign modelcolumn1 col4">0.853</td>
+    <td class="tdata centeralign modelcolumn2 col5">0.07</td>
+    <td class="tdata centeralign modelcolumn2 col6">&#45;0.43&nbsp;&ndash;&nbsp;0.58</td>
+    <td class="tdata centeralign modelcolumn2 col7">0.767</td>
+    <td class="tdata centeralign modelcolumn3 col8">0.05</td>
+    <td class="tdata centeralign modelcolumn3 col9">&#45;0.42&nbsp;&ndash;&nbsp;0.52</td>
+    <td class="tdata centeralign modelcolumn3 col10">0.825</td>
+    <td class="tdata centeralign modelcolumn4 col11">0.08</td>
+    <td class="tdata centeralign modelcolumn4 col12">&#45;0.43&nbsp;&ndash;&nbsp;0.59</td>
+    <td class="tdata centeralign modelcolumn4 col13">0.754</td>
+</tr>
+  <tr>
+    <td class="tdata firsttablecol col1">predicted_meta</td>
+    <td class="tdata centeralign modelcolumn1 col2">0.39</td>
+    <td class="tdata centeralign modelcolumn1 col3">0.19&nbsp;&ndash;&nbsp;0.60</td>
+    <td class="tdata centeralign modelcolumn1 col4"><strong>0.001</strong></td>
+    <td class="tdata centeralign modelcolumn2 col5"></td>
+    <td class="tdata centeralign modelcolumn2 col6"></td>
+    <td class="tdata centeralign modelcolumn2 col7"></td>
+    <td class="tdata centeralign modelcolumn3 col8"></td>
+    <td class="tdata centeralign modelcolumn3 col9"></td>
+    <td class="tdata centeralign modelcolumn3 col10"></td>
+    <td class="tdata centeralign modelcolumn4 col11"></td>
+    <td class="tdata centeralign modelcolumn4 col12"></td>
+    <td class="tdata centeralign modelcolumn4 col13"></td>
+</tr>
+  <tr>
+    <td class="tdata firsttablecol col1">predicted_taxa</td>
+    <td class="tdata centeralign modelcolumn1 col2"></td>
+    <td class="tdata centeralign modelcolumn1 col3"></td>
+    <td class="tdata centeralign modelcolumn1 col4"></td>
+    <td class="tdata centeralign modelcolumn2 col5">0.03</td>
+    <td class="tdata centeralign modelcolumn2 col6">&#45;0.15&nbsp;&ndash;&nbsp;0.20</td>
+    <td class="tdata centeralign modelcolumn2 col7">0.772</td>
+    <td class="tdata centeralign modelcolumn3 col8"></td>
+    <td class="tdata centeralign modelcolumn3 col9"></td>
+    <td class="tdata centeralign modelcolumn3 col10"></td>
+    <td class="tdata centeralign modelcolumn4 col11"></td>
+    <td class="tdata centeralign modelcolumn4 col12"></td>
+    <td class="tdata centeralign modelcolumn4 col13"></td>
+</tr>
+  <tr>
+    <td class="tdata firsttablecol col1">predicted_micom</td>
+    <td class="tdata centeralign modelcolumn1 col2"></td>
+    <td class="tdata centeralign modelcolumn1 col3"></td>
+    <td class="tdata centeralign modelcolumn1 col4"></td>
+    <td class="tdata centeralign modelcolumn2 col5"></td>
+    <td class="tdata centeralign modelcolumn2 col6"></td>
+    <td class="tdata centeralign modelcolumn2 col7"></td>
+    <td class="tdata centeralign modelcolumn3 col8">0.29</td>
+    <td class="tdata centeralign modelcolumn3 col9">0.04&nbsp;&ndash;&nbsp;0.54</td>
+    <td class="tdata centeralign modelcolumn3 col10"><strong>0.022</strong></td>
+    <td class="tdata centeralign modelcolumn4 col11"></td>
+    <td class="tdata centeralign modelcolumn4 col12"></td>
+    <td class="tdata centeralign modelcolumn4 col13"></td>
+</tr>
+  <tr>
+    <td class="tdata firsttablecol col1">predicted_pathway</td>
+    <td class="tdata centeralign modelcolumn1 col2"></td>
+    <td class="tdata centeralign modelcolumn1 col3"></td>
+    <td class="tdata centeralign modelcolumn1 col4"></td>
+    <td class="tdata centeralign modelcolumn2 col5"></td>
+    <td class="tdata centeralign modelcolumn2 col6"></td>
+    <td class="tdata centeralign modelcolumn2 col7"></td>
+    <td class="tdata centeralign modelcolumn3 col8"></td>
+    <td class="tdata centeralign modelcolumn3 col9"></td>
+    <td class="tdata centeralign modelcolumn3 col10"></td>
+    <td class="tdata centeralign modelcolumn4 col11">0.08</td>
+    <td class="tdata centeralign modelcolumn4 col12">&#45;0.12&nbsp;&ndash;&nbsp;0.28</td>
+    <td class="tdata centeralign modelcolumn4 col13">0.437</td>
+</tr>
+  <tr>
+    <td colspan="13" class="randomparts">Random Effects</td>
+  </tr>
+
+  <tr>
+    <td class="tdata leftalign summary">&sigma;<sup>2</sup></td>
+    <td class="tdata summary summarydata" colspan="3">0.16</td>
+    <td class="tdata summary summarydata" colspan="3">0.24</td>
+    <td class="tdata summary summarydata" colspan="3">0.21</td>
+    <td class="tdata summary summarydata" colspan="3">0.23</td>
+  </tr>
+
+  <tr>
+    <td class="tdata leftalign summary">&tau;<sub>00</sub></td>
+    <td class="tdata summary summarydata" colspan="3">0.70 <sub>subject_id</sub></td>
+    <td class="tdata summary summarydata" colspan="3">0.77 <sub>subject_id</sub></td>
+    <td class="tdata summary summarydata" colspan="3">0.66 <sub>subject_id</sub></td>
+    <td class="tdata summary summarydata" colspan="3">0.80 <sub>subject_id</sub></td>
+
+  <tr>
+    <td class="tdata leftalign summary">ICC</td>
+    <td class="tdata summary summarydata" colspan="3">0.81</td>
+    <td class="tdata summary summarydata" colspan="3">0.77</td>
+    <td class="tdata summary summarydata" colspan="3">0.76</td>
+    <td class="tdata summary summarydata" colspan="3">0.78</td>
+
+  <tr>
+    <td class="tdata leftalign summary">N</td>
+    <td class="tdata summary summarydata" colspan="3">14 <sub>subject_id</sub></td>
+    <td class="tdata summary summarydata" colspan="3">14 <sub>subject_id</sub></td>
+    <td class="tdata summary summarydata" colspan="3">14 <sub>subject_id</sub></td>
+    <td class="tdata summary summarydata" colspan="3">14 <sub>subject_id</sub></td>
+  <tr>
+    <td class="tdata leftalign summary firstsumrow">Observations</td>
+    <td class="tdata summary summarydata firstsumrow" colspan="3">45</td>
+    <td class="tdata summary summarydata firstsumrow" colspan="3">45</td>
+    <td class="tdata summary summarydata firstsumrow" colspan="3">45</td>
+    <td class="tdata summary summarydata firstsumrow" colspan="3">45</td>
+  </tr>
+  <tr>
+    <td class="tdata leftalign summary">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
+    <td class="tdata summary summarydata" colspan="3">0.149 / 0.840</td>
+    <td class="tdata summary summarydata" colspan="3">0.001 / 0.765</td>
+    <td class="tdata summary summarydata" colspan="3">0.090 / 0.779</td>
+    <td class="tdata summary summarydata" colspan="3">0.006 / 0.778</td>
+  </tr>
+
+</table>
+
+</body></html>
