@@ -38,7 +38,7 @@ merge_data <- function(data1, data2, join_type, columnname) {
   
   # Remove the duplicated columns and rename as necessary
   data <- data %>%
-    select(-matches(paste0(columnname, "\\.y$"))) %>%
+    dplyr::select(-matches(paste0(columnname, "\\.y$"))) %>%
     rename_with(~ gsub("\\.x$", "", .), ends_with(".x"))
   
   return(data)
@@ -49,7 +49,7 @@ merge_data <- function(data1, data2, join_type, columnname) {
 remove_columns <- function(data, columns_to_remove = NULL, pattern = NULL) {
   # Remove specified columns if provided
   if (!is.null(columns_to_remove)) {
-    data <- data %>% select(-all_of(columns_to_remove))
+    data <- data %>% dplyr::select(-all_of(columns_to_remove))
   }
   
   # Remove columns matching the pattern if provided
