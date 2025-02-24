@@ -466,6 +466,7 @@ lassoFeatures <- gsub("range0.997860960117438", "range", lassoFeatures)
 lassoFeatures <- lassoFeatures[grep("subject_id|BMI|range", lassoFeatures, invert = T)]
 lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
 lassoFeatures <- gsub("`", "", lassoFeatures)
+
 # Check the updated vector
 lassoFeatures
 bestglm_path <- as.data.frame(train_pathway_filtered[,lassoFeatures])
@@ -474,6 +475,7 @@ varlist_path <- names(bestglm_path)[which(names(bestglm_path) %ni%
                                             c("BMI", "subject_id", "range"))]
 varstring_path <- paste0(varlist_path, collapse = " + ", sep = "")
 varstring_path <- paste0("`", varlist_path, "`", collapse = " + ")
+
 # Use selected variables 
 mymod_path <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_path, 
                                             " + (1|range) +  (1|subject_id)")), 
@@ -489,6 +491,7 @@ test_path_filtered <- test_path %>%
   dplyr::group_by(subject_id) %>%       # Group by subject_id
   dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
   dplyr::ungroup()
+
 # grab only the columns that we have coefs for (starting at index 2 removes the intercept)
 rownames(mod_coef_df) <- gsub("`", "", rownames(mod_coef_df))
 test_path_vars <- test_path_filtered %>% 
@@ -532,6 +535,7 @@ met_tax_micom <- merge(met_tax, pred_df_micom,
 met_tax_micom_path <- merge(met_tax_micom, pred_df_path, 
                             by = c("subject_id", "time")) 
 all_omic <- unique(met_tax_micom_path)
+
 # Center and scale the last 5 columns of the dataframe
 all_omic[, 3:7] <- scale(all_omic[, 3:7])
 head(all_omic)

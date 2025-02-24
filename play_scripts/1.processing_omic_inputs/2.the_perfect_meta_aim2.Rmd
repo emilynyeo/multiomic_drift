@@ -104,7 +104,7 @@ a2_meta <- a2 %>%
   mutate(across(where(is.logical), as.numeric)) # make logical numeric
 ```
 
-# Variable transformations if skewed 
+# Preprocesses data by centering, scaling, transforming, and imputing missing values in specific columns
 
 ## preProcessing function:
 Pre-processing transformation (centering, scaling etc.) can be estimated from the training data and applied to any data set with the same variables.
@@ -114,10 +114,9 @@ k-nearest neighbor imputation is carried out by finding the k closest samples (E
 ```{r}
 # Preprocess the data - imputation and scaling 
 preProcValues <- preProcess(a2_meta[, 7:28], 
-                            method = c("center", 
-                                       "scale", 
-                                       "YeoJohnson",
-                                       "knnImpute",
+                            method = c("scale", 
+                                       #"center",
+                                       "medianImpute",
                                        "nzv"),
           thresh = 0.95, # cutoff for cumulative % of variance to be retained by PCA
           pcaComp = NULL, #no. PCA components to keep. If specified, over-rides thresh
@@ -192,16 +191,16 @@ plot_normality(a2_meta_Transformed[,5:28])
 ## Save files
 
 ```{r}
-#write.csv(a2_training, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_train_samples_standard_clinical.csv")
+write.csv(a2_training, 
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_train_samples_standard_clinical_feb20.csv")
 
-#write.csv(a2_testing, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_test_samples_standard_clinical.csv")
+write.csv(a2_testing, 
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_test_samples_standard_clinical_feb20.csv")
 
-#write.csv(a2_meta_Transformed, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_Transformed_standard_clinical.csv")
+write.csv(a2_meta_Transformed, 
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_Transformed_standard_clinical_feb20.csv")
 
-#write.csv(a2_meta, 
-#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_not_Transformed_standard_clinical.csv")
+write.csv(a2_meta, 
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_not_Transformed_standard_clinical_feb20.csv")
 ```
 

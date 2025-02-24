@@ -8,6 +8,7 @@ The purpose of this script is to process the taxonomic functional gene pathways.
 
 1. Removing pathways with below a 10 % prevelance
 2. Removing pathways with below % variance
+2. Center and scale 
 3. Splitting into aim 1 (baseline only) testing and training data frames* 
 4. Splitting into aim 2 (all time points) testing and training data frames*
 
@@ -86,10 +87,37 @@ path_all_time_cleaned <- path_all_time[, zero_percentage < threshold]
 dim(path_all_time_cleaned) # 124 removed 
 ```
 
+# Center and Scale 
+
+```{r}
+# CENTER AND SCALE
+# Preprocess the data - imputation and scaling 
+preProcValues <- preProcess(path_all_time_cleaned[,2:267], 
+                            method = c("scale",
+                                       #"center",
+                                       "nzv"),
+          thresh = 0.95, # cutoff for cumulative % of variance to be retained by PCA
+          pcaComp = NULL, #no. PCA components to keep. If specified, over-rides thresh
+          na.remove = TRUE, # should missing values be removed from the calculations
+          k = 5, # number of nearest neighbors from training set to use for imputation
+          knnSummary = mean, # function to average neighbor values/column during imputation
+          #outcome = "outcome_BMI_fnl_BL",
+          fudge = 0.2, # a tolerance value: Box-Cox transformation lambda values
+          numUnique = 15, # no. unique values y has to estimate Box-Cox transformation
+          verbose = TRUE, # a logical: prints a log as the computations proceed
+          freqCut = 95/5, # cutoff for ratio of most to 2nd most common value.
+          uniqueCut = 10, # cutoff % of distinct values out of no. total samples
+          cutoff = 0.85, # a numeric value for the pair-wise absolute correlation cutoff.
+          rangeBounds = c(0, 1))
+
+path_all_time_cs <- predict(preProcValues, path_all_time_cleaned[,1:267])
+dim(path_all_time_cs)
+```
+
 ## Only baseline
 
 ```{r}
-path_BL <- path_all_time %>% 
+path_BL <- path_all_time_cs %>% 
            filter(SampleID %in% baseline_samples)
 ```
 
@@ -147,41 +175,41 @@ nearZeroVar diagnoses predictors with 1 unique value (i.e. zero variance predict
 checkConditionalX looks at the distribution of the columns of x conditioned on the levels of y and identifies columns of x that are sparse within groups of y.
 
 ```{r}
-nzv <- nearZeroVar(path_BL, saveMetrics= TRUE)
-nzv[nzv$nzv,][2:10,]
+#nzv <- nearZeroVar(path_BL, saveMetrics= TRUE)
+#nzv[nzv$nzv,][2:10,]
 
-nzv_all <- nearZeroVar(path_all_time,
-  freqCut = 95/5, # cutoff ratio of most common value to 2nd most common value
-  uniqueCut = 10, # cutoff % distinct values out of number of total samples
-  saveMetrics = FALSE,
-  names = FALSE,
-  foreach = FALSE,
-  allowParallel = TRUE)
+#nzv_all <- nearZeroVar(path_all_time_cs,
+#  freqCut = 95/5, # cutoff ratio of most common value to 2nd most common value
+#  uniqueCut = 10, # cutoff % distinct values out of number of total samples
+#  saveMetrics = FALSE,
+#  names = FALSE,
+#  foreach = FALSE,
+#  allowParallel = TRUE)
 
-nzv_BL <- nearZeroVar(path_BL,
-  freqCut = 95/5,
-  uniqueCut = 10,
-  saveMetrics = FALSE,
-  names = FALSE,
-  foreach = FALSE,
-  allowParallel = TRUE)
+#nzv_BL <- nearZeroVar(path_BL,
+#  freqCut = 95/5,
+#  uniqueCut = 10,
+#  saveMetrics = FALSE,
+ # names = FALSE,
+#  foreach = FALSE,
+#  allowParallel = TRUE)
 
-path_no_nzv_all <- path_all_time[, -nzv_all]
-path_no_nzv_BL <- path_BL[, -nzv_BL]
-
-# Number of near zero variance variables for just baseline samples 
-length(setdiff(colnames(path_all_time), colnames(path_no_nzv_all)))
+#path_no_nzv_all <- path_all_time_cs[, -nzv_all]
+#path_no_nzv_BL <- path_BL[, -nzv_BL]
 
 # Number of near zero variance variables for just baseline samples 
-length(setdiff(colnames(path_BL), colnames(path_no_nzv_BL)))
+#length(setdiff(colnames(path_all_time_cs), colnames(path_no_nzv_all)))
+
+# Number of near zero variance variables for just baseline samples 
+#length(setdiff(colnames(path_BL), colnames(path_no_nzv_BL)))
 ```
 
 ## Plot
 
 ```{r}
 # Combine original and transformed data for easy comparison
-melted_all <- melt(path_no_nzv_all)
-melted_BL <- melt(path_no_nzv_BL)
+melted_all <- melt(path_all_time_cs)
+melted_BL <- melt(path_BL)
 
 # Plot histograms across all time
 ggplot(melted_all, aes(x = value, fill = variable)) + 
@@ -218,42 +246,43 @@ ggplot(melted_BL, aes(x = value, color = variable)) +
 
 Apply log transformation
 ```{r}
-log_all_melt <- path_no_nzv_all %>%
+log_all_melt <- path_all_time_cs %>%
   mutate(across(-1, log1p)) %>%  # Apply log1p to all columns except the first
-  melt(id.vars = colnames(path_no_nzv_all)[1])  # Melt the dataframe, keeping the first column as identifier
+  melt(id.vars = colnames(path_all_time_cs)[1])  # Melt the dataframe, keeping the first column as identifier
 
-log_BL_melt <- path_no_nzv_BL %>%
+log_BL_melt <- path_BL %>%
   mutate(across(-1, log1p)) %>%  # Apply log1p to all columns except the first
-  melt(id.vars = colnames(path_no_nzv_all)[1])  # Melt the dataframe, keeping the first column as identifier
+  melt(id.vars = colnames(path_BL)[1])  # Melt the dataframe, keeping the first column as identifier
 ```
 
 Voom SM Normalizations : CLR is ideal for compositional data, while Boom SM normalization is more versatile for adjusting various forms of high-dimensional data.
 
 ### clr transformations 
 
+i dont think this should be done. skipping
+
 ##### First turn into relative abundance before clr
 ```{r}
 # Replace spaces with underscores in column names
-colnames(path_no_nzv_BL) <- gsub(" ", "_", colnames(path_no_nzv_all))
-all_path_relative_abundance <- path_no_nzv_all %>%
+colnames(path_all_time_cs) <- gsub(" ", "_", colnames(path_all_time_cs))
+all_path_relative_abundance <- path_all_time_cs %>%
   #rownames_to_column(var = "subject_id") %>%  # Convert row names to a column
   dplyr::rowwise() %>%
-  dplyr::mutate(total = sum(c_across(2:327), na.rm = TRUE)) %>%
-  dplyr::mutate(across(2:327, ~ .x / total)) %>%
+  dplyr::mutate(total = sum(c_across(2:267), na.rm = TRUE)) %>%
+  dplyr::mutate(across(2:267, ~ .x / total)) %>%
   dplyr::select(-total)# %>%
   #column_to_rownames(var = "SampleID")
 
 # Replace spaces with underscores in column names
-colnames(path_no_nzv_BL) <- gsub(" ", "_", colnames(path_no_nzv_BL))
-bl_path_relative_abundance <- path_no_nzv_BL %>%
+colnames(path_BL) <- gsub(" ", "_", colnames(path_BL))
+bl_path_relative_abundance <- path_BL %>%
   #rownames_to_column(var = "subject_id") %>%  # Convert row names to a column
   dplyr::rowwise() %>%
-  dplyr::mutate(total = sum(c_across(2:327), na.rm = TRUE)) %>%
-  dplyr::mutate(across(2:327, ~ .x / total)) %>%
+  dplyr::mutate(total = sum(c_across(2:267), na.rm = TRUE)) %>%
+  dplyr::mutate(across(2:267, ~ .x / total)) %>%
   dplyr::select(-total) #%>%
   #column_to_rownames(var = "SampleID")
 ```
-
 
 Purpose: The CLR transformation is primarily used to handle compositional data, where the data represents proportions or parts of a whole (e.g., relative abundances of species)
 
@@ -261,15 +290,15 @@ This transformation helps to stabilize the variance and makes the data more suit
 
 ```{r}
 clr_path_all <- all_path_relative_abundance
-clr_path_all[,2:327] <- clr(clr_path_all[,2:327])
+clr_path_all[,2:267] <- clr(clr_path_all[,2:267])
 clr_melt_path_all <- melt(clr_path_all)
 
 clr_path_BL <- bl_path_relative_abundance
-clr_path_BL[,2:327] <- clr(clr_path_BL[,2:327])
+clr_path_BL[,2:267] <- clr(clr_path_BL[,2:267])
 clr_melt_path_BL <- melt(clr_path_BL)
 ```
 
-plot clr transformations
+plot clr transformations - don't do 
 
 ```{r}
 ggplot(clr_melt_path_all, aes(x = value, color = variable)) +
@@ -320,10 +349,14 @@ process_names_all <- function(names) {
   }
   return(cleaned_numbers_all)  # Return the cleaned numbers
 }
+```
 
+### Apply the function 
+
+```{r}
 # Apply the function to the sample names
-clr_path_BL$bl_samples <- process_names_bl(clr_path_BL$SampleID)
-clr_path_all$all_samples <- process_names_all(clr_path_all$SampleID)
+path_BL$bl_samples <- process_names_bl(path_BL$SampleID)
+path_all_time_cs$all_samples <- process_names_all(path_all_time_cs$SampleID)
 
 # Make training & testing to match the samples in training and testing of ANCOMBC
 training_sample_names <- train_Transformed$record_id
@@ -331,30 +364,31 @@ testing_sample_names <- test_Transformed$record_id
 
 # Filter rows in BL_clr that match training and testing samples 
 # Step 1: Make column names unique
-colnames(clr_path_BL) <- make.names(colnames(clr_path_BL), unique = TRUE)
+colnames(path_BL) <- make.names(colnames(path_BL), unique = TRUE)
 # Step 2: Filter the data
-BL_clr_testing <- clr_path_BL %>% filter(bl_samples %in% testing_sample_names)
-BL_clr_training <- clr_path_BL %>% filter(bl_samples %in% training_sample_names)
+BL_clr_testing <- path_BL %>% filter(bl_samples %in% testing_sample_names)
+BL_clr_training <- path_BL %>% filter(bl_samples %in% training_sample_names)
 
 # Step 1: Make column names unique
-colnames(clr_path_all) <- make.names(colnames(clr_path_all), unique = TRUE)
+colnames(path_all_time_cs) <- make.names(colnames(path_all_time_cs), unique = TRUE)
 # Step 2: Filter the data
-all_clr_training <- clr_path_all %>% filter(all_samples %in% training_sample_names)
-all_clr_testing <- clr_path_all %>% filter(all_samples %in% testing_sample_names)
+all_clr_training <- path_all_time_cs %>% filter(all_samples %in% training_sample_names)
+all_clr_testing <- path_all_time_cs %>% filter(all_samples %in% testing_sample_names)
 ```
+
 
 ## Save files 
 
 ```{r}
 #aim 1 files
-# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_training.csv")
-# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_testing.csv")
-# write.csv(clr_path_BL, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/clr_path_BL.csv")
+write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_training_feb20.csv")
+write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/path_bl_clr_testing_feb20.csv")
+write.csv(clr_path_BL, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim1/clr_path_BL_feb20.csv")
 # 
 # # aim 2 files
-# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/all_clr_training.csv")
-# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/all_clr_testing.csv")
-# write.csv(clr_path_all, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/clr_taxa_all.csv")
+write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/all_clr_training_feb20.csv")
+write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/all_clr_testing_feb20.csv")
+write.csv(clr_path_all, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/functional/aim2/clr_taxa_all_feb20.csv")
 ```
 
 

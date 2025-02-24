@@ -110,11 +110,39 @@ flux_cleaned <- flux_no_nzv[, zero_percentage < threshold]
 dim(flux_cleaned) # 17 removed 
 ```
 
+# Center and scale
+
+```{r}
+# CENTER AND SCALE
+# Preprocess the data - imputation and scaling 
+preProcValues <- preProcess(flux_cleaned[,2:92], 
+                            method = c("scale",
+                                       # "center",
+                                       "nzv"),
+          thresh = 0.95, # cutoff for cumulative % of variance to be retained by PCA
+          pcaComp = NULL, #no. PCA components to keep. If specified, over-rides thresh
+          na.remove = TRUE, # should missing values be removed from the calculations
+          k = 5, # number of nearest neighbors from training set to use for imputation
+          knnSummary = mean, # function to average neighbor values/column during imputation
+          #outcome = "outcome_BMI_fnl_BL",
+          fudge = 0.2, # a tolerance value: Box-Cox transformation lambda values
+          numUnique = 15, # no. unique values y has to estimate Box-Cox transformation
+          verbose = TRUE, # a logical: prints a log as the computations proceed
+          freqCut = 95/5, # cutoff for ratio of most to 2nd most common value.
+          uniqueCut = 10, # cutoff % of distinct values out of no. total samples
+          cutoff = 0.85, # a numeric value for the pair-wise absolute correlation cutoff.
+          rangeBounds = c(0, 1))
+
+flux_all_time_cs <- predict(preProcValues, flux_cleaned[,1:92])
+dim(flux_all_time_cs)
+```
+
+
 # plot relative abundances of metabolites 
 
 ```{r}
 # Reshape the data to long format
-long_flux <- flux_cleaned %>%
+long_flux <- flux_all_time_cs %>%
   pivot_longer(cols = -sample_id, 
                names_to = "flux", 
                values_to = "flux_counts")
@@ -159,71 +187,13 @@ legend
 plot_200_300
 ```
 
-# Convert into relative abundance 
-
-```{r}
-flux_relative_abundance <- flux_cleaned %>%
-  dplyr::rowwise() %>%
-  dplyr::mutate(total = sum(c_across(proton:`Carbon dioxide`), na.rm = TRUE)) %>%
-  dplyr::mutate(across(proton:`Carbon dioxide`, ~ .x / total)) %>%
-  dplyr::select(-total)  
-```
-
-# plot relative abundance
-
-```{r}
-melted_all <- melt(flux_relative_abundance)
-
-# Plot histograms across all time
-ggplot(melted_all, aes(x = value, fill = variable)) + 
-    geom_histogram(bins = 30, alpha = 0.5) + 
-    ggtitle("Histograms of metabolite fluxes across all timepoints") +
-    theme_minimal() + 
-    theme(legend.position = "none")
-```
-
-```{r}
-ggplot(melted_all, aes(x = value, color = variable)) +
-    geom_density() +
-    ggtitle("Density Plots of metabolite fluxes Across all Time Points") +
-    theme_minimal() + 
-    theme(legend.position = "none")
-```
-
-# Transformations 
-
-clr transformation
-
-```{r}
-clr_flux <- flux_relative_abundance
-clr_flux[,2:92] <- clr(clr_flux[,2:92])
-clr_melt_flux <- melt(clr_flux)
-```
-
-# Plot CLR
-
-```{r}
-ggplot(clr_melt_flux, aes(x = value, fill = variable)) + 
-    geom_histogram(bins = 30, alpha = 0.5) + 
-    ggtitle("CLR transformed metabolite fluxes across all timepoints") +
-    theme_minimal() + 
-    theme(legend.position = "none")
-```
-
-```{r}
-ggplot(clr_melt_flux, aes(x = value, color = variable)) +
-    geom_density() +
-    ggtitle("CLR transformed metabolite fluxes Across all Time Points") +
-    theme_minimal() + 
-    theme(legend.position = "none")
-```
 # make baseline only 
 
 ```{r}
-sample_names <- clr_flux$sample_id
-baseline_samples <- clr_flux$sample_id[grep("\\.BL$", sample_names)]
+sample_names <- flux_all_time_cs$sample_id
+baseline_samples <- flux_all_time_cs$sample_id[grep("\\.BL$", sample_names)]
 
-clr_flux_BL <- clr_flux %>% 
+clr_flux_BL <- flux_all_time_cs %>% 
            dplyr::filter(sample_id %in% baseline_samples)
 ```
 
@@ -274,7 +244,7 @@ process_names_all <- function(names) {
 
 # Apply the function to the sample names
 clr_flux_BL$bl_samples <- process_names_bl(clr_flux_BL$sample_id)
-clr_flux$all_samples <- process_names_all(clr_flux$sample_id)
+flux_all_time_cs$all_samples <- process_names_all(flux_all_time_cs$sample_id)
 
 # Make training & testing to match the samples in training and testing meta
 training_sample_names <- train_Transformed$record_id
@@ -284,29 +254,29 @@ testing_sample_names <- test_Transformed$record_id
 # Step 1: Make column names unique
 colnames(clr_flux_BL) <- make.names(colnames(clr_flux_BL), unique = TRUE)
 # Step 2: Filter the AIM1 data
-BL_clr_testing <- clr_flux_BL %>% filter(bl_samples %in% testing_sample_names)
-BL_clr_training <- clr_flux_BL %>% filter(bl_samples %in% training_sample_names)
+BL_flux_testing <- clr_flux_BL %>% filter(bl_samples %in% testing_sample_names)
+BL_flux_training <- clr_flux_BL %>% filter(bl_samples %in% training_sample_names)
 
 # AIM2 data
 # Step 1: Make column names unique
-colnames(clr_flux) <- make.names(colnames(clr_flux), unique = TRUE)
+colnames(flux_all_time_cs) <- make.names(colnames(flux_all_time_cs), unique = TRUE)
 # Step 2: Filter the data
-all_clr_training <- clr_flux %>% filter(all_samples %in% training_sample_names)
-all_clr_testing <- clr_flux %>% filter(all_samples %in% testing_sample_names)
+all_flux_training <- flux_all_time_cs %>% filter(all_samples %in% training_sample_names)
+all_flux_testing <- flux_all_time_cs %>% filter(all_samples %in% testing_sample_names)
 ```
 
 # Write out files 
 
 ```{r}
 ## aim 1 files
-# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim1/clr_flux_BL_training.csv")
-# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim1/clr_flux_BL_testing.csv")
-# write.csv(clr_flux_BL, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim1/clr_flux_BL.csv")
+write.csv(BL_flux_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim1/flux_BL_training_feb20.csv")
+write.csv(BL_flux_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim1/flux_BL_testing_feb20.csv")
+write.csv(clr_flux_BL, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim1/flux_BLa_feb20.csv")
 # 
 # ## aim 2 files
-# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim2/flux_all_clr_training.csv")
-# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim2/flux_all_clr_testing.csv")
-# write.csv(clr_flux, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim2/clr_flux_all.csv")
+write.csv(all_flux_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim2/flux_all_training_feb20.csv")
+write.csv(all_flux_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim2/flux_all_testing_feb20.csv")
+write.csv(flux_all_time_cs, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/aim2/flux_all_feb20.csv")
 ```
 
 

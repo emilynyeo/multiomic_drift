@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
                readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
                AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
-               summarytools, grid, mice, plyr, mlmRev, cowplot, ape, purr, tibble,
+               summarytools, grid, mice, plyr, mlmRev, cowplot, ape, tibble,
                jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
                MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
                RColorBrewer, DT, ggpubr, microbiomeutilities, compositions)
@@ -201,10 +201,34 @@ a1_T <- fread("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-pred
 CTL data has already been center log transformed. So perhaps sticking to that is best. 
 CLR for RF. 
 16S sometimes wide eye for genus
-
 ```{r}
 clr_transformed <- genus_clr_transformed
 
+# CENTER AND SCALE
+# Preprocess the data - imputation and scaling 
+preProcValues <- preProcess(clr_transformed[,1:179], 
+                            method = c("scale",
+                                       #"center", 
+                                       "nzv"),
+          thresh = 0.95, # cutoff for cumulative % of variance to be retained by PCA
+          pcaComp = NULL, #no. PCA components to keep. If specified, over-rides thresh
+          na.remove = TRUE, # should missing values be removed from the calculations
+          k = 5, # number of nearest neighbors from training set to use for imputation
+          knnSummary = mean, # function to average neighbor values/column during imputation
+          outcome = "outcome_BMI_fnl_BL",
+          fudge = 0.2, # a tolerance value: Box-Cox transformation lambda values
+          numUnique = 15, # no. unique values y has to estimate Box-Cox transformation
+          verbose = TRUE, # a logical: prints a log as the computations proceed
+          freqCut = 95/5, # cutoff for ratio of most to 2nd most common value.
+          uniqueCut = 10, # cutoff % of distinct values out of no. total samples
+          cutoff = 0.85, # a numeric value for the pair-wise absolute correlation cutoff.
+          rangeBounds = c(0, 1))
+
+clr_transformed <- predict(preProcValues, clr_transformed[,1:179])
+dim(clr_transformed)
+```
+
+```{r}
 # All samples 
 sample_names <- rownames(clr_transformed)
 
@@ -253,18 +277,24 @@ all_clr_training <- clr_transformed %>% filter(all_samples %in% training_sample_
 all_clr_testing <- clr_transformed %>% filter(all_samples %in% testing_sample_names)
 ```
 
+
 ## Save files 
 
 ```{r}
-# aim 1 files
-# write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_training.csv")
-# write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_testing.csv")
-# write.csv(bl_clr, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_taxa_all.csv")
-# 
-# # aim 2 files
-# write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/aim2_clr_training.csv")
-# write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/aim2_clr_testing.csv")
-# write.csv(clr_transformed, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/clr_taxa_all.csv")
+### Aim 1 files
+write.csv(BL_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_training_feb20.csv")
+
+write.csv(BL_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_testing_feb20.csv")
+
+write.csv(bl_clr, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim1_transformed/genus/BL_clr_taxa_all_feb20.csv")
+
+
+### Aim 2 files
+write.csv(all_clr_training, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/aim2_clr_training_feb20.csv")
+
+write.csv(all_clr_testing, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/aim2_clr_testing_feb20.csv")
+
+write.csv(clr_transformed, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa/aim2_transformed/genus/clr_taxa_all_feb20.csv")
 ```
 
 
