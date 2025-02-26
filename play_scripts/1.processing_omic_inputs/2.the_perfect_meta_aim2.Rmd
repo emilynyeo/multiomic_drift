@@ -33,8 +33,10 @@ meta <- read_csv("~/projects/research/Stanislawski/BMI_risk_scores/data/correct_
 # Replace spaces with underscores in column names
 colnames(meta) <- gsub(" ", "_", colnames(meta))
 
+length(unique(meta$subject_id))
 # Drop non-consenting individuals 
 meta <- meta[meta$consent != "no", ]
+length(unique(meta$subject_id))
 ```
 # Create variables 
 metS, 
@@ -102,6 +104,41 @@ a2_meta <- a2 %>%
   filter(completer != 0) %>% 
   dplyr::select(-c(completer, consent)) %>%
   mutate(across(where(is.logical), as.numeric)) # make logical numeric
+
+length(unique(a2_meta$subject_id))
+```
+
+```{r}
+# Column names for the 12-month and 6-month data
+columns_6m <- c("Glucose_6m", "HOMA_IR_6m", "Insulin_endo_6m", 
+                "HDL_Total_Direct_lipid_6m", "LDL_Calculated_6m", "Triglyceride_lipid_6m")
+columns_12m <- c("Glucose_12m", "HOMA_IR_12m", "Insulin_endo_12m", 
+                 "HDL_Total_Direct_lipid_12m", "LDL_Calculated_12m", "Triglyceride_lipid_12m")
+
+# Create a new column indicating rows with missing only 12-month data
+a2_meta$missing_12m_only <- rowSums(is.na(a2_meta[, columns_12m])) == length(columns_12m) &
+                                    rowSums(!is.na(a2_meta[, columns_6m])) > 0
+
+# Create a new column indicating rows with missing both 6-month and 12-month data
+a2_meta$missing_both_6m_12m <- rowSums(is.na(a2_meta[, columns_6m])) == length(columns_6m) &
+                                        rowSums(is.na(a2_meta[, columns_12m])) == length(columns_12m)
+
+head(a2_meta[, c("missing_12m_only", "missing_both_6m_12m")], 2) # Check the result
+
+# 2. Remove rows with missing 12-month variables
+a2_12m_missing <- a2_meta[!rowSums(is.na(a2_meta[, columns_12m])) == length(columns_12m), ]
+
+# 3. Remove rows missing both 6-month and 12-month data
+a2_both_6m_12m_missing <- a2_meta[!(rowSums(is.na(a2_meta[, columns_6m])) == length(columns_6m) &
+                                               rowSums(is.na(a2_meta[, columns_12m])) == length(columns_12m)), ]
+
+# Check the first few rows of each dataframe to confirm the splits
+head(a2_meta, 2)
+head(a2_12m_missing, 2)
+head(a2_both_6m_12m_missing, 2)
+length(unique(a2_meta$subject_id))
+length(unique(a2_12m_missing$subject_id))
+length(unique(a2_both_6m_12m_missing$subject_id))
 ```
 
 # Preprocesses data by centering, scaling, transforming, and imputing missing values in specific columns

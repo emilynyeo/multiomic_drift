@@ -54,7 +54,7 @@ remove_columns <- function(data, columns_to_remove = NULL, pattern = NULL) {
   
   # Remove columns matching the pattern if provided
   if (!is.null(pattern)) {
-    data <- data %>% select(-matches(pattern))
+    data <- data %>% dplyr::select(-matches(pattern))
   }
   
   return(data)
