@@ -228,16 +228,90 @@ plot_normality(a2_meta_Transformed[,5:28])
 ## Save files
 
 ```{r}
-write.csv(a2_training, 
-        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_train_samples_standard_clinical_feb20.csv")
+#write.csv(a2_training, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_train_samples_standard_clinical_feb20.csv")
 
-write.csv(a2_testing, 
-        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_test_samples_standard_clinical_feb20.csv")
+#write.csv(a2_testing, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_test_samples_standard_clinical_feb20.csv")
 
-write.csv(a2_meta_Transformed, 
-        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_Transformed_standard_clinical_feb20.csv")
+#write.csv(a2_meta_Transformed, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_Transformed_standard_clinical_feb20.csv")
 
-write.csv(a2_meta, 
-        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_not_Transformed_standard_clinical_feb20.csv")
+#write.csv(a2_meta, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/a2_meta_not_Transformed_standard_clinical_feb20.csv")
+```
+
+## Make long files 
+
+```{r}
+BL_test <- a2_testing %>% dplyr::select(1:7, matches("BL$"))
+BL_train <- a2_training %>% dplyr::select(1:7, matches("BL$"))
+BL_a2_trans <- a2_meta_Transformed %>% dplyr::select(1:7, matches("BL$"))
+BL_a2_meta <- a2_meta %>% dplyr::select(1:7, matches("BL$"))
+
+BL_test$time <- 0
+BL_train$time <- 0
+BL_a2_trans$time <- 0
+BL_a2_meta$time <- 0
+
+m6_test <- a2_testing %>% dplyr::select(1:7, matches("6m$"))
+m6_train <- a2_training %>% dplyr::select(1:7, matches("6m$"))
+m6_a2_trans <- a2_meta_Transformed %>% dplyr::select(1:7, matches("6m$"))
+m6_a2_meta <- a2_meta %>% dplyr::select(1:7, matches("6m$"))
+
+m6_test$time <- 6
+m6_train$time <- 6
+m6_a2_trans$time <- 6
+m6_a2_meta$time <- 6
+
+m12_test <- a2_testing %>% dplyr::select(1:7, matches("12m$"))
+m12_train <- a2_training %>% dplyr::select(1:7, matches("12m$"))
+m12_a2_trans <- a2_meta_Transformed %>% dplyr::select(1:7, matches("12m$"))
+m12_a2_meta <- a2_meta %>% dplyr::select(1:7, matches("12m$"))
+
+m12_test$time <- 12
+m12_train$time <- 12
+m12_a2_trans$time <- 12
+m12_a2_meta$time <- 12
+```
+
+# combine test
+```{r}
+# Remove the _BL, _6m, and _12m suffixes from the column names
+BL_test <- BL_test %>%
+  rename_with(~ gsub("_(BL|6m|12m)$", "", .))
+
+m6_test <- m6_test %>%
+  rename_with(~ gsub("_(BL|6m|12m)$", "", .))
+
+m12_test <- m12_test %>%
+  rename_with(~ gsub("_(BL|6m|12m)$", "", .))
+
+# Combine the data frames
+combined_test <- bind_rows(BL_test, m6_test, m12_test)
+```
+
+# combine train
+```{r}
+# Remove the _BL, _6m, and _12m suffixes from the column names
+BL_train <- BL_train %>%
+  rename_with(~ gsub("_(BL|6m|12m)$", "", .))
+
+m6_train <- m6_train %>%
+  rename_with(~ gsub("_(BL|6m|12m)$", "", .))
+
+m12_train <- m12_train %>%
+  rename_with(~ gsub("_(BL|6m|12m)$", "", .))
+
+# Combine the data frames
+combined_train <- bind_rows(BL_train, m6_train, m12_train)
+```
+
+```{r}
+write.csv(combined_train, 
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_train_samples_standard_clinical_feb20.csv")
+
+write.csv(combined_test, 
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_test_samples_standard_clinical_feb20.csv")
 ```
 

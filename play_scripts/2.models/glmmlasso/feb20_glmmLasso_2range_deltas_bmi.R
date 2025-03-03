@@ -1,12 +1,26 @@
 # Trying out long lasso
 rm(list = ls())
 #source("zc_functions.R") 
+#install.packages("rsq")  
+library(rsq)
 library(pacman)
 p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn, 
        caret, caretEnsemble, glmnet, xgboost, ggplot2, glmmLasso, corrplot,
        readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest,  
        reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM)
+library(nlme)
+library(gridExtra)
+library(sjPlot)
+library(htmltools)
+library(officer)
+library(flextable)
+library(webshot)
+library(apaTables)
+library(MuMIn)
 '%ni%' <- Negate('%in%')
+r2_general <-function(preds,actual){ 
+  return(1- sum((preds - actual) ^ 2)/sum((actual - mean(actual))^2))
+}
 
 out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/"
 data_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/all_omic_processed_data/deltas/"
@@ -28,6 +42,7 @@ test_slim <- test %>% dplyr::select(-c("leptin", "peptide_yy","Weight",
 test_slim$range <- as.factor(test_slim$range)
 
 # Define the column names based on your lists
+basic <- c('subject_id','BMI', 'range','age', 'sex')
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1C', 'HDL', 'homo_ir', 'insulin', 'LDL')
 only_taxa <- c('subject_id','BMI', 'range', 
@@ -44,15 +59,148 @@ only_pathway <- c('subject_id', 'BMI', 'range',
 
 # Create data frames based on the columns defined
 train_slim$subject_id <- as.factor(train_slim$subject_id)
+train_basic <- train_slim[, basic, drop = FALSE]
 train_meta <- train_slim[, meta_keep, drop = FALSE]
 train_taxa <- train_slim[, only_taxa, drop = FALSE]
 train_micom <- train_slim[, only_micom, drop = FALSE]
 train_pathway <- train_slim[, only_pathway, drop = FALSE]
 
+test_basic <- test_slim[, basic, drop = FALSE]
 test_meta <- test_slim[, meta_keep, drop = FALSE]
 test_taxa <- test_slim[, only_taxa, drop = FALSE]
 test_micom <- test_slim[, only_micom, drop = FALSE]
 test_pathway <- test_slim[, only_pathway, drop = FALSE]
+
+################################################################################
+### BASIC data set
+numvar_basic <- c()
+lambdavec <- seq(from = 10, to = 50, by = 1)
+for (lambdy in lambdavec) {
+  predictors <- setdiff(names(train_basic), c("BMI", "subject_id"))  
+  predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
+  fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
+  lm1_basic <- glmmLasso(fix = fix_formula,
+                        data = train_basic,
+                        rnd = list(subject_id = ~ 1, range = ~ 1),
+                        lambda = lambdy,
+                        family = gaussian(link = "identity"))
+  summary(lm1_basic)
+  lassoFeatures <- names(lm1_basic$coefficients[which(lm1_basic$coefficients != 0)])
+  lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
+  lassoFeatures <- lassoFeatures[grep("as.factor",lassoFeatures,invert=T)] ####
+  lassoFeatures <- unique(c(lassoFeatures))
+  numvar_basic <- c(numvar_basic, length(lassoFeatures))
+}
+plot(x = lambdavec, y = numvar_basic)
+ggplot() +
+  geom_point(aes(x = lambdavec, y = numvar_basic)) +
+  geom_vline(xintercept = 25, color = "blue", linetype = "dashed") +
+  theme_bw() +
+  ggtitle("Only BAsic Delta") +
+  xlab("Penalty Coefficient (Lambda)") +
+  ylab("Number of Included Variables")
+ggsave(paste0(out_dir,"lambda_elbow_only_basic.png"), width=6, height=4, units="in", dpi=320)
+
+best_basic <- glmmLasso(fix = fix_formula,
+                       data = train_meta,
+                       rnd = list(subject_id = ~ 1, range = ~ 1),
+                       lambda = 30,
+                       family = gaussian(link = "identity"))
+
+lassoFeatures <- names(best_basic$coefficients)
+lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
+lassoFeatures <- lassoFeatures[grep("as.factor",lassoFeatures,invert=T)] ####
+lassoFeatures <- unique(c(lassoFeatures))
+lassoFeatures <- gsub("range0.997860960117438", "range", lassoFeatures)
+lassoFeatures <- lassoFeatures[grep("subject_id|BMI|range", lassoFeatures, invert = T)]
+lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
+
+# Check the updated vector
+lassoFeatures
+
+bestglm_basic <- as.data.frame(train_basic[,lassoFeatures])
+summary(bestglm_basic$BMI)
+varlist_basic <- names(bestglm_basic)[which(names(bestglm_basic) %ni% 
+                                            c("BMI", "subject_id", "range"))]
+varstring_basic <- paste0(varlist_basic, collapse = " + ", sep = "")
+
+# Use selected variables 
+mymod_basic <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_basic, 
+                                            " + (1|range) +  (1|subject_id)")), 
+                          data = bestglm_basic, 
+                          family = gaussian(link = "identity"))
+mymodsum <- summary(mymod_basic)
+mod_coef_df <- coef(mymodsum) %>% data.frame()
+
+# prediction on reserved validation samples
+test_basic <- test_basic[complete.cases(test_basic),] # complete cases
+
+# grab only the columns that we have coefs for (starting at index 2 removes the intercept)
+test_basic_vars <- test_basic %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+test_basic_vars$Intercept <- 1 # make a column for the intercept
+test_basic_vars <- test_basic_vars %>% dplyr::select(Intercept, everything())
+
+#--predict the risk scores without covariates--########
+pred_risk_scores_basic <- as.matrix(test_basic_vars) %*% as.matrix(mod_coef_df$Estimate)
+
+# combine the predicted and actual
+pred_df_basic <- as.data.frame(cbind(test_basic$subject_id,
+                                    test_basic$range,
+                                    test_basic$BMI,
+                                    scale(pred_risk_scores_basic))); colnames(pred_df_basic) <- c("subject_id",
+                                                                                                "time", 
+                                                                                                "actual",
+                                                                                                "predicted_basic")
+# Calculate R-squared value
+actual <- test_basic$BMI
+predicted <- pred_risk_scores_basic
+mean_actual <- mean(actual)
+ss_total <- sum((actual - mean_actual)^2)
+ss_residual <- sum((actual - predicted)^2)
+r_squared <- 1 - (ss_residual / ss_total)
+
+# Print R-squared value
+r_squared
+# Via function R2
+r2_general(predicted,actual)
+
+# Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
+coef_df <- as.data.frame(best_basic$coefficients)
+#coef_df <- as.data.frame(coef_df[rownames(coef_df) != "(Intercept)", ]) # Remove intercept
+coef_df$Feature <- rownames(coef_df) 
+coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
+coef_df$Importance <- coef_df$`best_basic$coefficients`
+
+# Filter out rows where Importance is 0
+#coef_df <- coef_df[coef_df$Importance != 0, ]
+
+# Plot the feature importances
+library(ggplot2)
+ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Basic Feature Importances from GLM Lasso Model") +
+  xlab("Features") +
+  ylab("Importance (Absolute Coefficients)") +
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(t = 20, r = 20, b = 20, l = 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
+
+# Save the plot to a file
+ggsave(paste0(out_dir, "basic_feature_importances_with_r2.png"), 
+       width = 8, height = 6, units = "in", dpi = 300)
+
+file_path <- file.path(out_dir, "basic_predictions_feb20.csv")
+# write.csv(pred_df_basic, file_path, row.names = FALSE)
+
+#############################################################################################
 
 ### Meta data set
 numvar_meta <- c()
@@ -163,15 +311,23 @@ ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   ggtitle("Meta Feature Importances from GLM Lasso Model") +
   xlab("Features") +
   ylab("Importance (Absolute Coefficients)") +
-  annotate("text", x = 1, y = max(coef_df$Importance) * 0.95, 
-           label = paste("R� =", round(r_squared, 3)), size = 5, color = "red")
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(t = 20, r = 20, b = 20, l = 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
 
 # Save the plot to a file
 ggsave(paste0(out_dir, "meta_feature_importances_with_r2.png"), 
        width = 8, height = 6, units = "in", dpi = 300)
 
 file_path <- file.path(out_dir, "meta_predictions_feb20.csv")
-write.csv(pred_df_meta, file_path, row.names = FALSE)
+#write.csv(pred_df_meta, file_path, row.names = FALSE)
+
 #############################################################################################
 ### Taxa data set
 
@@ -270,9 +426,17 @@ pred_df_taxa <- as.data.frame(cbind(test_taxa$subject_id,
 actual <- test_taxa$BMI
 predicted <- pred_risk_scores_taxa
 mean_actual <- mean(actual)
+ss_regression <- sum((predicted - mean_actual)^2)
+
 ss_total <- sum((actual - mean_actual)^2)
+ss_regression/ss_total
+
 ss_residual <- sum((actual - predicted)^2)
 r_squared <- 1 - (ss_residual / ss_total)
+
+# OTHER FORMULAS:
+rsq <- function (x, y) cor(x, y) ^ 2
+rsq(actual, predicted)
 
 # Print R-squared value
 r_squared
@@ -288,7 +452,6 @@ coef_df$Importance <- coef_df$`best_taxa$coefficients`
 coef_df <- coef_df[coef_df$Importance != 0, ]
 
 # Plot the feature importances
-library(ggplot2)
 ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   coord_flip() +
@@ -296,15 +459,22 @@ ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   ggtitle("Taxa Feature Importances from GLM Lasso Model") +
   xlab("Features") +
   ylab("Importance (Absolute Coefficients)") +
-  annotate("text", x = 1, y = max(coef_df$Importance) * 0.95, 
-           label = paste("R� =", round(r_squared, 3)), size = 5, color = "red")
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
 
 # Save the plot to a file
 ggsave(paste0(out_dir, "taxa_feature_importances_with_r2.png"), 
        width = 8, height = 6, units = "in", dpi = 300)
 
 file_path <- file.path(out_dir, "taxa_predictions_feb20.csv")
-write.csv(pred_df_taxa, file_path, row.names = FALSE)
+#write.csv(pred_df_taxa, file_path, row.names = FALSE)
 
 ##########################################################################################
 ### Micom data set
@@ -409,7 +579,6 @@ coef_df$Importance <- coef_df$`best_micom$coefficients`
 coef_df <- coef_df[coef_df$Importance != 0, ]
 
 # Plot the feature importances
-library(ggplot2)
 ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   coord_flip() +
@@ -417,15 +586,22 @@ ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   ggtitle("Micom Feature Importances from GLM Lasso Model") +
   xlab("Features") +
   ylab("Importance (Absolute Coefficients)") +
-  annotate("text", x = 1, y = max(coef_df$Importance) * 0.95, 
-           label = paste("R� =", round(r_squared, 3)), size = 5, color = "red")
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
 
 # Save the plot to a file
 ggsave(paste0(out_dir, "micom_feature_importances_with_r2.png"), 
        width = 8, height = 6, units = "in", dpi = 300)
 
 file_path <- file.path(out_dir, "micom_predictions_feb20.csv")
-write.csv(pred_df_micom, file_path, row.names = FALSE)
+#write.csv(pred_df_micom, file_path, row.names = FALSE)
 
 ##########################################################################################
 ### Pathway data set
@@ -533,7 +709,6 @@ coef_df$Importance <- coef_df$`best_path$coefficients`
 coef_df <- coef_df[coef_df$Importance != 0, ]
 
 # Plot the feature importances
-library(ggplot2)
 ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   coord_flip() +
@@ -541,15 +716,21 @@ ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   ggtitle("Micom Feature Importances from GLM Lasso Model") +
   xlab("Features") +
   ylab("Importance (Absolute Coefficients)") +
-  annotate("text", x = 1, y = max(coef_df$Importance) * 0.95, 
-           label = paste("R� =", round(r_squared, 3)), size = 5, color = "red")
-
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
 # Save the plot to a file
 ggsave(paste0(out_dir, "path_feature_importances_with_r2.png"), 
        width = 8, height = 6, units = "in", dpi = 300)
 
 file_path <- file.path(out_dir, "path_predictions_feb20.csv")
-write.csv(pred_df_path, file_path, row.names = FALSE)
+#write.csv(pred_df_path, file_path, row.names = FALSE)
 
 ### Basic model ###
 numvar_meta <- c()
@@ -580,7 +761,7 @@ ggplot() +
   ylab("Number of Included Variables")
 ggsave(paste0(out_dir,"lambda_elbow_only_basic.png"), width=6, height=4, units="in", dpi=320)
 
-best_basic <- glmmLasso(fix = fix_formula,
+best_meta <- glmmLasso(fix = fix_formula,
                        data = train_meta,
                        rnd = list(subject_id = ~ 1, range = ~ 1),
                        lambda = 30,
@@ -649,7 +830,6 @@ coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
 coef_df$Importance <- coef_df$`best_basic$coefficients`
 
 # Plot the feature importances
-library(ggplot2)
 ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   coord_flip() +
@@ -657,17 +837,27 @@ ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   ggtitle("Basic Feature Importances from GLM Lasso Model") +
   xlab("Features") +
   ylab("Importance (Absolute Coefficients)") +
-  annotate("text", x = 1, y = max(coef_df$Importance) * 0.95, 
-           label = paste("R� =", round(r_squared, 3)), size = 5, color = "red")
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
 
 # Save the plot to a file
 ggsave(paste0(out_dir, "basic_feature_importances_with_r2.png"), 
        width = 8, height = 6, units = "in", dpi = 300)
 
 file_path <- file.path(out_dir, "basic_predictions_feb20.csv")
-write.csv(pred_df_basic, file_path, row.names = FALSE)
+#write.csv(pred_df_basic, file_path, row.names = FALSE)
+
+################################################################################
 
 ##### Compare models
+
 # Convert the last 3 columns to numeric
 pred_df_basic[, tail(names(pred_df_basic), 3)] <- 
   lapply(pred_df_basic[, tail(names(pred_df_basic), 3)], as.numeric)
@@ -680,31 +870,95 @@ pred_df_micom[, tail(names(pred_df_micom), 3)] <-
 pred_df_path[, tail(names(pred_df_path), 3)] <- 
   lapply(pred_df_path[, tail(names(pred_df_path), 3)], as.numeric)
 
-met_tax <- merge(pred_df_meta, pred_df_taxa, 
+met_basic <- merge(pred_df_meta, pred_df_basic, 
                  by = c("subject_id", "time")) %>% 
-                 dplyr::select(-c(actual.x, actual.y))
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+met_tax <- merge(met_basic, pred_df_taxa, 
+                 by = c("subject_id", "time")) %>% 
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
 met_tax_micom <- merge(met_tax, pred_df_micom, 
                        by = c("subject_id", "time")) %>% 
-                       dplyr::select(-c(actual))
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
 met_tax_micom_path <- merge(met_tax_micom, pred_df_path, 
-                            by = c("subject_id", "time")) 
+                            by = c("subject_id", "time")) %>% 
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-basic_met_tax_micom_path <- merge(met_tax_micom_path, pred_df_basic,
-                                  by = c("subject_id", "time")) %>% 
-  dplyr::select(-c(actual.y)) %>% 
-  dplyr::rename(actual = actual.x)
-
-all_omic <- unique(basic_met_tax_micom_path)
+all_omic <- unique(met_tax_micom_path)
 all_omic$predicted_taxa <- as.numeric(all_omic$predicted_taxa)
 all_omic$predicted_micom <- as.numeric(all_omic$predicted_micom)
 all_omic$predicted_pathway <- as.numeric(all_omic$predicted_pathway)
 all_omic[, 3:8] <- scale(all_omic[, 3:8])
 
-# Make linear models MSE
-basic_model <- lme(actual ~ predicted_basic + time, random = ~1|subject_id, data = all_omic)
-summary(basic_model)
+########################################################################################
+mod_dat = all_omic %>% rename(bmi = actual, 
+                              Time = time,
+                              Cluster = subject_id,
+                              y_new_meta_only = predicted_meta,
+                              y_new_basic = predicted_basic,
+                              y_new_micom_only = predicted_micom,
+                              y_new_path_only = predicted_pathway,
+                              y_new_tax_only = predicted_taxa)
+
+mod_dat$Time <- as.numeric(mod_dat$Time)
+lmer_basic <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_meta <- lmer(bmi ~ y_new_meta_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_micom <- lmer(bmi ~ y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_path <- lmer(bmi ~ y_new_path_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_tax <- lmer(bmi ~ y_new_tax_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_time <- lmer(bmi ~ Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+
+### Single plus omic 
+lmer_basic <- lmer(bmi ~ y_new_basic + Time + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta_only + Time + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_path_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_tax_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_time_b <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+
+### Combined PTEV models 
+basic <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat)
+meta_basic <- lmer(bmi ~ y_new_basic + y_new_meta_only + Time + (1|Cluster), data = mod_dat)
+meta_basic_tax <- lmer(bmi ~ y_new_basic + y_new_meta_only + 
+                       y_new_tax_only + Time + (1|Cluster), data = mod_dat)
+meta_basic_tax_path <- lmer(bmi ~ y_new_basic + y_new_meta_only + y_new_tax_only + 
+                            y_new_path_only + Time + (1|Cluster), data = mod_dat)
+meta_basic_tax_path_micom <- lmer(bmi ~ y_new_basic + y_new_meta_only + 
+                                  y_new_tax_only + y_new_path_only + y_new_micom_only + 
+                                  Time+ (1|Cluster), data = mod_dat)
+
+# Combined PTEV models sequential 
+sjPlot::tab_model(basic, meta_basic, 
+                  meta_basic_tax, meta_basic_tax_path, 
+                  meta_basic_tax_path_micom,
+                  title = "glmlasso delta sequential lmer models",
+                  string.pred = "Predictors",
+                  string.est = "Estimate",
+                  string.std = "std. Beta",
+                  string.ci = "95% CI",
+                  string.se = "std. Error",
+                  p.style = c("numeric"), 
+                  p.threshold = c(0.05),
+                  #dv.labels = model_titles,
+                  auto.label = FALSE)
+
+# https://joshuawiley.com/MonashHonoursStatistics/LMM_Comparison.html#nested-models-in-r
+# Basic vs Basic + meta
+nobs(lmer_basic)
+nobs(lmer_meta_b)
+logLik(lmer_basic)
+logLik(lmer_meta_b)
+anova(lmer_basic, lmer_meta_b, test = "LRT")
+anova(lmer_basic, lmer_micom_b, test = "LRT")
+anova(lmer_basic, lmer_tax_b, test = "LRT")
+anova(lmer_basic, lmer_path_b, test = "LRT")
+########################################################################################
+# Make linear models 
+basic_model <- lme(actual ~ predicted_basic + time, 
+                   random = ~1|subject_id, data = all_omic)
+
 
 # Combined models 
 lm_meta_tax_time <- lme(actual ~ predicted_meta + predicted_taxa + time, 
@@ -712,7 +966,6 @@ lm_meta_tax_time <- lme(actual ~ predicted_meta + predicted_taxa + time,
 summary(lm_meta_tax_time)
 
 ### Checks before models 
-library(car)
 vif(lm(actual ~ predicted_meta + predicted_taxa + predicted_micom + time, data = all_omic))
 summary(all_omic)
 table(all_omic$subject_id)
@@ -733,12 +986,6 @@ model_titles <- c("1: Basic",
                   "4: Micom", 
                   "5: Pathway")
 
-library(gridExtra)
-library(sjPlot)
-library(htmltools)
-library(officer)
-library(flextable)
-library(webshot)
 # Create the table as a grid object
 sjPlot::tab_model(lm_basic, lm_meta, lm_tax, 
                   lm_micom, lm_path, 
@@ -757,10 +1004,28 @@ lm_meta_basic <- lme(actual ~ predicted_basic + predicted_meta,
                    random = ~1|subject_id, data = all_omic)
 lm_meta_tax <- lme(actual ~ predicted_meta + predicted_taxa, 
                                 random = ~1|subject_id, data = all_omic)
-summary(lm_meta_tax)
+lm_basic_tax <- lme(actual ~ predicted_basic + predicted_taxa, 
+                   random = ~1|subject_id, data = all_omic)
+lm_basic_micom <- lme(actual ~ predicted_basic + predicted_micom, 
+                    random = ~1|subject_id, data = all_omic)
+lm_basic_path <- lme(actual ~ predicted_basic + predicted_pathway, 
+                      random = ~1|subject_id, data = all_omic)
+
+lm_meta_tax <- lme(actual ~ predicted_meta + predicted_taxa, 
+                   random = ~1|subject_id, data = all_omic)
+lm_basic_tax <- lme(actual ~ predicted_basic + predicted_taxa, 
+                    random = ~1|subject_id, data = all_omic)
+lm_basic_micom <- lme(actual ~ predicted_basic + predicted_micom, 
+                      random = ~1|subject_id, data = all_omic)
+lm_basic_path <- lme(actual ~ predicted_basic + predicted_pathway, 
+                     random = ~1|subject_id, data = all_omic)
+
+lm_basic_all_omic <- lme(actual ~ predicted_basic + predicted_meta + 
+                         predicted_taxa + predicted_pathway + predicted_micom, 
+                         random = ~1|subject_id, data = all_omic)
+# No basic 
 lm_meta_tax_micom <- lme(actual ~ predicted_meta + predicted_taxa + 
                            predicted_micom, random = ~1|subject_id, data = all_omic)
-summary(lm_meta_tax_micom)
 lm_meta_tax_micom_path <- lme(actual ~ predicted_meta + predicted_taxa + 
                                 predicted_micom + predicted_pathway, 
                               random = ~1|subject_id, data = all_omic)
@@ -769,11 +1034,22 @@ lm_no_meta <- lme(actual ~ predicted_taxa +
                   random = ~1|subject_id, data = all_omic)
 summary(lm_meta_tax_micom_path)
 
-anova(lm_meta, lm_meta_tax)
-anova(lm_meta_tax, lm_meta_tax_micom)
-anova(lm_meta_tax_micom, lm_meta_tax_micom_path)
-anova(lm_meta_tax, lm_meta_tax_micom_path)
-anova(lm_meta, lm_meta_tax_micom_path)
+
+
+# Fit both models using Maximum Likelihood (ML)
+lm_basic_ml <- lme(fixed = actual ~ predicted_basic,  # Fixed effects
+                   random = ~ 1 | subject_id,  # Random effects
+                   method = "ML",  # Use Maximum Likelihood
+                   data = all_omic)
+
+lm_basic_path_ml <- lme(fixed = actual ~ predicted_basic + predicted_taxa,  # Different fixed effects
+                        random = ~ 1 | subject_id,  # Random effects
+                        method = "ML",  # Use Maximum Likelihood
+                        data = all_omic)
+
+# Now perform ANOVA (ML comparison)
+anova(lm_basic_ml, lm_basic_path_ml)
+
 
 # Define model titles for clarity
 model_titles <- c("Model 0: Basic" ,
@@ -797,8 +1073,8 @@ sjPlot::tab_model(lm_basic, lm_meta_basic, lm_meta_tax,
                   auto.label = FALSE)
 
 # Save the plot
-output_file <- file.path(out_dir, "delta_combined_omics_models_feb20.png")
-ggsave(output_file, plot_model, width = 10, height = 6)
+#output_file <- file.path(out_dir, "delta_combined_omics_models_feb20.png")
+#ggsave(output_file, plot_model, width = 10, height = 6)
 
 ### Check Correlations
 cor_matrix <- cor((all_omic)[3:7], 
@@ -815,3 +1091,68 @@ ggplot(melted_cor_matrix,
     axis.text.y = element_text(angle = 0, hjust = 1, size = 3)) + 
   labs(title = "Correlations btwn HIGH corr pathway2", fill = "Correlation")
 
+# Run the ANOVA tests
+anova_basic_meta <- anova(lm_basic, lm_meta_basic)
+anova_basic_tax <- anova(lm_basic, lm_basic_tax)
+anova_basic_micom <- anova(lm_basic, lm_basic_micom)
+anova_basic_path <- anova(lm_basic, lm_basic_path)
+anova_basic_all <- anova(lm_basic, lm_basic_all_omic)
+
+meta_r <- rsq.lmm(lm_meta,adj=TRUE)
+basic_r <- rsq.lmm(lm_basic,adj=TRUE)
+meta_basic_r <- rsq.lmm(lm_meta_basic,adj=TRUE)
+tax_basic_r <- rsq.lmm(lm_basic_tax,adj=TRUE)
+micom_basic_r <- rsq.lmm(lm_basic_micom,adj=TRUE)
+path_basic_r <- rsq.lmm(lm_basic_path,adj=TRUE)
+all_r <- rsq.lmm(lm_basic_all_omic,adj=TRUE)
+  
+### Plot r-squared 
+# Create a data frame with model names and their corresponding R-squared values
+r_squared_data <- data.frame(
+  Model = rep(c("lm_basic", "lm_basic_meta", "lm_basic_tax", 
+                "lm_basic_micom", "lm_basic_path", "basic_all_omic"), each = 3),
+  Type = rep(c("Model_Total", "Fixed_Effects", "Random_Effects"), times = 6),
+  R_squared = c(path_basic_r$model, path_basic_r$fixed, path_basic_r$random,
+                meta_basic_r$model, meta_basic_r$fixed, meta_basic_r$random,
+                tax_basic_r$model, tax_basic_r$fixed, tax_basic_r$random,
+                micom_basic_r$model, micom_basic_r$fixed, micom_basic_r$random,
+                basic_r$model, basic_r$fixed, basic_r$random,
+                all_r$model, all_r$fixed, all_r$random))
+
+# Plot the data using ggplot2
+r2_plot <- ggplot(r_squared_data, aes(x = Model, y = R_squared, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(x = "Model", y = "R Squared", 
+       title = "R Squared for Different Models (glmlasso delta)") +
+  scale_fill_manual(values = c("lightblue", "lightgreen", "lightcoral")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ylim(0, 0.6)
+
+output_file <- file.path(out_dir, "glm_delta_r2_models_feb20.png")
+ggsave(output_file, r2_plot, width = 10, height = 6)
+
+### PLOT ANOVA RESULTS
+anova_results <- data.frame(
+  Model_Comparison = c("basic vs meta + basic", "basic vs basic + tax", 
+                       "basic vs basic + micom", "basic vs basic + path",
+                       "basic vs basic + all omic"),
+  L_Ratio = c(anova_basic_meta$L.Ratio[2], anova_basic_tax$L.Ratio[2], 
+              anova_basic_micom$L.Ratio[2], anova_basic_path$L.Ratio[2],
+              anova_basic_all$L.Ratio[2]),
+  p_value = c(anova_basic_meta$`p-value`[2], anova_basic_tax$`p-value`[2], 
+              anova_basic_micom$`p-value`[2], anova_basic_path$`p-value`[2],
+              anova_basic_all$`p-value`[2]))
+
+# Plot ANOVA
+anova_plot <- ggplot(anova_results, aes(x = Model_Comparison, y = L_Ratio)) +
+  geom_bar(stat = "identity", fill = "skyblue") +  # Create bars
+  geom_text(aes(label = round(p_value, 3)), vjust = -0.5) +  # Add p_value above the bars
+  theme_minimal() +  # Clean theme
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  
+  labs(x = "Model Comparison", y = "L Ratio", 
+       title = "L Ratio for Each Model Comparison (glmlasso delta models)") +
+  ylim(0, 7)
+
+output_file <- file.path(out_dir, "glm_delta_anova_models_feb20.png")
+ggsave(output_file, anova_plot, width = 10, height = 6)

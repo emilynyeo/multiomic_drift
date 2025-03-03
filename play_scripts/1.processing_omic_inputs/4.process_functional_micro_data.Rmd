@@ -374,6 +374,25 @@ colnames(path_all_time_cs) <- make.names(colnames(path_all_time_cs), unique = TR
 # Step 2: Filter the data
 all_clr_training <- path_all_time_cs %>% filter(all_samples %in% training_sample_names)
 all_clr_testing <- path_all_time_cs %>% filter(all_samples %in% testing_sample_names)
+
+### Make time column for both
+all_clr_training <- all_clr_training %>%
+  mutate(time = case_when(grepl("BL", SampleID) ~ 0,
+    grepl("6m", SampleID) ~ 6, grepl("12m", SampleID) ~ 12,
+    TRUE ~ NA_real_)) # In case there's an unmatched value
+
+all_clr_testing <- all_clr_testing %>%
+  mutate(time = case_when(grepl("BL", SampleID) ~ 0,
+    grepl("6m", SampleID) ~ 6, grepl("12m", SampleID) ~ 12,
+    TRUE ~ NA_real_)) # In case there's an unmatched value
+
+# Remove rows where SampleID ends with ".3m"
+all_clr_testing <- all_clr_testing %>%
+  filter(!grepl("\\.3m$", SampleID))
+
+# Remove rows where SampleID ends with ".3m"
+all_clr_training <- all_clr_training %>%
+  filter(!grepl("\\.3m$", SampleID))
 ```
 
 

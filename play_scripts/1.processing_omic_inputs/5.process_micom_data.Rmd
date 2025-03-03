@@ -263,6 +263,26 @@ colnames(flux_all_time_cs) <- make.names(colnames(flux_all_time_cs), unique = TR
 # Step 2: Filter the data
 all_flux_training <- flux_all_time_cs %>% filter(all_samples %in% training_sample_names)
 all_flux_testing <- flux_all_time_cs %>% filter(all_samples %in% testing_sample_names)
+
+
+### Make time column for both
+all_flux_training <- all_flux_training %>%
+  mutate(time = case_when(grepl("BL", sample_id) ~ 0,
+    grepl("6m", sample_id) ~ 6, grepl("12m", sample_id) ~ 12,
+    TRUE ~ NA_real_)) # In case there's an unmatched value
+
+all_flux_testing <- all_flux_testing %>%
+  mutate(time = case_when(grepl("BL", sample_id) ~ 0,
+    grepl("6m", sample_id) ~ 6, grepl("12m", sample_id) ~ 12,
+    TRUE ~ NA_real_)) # In case there's an unmatched value
+
+# Remove rows where SampleID ends with ".3m"
+all_flux_testing <- all_flux_testing %>%
+  filter(!grepl("\\.3m$", sample_id))
+
+# Remove rows where SampleID ends with ".3m"
+all_flux_training <- all_flux_training %>%
+  filter(!grepl("\\.3m$", sample_id))
 ```
 
 # Write out files 

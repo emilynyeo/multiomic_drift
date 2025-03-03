@@ -202,11 +202,12 @@ CTL data has already been center log transformed. So perhaps sticking to that is
 CLR for RF. 
 16S sometimes wide eye for genus
 ```{r}
-clr_transformed <- genus_clr_transformed
+clr_transformed_0 <- genus_clr_transformed 
+clr_transformed_0$SampleID <- rownames(clr_transformed)
 
 # CENTER AND SCALE
 # Preprocess the data - imputation and scaling 
-preProcValues <- preProcess(clr_transformed[,1:179], 
+preProcValues <- preProcess(clr_transformed_0[,1:179], 
                             method = c("scale",
                                        #"center", 
                                        "nzv"),
@@ -215,7 +216,7 @@ preProcValues <- preProcess(clr_transformed[,1:179],
           na.remove = TRUE, # should missing values be removed from the calculations
           k = 5, # number of nearest neighbors from training set to use for imputation
           knnSummary = mean, # function to average neighbor values/column during imputation
-          outcome = "outcome_BMI_fnl_BL",
+          #outcome = "outcome_BMI_fnl_BL",
           fudge = 0.2, # a tolerance value: Box-Cox transformation lambda values
           numUnique = 15, # no. unique values y has to estimate Box-Cox transformation
           verbose = TRUE, # a logical: prints a log as the computations proceed
@@ -224,7 +225,10 @@ preProcValues <- preProcess(clr_transformed[,1:179],
           cutoff = 0.85, # a numeric value for the pair-wise absolute correlation cutoff.
           rangeBounds = c(0, 1))
 
-clr_transformed <- predict(preProcValues, clr_transformed[,1:179])
+
+clr_transformed_processed <- predict(preProcValues, clr_transformed_0[, 1:179])
+clr_transformed <- cbind(clr_transformed_processed, clr_transformed_0[, 180, drop = FALSE])
+
 dim(clr_transformed)
 ```
 
@@ -275,6 +279,17 @@ colnames(clr_transformed) <- make.names(colnames(clr_transformed), unique = TRUE
 # Step 2: Filter the data
 all_clr_training <- clr_transformed %>% filter(all_samples %in% training_sample_names)
 all_clr_testing <- clr_transformed %>% filter(all_samples %in% testing_sample_names)
+
+### Make time column for both
+all_clr_training <- all_clr_training %>%
+  mutate(time = case_when(grepl("BL", SampleID) ~ 0,
+    grepl("6m", SampleID) ~ 6, grepl("12m", SampleID) ~ 12,
+    TRUE ~ NA_real_)) # In case there's an unmatched value
+
+all_clr_testing <- all_clr_testing %>%
+  mutate(time = case_when(grepl("BL", SampleID) ~ 0,
+    grepl("6m", SampleID) ~ 6, grepl("12m", SampleID) ~ 12,
+    TRUE ~ NA_real_)) # In case there's an unmatched value
 ```
 
 
