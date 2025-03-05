@@ -306,6 +306,3 @@ top_models_list_all_omic_m12_no_redundant <- bmi_bL_6m_BL_train_omics_Genus_ra_N
 # Print the top models for each data set
 print(top_models_list_all_omic_m12)
 print(top_models_list_all_omic_m12_no_redundant)
-
-
-

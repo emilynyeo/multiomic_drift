@@ -335,7 +335,92 @@ train_and_save_models <- function(data, target_var,
   return(results)
 }
 
+####Same fucntion as above but multiple models 
+train_and_save_multiple_models <- function(datasets, target_vars, 
+                                           train_control, result_prefixes, 
+                                           test_size = 0.3) {
+  
+  # Check if lengths of datasets, target_vars, and result_prefixes are equal
+  if (length(datasets) != length(target_vars) || length(datasets) != length(result_prefixes)) {
+    stop("The number of datasets, target variables, and result prefixes must be the same.")
+  }
+  
+  # Loop over each dataset, target variable, and result prefix
+  for (i in seq_along(datasets)) {
+    data <- datasets[[i]]
+    target_var <- target_vars[i]
+    result_prefix <- result_prefixes[i]
+    
+    # Split data into training and testing sets
+    set.seed(123) # Ensure reproducibility
+    train_indices <- sample(seq_len(nrow(data)), size = (1 - test_size) * nrow(data))
+    train_data <- data[train_indices, ]
+    test_data <- data[-train_indices, ]
+    
+    # Train models
+    results <- train_all_models(train_data, target_var, train_control)
+    
+    # Combine importances
+    feature_importance <- combine_importances(
+      list(results$rf_model, results$lasso_model, 
+           results$ridge_model, results$elastic_net_model, results$xgb_model),
+      c("RF_Importance", "Lasso_Importance", 
+        "Ridge_Importance", "Enet_Importance", "XGBoost_Importance")
+    )
+    
+    # Ensure output directory exists
+    if (!dir.exists("drift_fs/csv/results/feb20/")) {
+      dir.create("drift_fs/csv/results/feb20/", recursive = TRUE)
+    }
+    
+    write.csv(feature_importance, 
+              paste0("drift_fs/csv/results/feb20/", 
+                     result_prefix, "_feature_importance.csv"), 
+              row.names = FALSE)
+    
+    # Extract best betas
+    beta_coefficients <- extract_best_betas(
+      list(results$lasso_model, results$ridge_model, results$elastic_net_model),
+      c("Lasso_Beta", "Ridge_Beta", "Enet_Beta")
+    )
+    write.csv(beta_coefficients, paste0("drift_fs/csv/results/feb20/", 
+                                        result_prefix, "_beta.csv"), row.names = FALSE)
+    
+    # Initialize an empty DataFrame to store performance metrics
+    metrics_df <- data.frame(Model = character(), DataType = character(), 
+                             R2 = numeric(), MAE = numeric(), 
+                             RMSE = numeric(), stringsAsFactors = FALSE)
+    
+    # Calculate and store metrics for each model on both training and testing data
+    for (model_name in names(results[-length(results)])) {
+      model <- results[[model_name]]
+      
+      # Training metrics
+      train_metrics <- calculate_metrics(model, train_data, target_var, model_name, "Train")
+      metrics_df <- rbind(metrics_df, train_metrics)
+      
+      # Testing metrics
+      test_metrics <- calculate_metrics(model, test_data, target_var, model_name, "Test")
+      metrics_df <- rbind(metrics_df, test_metrics)
+    }
+    
+    # Save the metrics DataFrame as CSV
+    write.csv(metrics_df, paste0("drift_fs/csv/results/feb20/", 
+                                 result_prefix, "_metrics.csv"), row.names = FALSE)
+    
+    # Ensure the model directory exists
+    if (!dir.exists("drift_fs/models/feb20/")) {
+      dir.create("drift_fs/models/feb20/", recursive = TRUE)
+    }
+    
+    # Save model results
+    saveRDS(results, paste0("drift_fs/models/feb20/", result_prefix, "_results.rds"))
+  }
+  
+  return("Model training completed for all datasets.")
+}
 
+####
 
 # Function to get top N important features for a given model
 get_top_n_features <- function(feature_importance, model_importance_column, n = 20) {
