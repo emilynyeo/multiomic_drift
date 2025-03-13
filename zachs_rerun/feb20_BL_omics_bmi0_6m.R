@@ -54,8 +54,6 @@ all <- merge(m12_6m, BL, by = "subject_id", all = TRUE)
 all$bmi_bL_6m <- all$outcome_BMI_fnl_6m - all$outcome_BMI_fnl
 all <- all[!is.na(all$bmi_bL_6m), ] # Remove rows with missing values in bmi_bL_6m (30)
 
-# rm(BL, m12, m6, m12_6m, m12_slim, m6_slim, omic_g_ra, omic_g_ra_inner, omic_g_ra_outer)
-
 ### Latent variables 
 latent_variables_BL <- c(
   "randomized_group", "score_std", "cohort_number", "sex", "race", "age", 
@@ -71,11 +69,10 @@ all_latent <- setdiff(all_columns, columns_to_exclude)
 # imputed <- preprocess_data(all, all_latent, "medianImpute")
 # remove outcome_BMI_fnl_BL from the genus and species dataframes
 imputed <- remove_columns(all, 
-                          columns_to_remove = c("subject_id", "sample_id", "all_samples_y",
+                          columns_to_remove = c("sample_id", "all_samples_y",
                                                 "record_id", "all_samples", 
                                                 "time_y", "outcome_BMI_fnl_12m", 
                                                 "outcome_BMI_fnl_6m", "Unnamed..0_merged_data"))
-
 ## Set single omic DFs
 
 # Find the column indices for "proton" and "Carbon.dioxide" in train_set
@@ -84,16 +81,16 @@ carbon_dioxide_column <- which(colnames(imputed) == "Carbon.dioxide")
 n10_col <- which(colnames(imputed) == "N10.formyl.tetrahydrofolate_biosynthesis")
 lval_col <- which(colnames(imputed) == "L.valine_biosynthesis")
 # Columns to KEEP for only meta 
-only_basic <- c('outcome_BMI_fnl', 'time', 'age', 'sex')
-meta_keep <- c('outcome_BMI_fnl', 'time', 'randomized_group', 'cohort_number', 
+only_basic <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 'age', 'sex')
+meta_keep <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time', 'randomized_group', 'cohort_number', 
                'sex', 'race', 'age', 'Glucose', 'HDL_Total_Direct_lipid', 'HOMA_IR', 
                'Insulin_endo', 'LDL_Calculated', 'Triglyceride_lipid')
-only_grs <- c('outcome_BMI_fnl', 'bmi_prs', 'time')
-only_taxa <- c('outcome_BMI_fnl', 'time', 
+only_grs <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'bmi_prs', 'time')
+only_taxa <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time', 
                grep("^g__", colnames(imputed), value = TRUE))
-only_micom <- c('outcome_BMI_fnl', 'time', 
+only_micom <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 
                 colnames(imputed)[proton_column:carbon_dioxide_column])
-only_path <- c('outcome_BMI_fnl', 'time',
+only_path <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time',
                colnames(imputed)[n10_col:lval_col])
 
 basic <- imputed %>% select(all_of(only_basic))
@@ -103,25 +100,67 @@ taxa <- imputed %>% select(all_of(only_taxa))
 path <- imputed %>% select(all_of(only_path))
 micom <- imputed %>% select(all_of(only_micom))
 
+### Do the same for test set 
+test_omic_g_ra <- test
+
+# Apply the same filtering based on the 'time' variable
+test_BL <- test_omic_g_ra %>%
+  filter(grepl("0$", time)) %>%
+  select(-matches("12$|6$"))
+
+test_m6 <- test_omic_g_ra %>%
+  filter(grepl("6$", time)) %>%
+  select(-matches("0$|12$"))
+
+test_m12 <- test_omic_g_ra %>%
+  filter(grepl("12$", time)) %>%
+  select(-matches("0$|6$"))
+
+test_m6_slim <- test_m6 %>%
+  select(c("subject_id", "outcome_BMI_fnl")) %>%
+  rename(outcome_BMI_fnl_6m = outcome_BMI_fnl)
+
+test_m12_slim <- test_m12 %>%
+  select(c("subject_id", "outcome_BMI_fnl")) %>%
+  rename(outcome_BMI_fnl_12m = outcome_BMI_fnl)
+
+test_m12_6m <- merge(test_m12_slim, test_m6_slim, by = "subject_id", all = TRUE)
+test_all <- merge(test_m12_6m, test_BL, by = "subject_id", all = TRUE)
+test_all$bmi_bL_6m <- test_all$outcome_BMI_fnl_6m - test_all$outcome_BMI_fnl
+test_all <- test_all[!is.na(test_all$bmi_bL_6m), ]  # Remove rows with missing values in bmi_bL_6m
+
+# Now, apply the same exclusion of columns as was done in training
+test_imputed <- remove_columns(test_all,
+                               columns_to_remove = c("sample_id", "all_samples_y",
+                                                     "record_id", "all_samples",
+                                                     "time_y", "outcome_BMI_fnl_12m",
+                                                     "outcome_BMI_fnl_6m", 
+                                                     "Unnamed..0_merged_data"))
+
+# Process the test dataset similarly for the specific omic columns
+test_basic <- test_imputed %>% select(all_of(only_basic))
+test_meta <- test_imputed %>% select(all_of(meta_keep))
+test_grs <- test_imputed %>% select(all_of(only_grs))
+test_taxa <- test_imputed %>% select(all_of(only_taxa))
+test_path <- test_imputed %>% select(all_of(only_path))
+test_micom <- test_imputed %>% select(all_of(only_micom))
+
+rm(test_BL, test_m12, test_m12_6m, test_m12_slim, test_m6, 
+   test_m6_slim, test_omic_g_ra, test, omic_g_ra, m6_slim, m6, m12, m12_slim, 
+   m12_6m, BL, all)
+
 ############ RUN on Single Omics ##############################################
-# Set dfs 
 datasets <- list(basic, meta, grs, taxa, path, micom)
-
-# target variables
-target_vars <- c("outcome_BMI_fnl", "outcome_BMI_fnl", "outcome_BMI_fnl", 
-                 "outcome_BMI_fnl", "outcome_BMI_fnl", "outcome_BMI_fnl")
-
-# result prefixes
+target_vars <- c("bmi_bL_6m", "bmi_bL_6m", "bmi_bL_6m", 
+                 "bmi_bL_6m", "bmi_bL_6m", "bmi_bL_6m")
 result_prefixes <- c("basic_BL_bmi0_6m", "meta_BL_bmi0_6m", "grs_BL_bmi0_6m", 
                      "taxa_BL_bmi0_6m", "path_BL_bmi0_6m", "micom_BL_bmi0_6m")
-
-# Call the function
 set.seed(123)
 train_control <- trainControl(method = "cv", number = 5, search = "grid")
-#train_and_save_multiple_models(datasets, target_vars, train_control, result_prefixes)
+train_and_save_multiple_models(datasets, target_vars, train_control, result_prefixes)
 
+### Call in the above results 
 base_path <- "drift_fs/csv/results/feb20"
-
 # Define file paths in a structured list
 file_paths <- list(
   # basic
@@ -153,8 +192,7 @@ file_paths <- list(
 # Read all data into a named list using lapply
 data_list <- lapply(file_paths, function(path) read.csv(file.path(base_path, path)))
 names(data_list) <- names(file_paths) # Assign names to the data list
-
-# In[4]: Process and plot for all datasets ----
+# Process and plot for all datasets ----
 datasets <- list(
   "basic" = list(
     beta = data_list$basic_beta,
@@ -189,8 +227,6 @@ datasets <- list(
 )
 
 ######## PLOT R2 OF MODELS #####################################################
-
-# Create a list to store the R² values
 r2_data <- list()
 for (dataset_name in names(datasets)) { # Iterate through each dataset
   metrics_df <- datasets[[dataset_name]]$metrics # Get current dataset metrics
@@ -203,20 +239,30 @@ for (dataset_name in names(datasets)) { # Iterate through each dataset
 }
 r2_combined <- bind_rows(r2_data) # Combine R² single data frame
 
+# If you only want RF and LASSO models 
+r2_combined_rf_lasso <- r2_combined %>%
+  dplyr::filter(str_detect(Model, "lasso_model|rf_model"))
+
+custom_colors <- c("basic" = "#85c787",  # Example hex color for lasso_model
+                   "grs" = "#ff7f5e",
+                   "meta" = "#7a8ec4",
+                   "micom" = "#d4ba66",
+                   "path" = "#66a4d4", 
+                   "taxa" = "#d4668e")
 # Plot R² values using ggplot2
-plot <- ggplot(r2_combined, aes(x = Model, y = R2, fill = Dataset)) +
+plot <- ggplot(r2_combined_rf_lasso, aes(x = Model, y = R2, fill = Dataset)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
   labs(
     title = "R² Values for Train Models Across Datasets",
     x = "Model",
     y = "R²",
-    fill = "Dataset"
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    fill = "Dataset") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = custom_colors)
 print(plot)
 
-ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/results/feb20/single_omic_BL_bmi0_6m_r2_plot.png", 
+ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/results/feb20/single_omic_BL_bmi0_6m_r2_plot_rf_lass.png", 
        plot = plot, width = 10, height = 8)
 
 ######## PLOT FT. IMPORTANCES #################################################
@@ -257,9 +303,19 @@ ft_imp_combined_top10 <- ft_imp_combined %>%
 
 # View the updated dataframe
 head(ft_imp_combined_top10)
+ft_imp_combined_rf_lasso <- ft_imp_combined_top10 %>%
+  dplyr::filter(str_detect(Model, "Lasso_Importance|RF_Importance"))
+
+# Define custom colors for each model
+custom_colors <- c("basic" = "#85c787",  # Example hex color for lasso_model
+                   "grs" = "#ff7f5e",
+                   "meta" = "#7a8ec4",
+                   "micom" = "#d4ba66",
+                   "path" = "#66a4d4", 
+                   "tax" = "#d4668e")   # Example hex color for rf_model
 
 # Plot feature importances using ggplot2 with independent y-axes for each facet
-plot_ft_imp <- ggplot(ft_imp_combined_top10, 
+plot_ft_imp <- ggplot(ft_imp_combined_rf_lasso, 
                       aes(x = reorder(Variable, Importance), y = Importance, fill = Model)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_wrap(~ Dataset, scales = "free_y") +  # Facet by dataset with independent y-axes
@@ -271,14 +327,193 @@ plot_ft_imp <- ggplot(ft_imp_combined_top10,
     fill = "Model"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Rotate feature names
-  coord_flip()  # Flip the coordinates for better readability
+  coord_flip() +  # Flip the coordinates for better readability
+  scale_fill_manual(values = custom_colors) # Apply custom colors correctly
 
+# Print the plot
 print(plot_ft_imp)
+
 # Save plot to a specific directory with a custom filename
-ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/results/feb20/single_omic_BL_bmi0_6m_ft_imp_plot.png", 
+ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/results/feb20/single_omic_BL_bmi0_6m_ft_imp_rf_lasso.png", 
        plot = plot_ft_imp, width = 10, height = 8)
 
 ###############################################################################
+datasets <- list(basic, meta, grs, taxa, path, micom)
+# target variables
+target_vars <- c("bmi_bL_6m", "bmi_bL_6m", "bmi_bL_6m", 
+                 "bmi_bL_6m", "bmi_bL_6m", "bmi_bL_6m")
+# result prefixes
+result_prefixes <- c("basic_BL_bmi0_6m", "meta_BL_bmi0_6m", "grs_BL_bmi0_6m", 
+                     "taxa_BL_bmi0_6m", "path_BL_bmi0_6m", "micom_BL_bmi0_6m")
+
+results <- train_multiple_models(datasets, target_vars, train_control, result_prefixes)
+
+## LASSO results and PREDICTIONS
+# basic results
+lasso_mod_basic <- results[["basic_BL_bmi0_6m"]]$lasso_model
+lasso_pred_basic <- best_lasso_predictions(lasso_mod_basic, 
+                                           basic, "bmi_bL_6m", test_basic) %>% 
+                    rename(predicted_basic = predicted) %>% unique()
+# meta
+lasso_mod_meta <- results[["meta_BL_bmi0_6m"]]$lasso_model
+lasso_pred_meta <- best_lasso_predictions(lasso_mod_meta, 
+                                          meta, "bmi_bL_6m", test_meta) %>% 
+                  rename(predicted_meta = predicted) %>% unique()
+# grs
+lasso_mod_grs <- results[["grs_BL_bmi0_6m"]]$lasso_model
+lasso_pred_grs <- best_lasso_predictions(lasso_mod_grs, 
+                                         grs, "bmi_bL_6m", test_grs) %>% 
+                  rename(predicted_grs = predicted) %>% unique()
+# taxa
+lasso_mod_taxa <- results[["taxa_BL_bmi0_6m"]]$lasso_model
+lasso_pred_taxa <- best_lasso_predictions(lasso_mod_taxa, 
+                                          taxa, "bmi_bL_6m", test_taxa) %>% 
+                   rename(predicted_taxa = predicted) %>% unique()
+# micom 
+lasso_mod_micom <- results[["micom_BL_bmi0_6m"]]$lasso_model
+lasso_pred_micom <- best_lasso_predictions(lasso_mod_micom, 
+                                           micom, "bmi_bL_6m", test_micom) %>% 
+                    rename(predicted_micom = predicted) %>% unique()
+# path 
+lasso_mod_path <- results[["path_BL_bmi0_6m"]]$lasso_model
+lasso_pred_path <- best_lasso_predictions(lasso_mod_path, 
+                                          path, "bmi_bL_6m", 
+                                          test_path, s = 0.07) %>% 
+                   rename(predicted_path = predicted) %>% unique()
+
+merged_lasso_preds <- lasso_pred_basic %>%
+  left_join(lasso_pred_meta, by = "subject_id") %>%
+  left_join(lasso_pred_grs, by = "subject_id") %>%
+  left_join(lasso_pred_taxa, by = "subject_id") %>%
+  left_join(lasso_pred_micom, by = "subject_id") %>%
+  left_join(lasso_pred_path, by = "subject_id") %>% 
+  dplyr::select(-c("actual.y.y.y", "time.y.y.y", "actual.x.x.x", "time.x.x.x",
+                   "actual.y.y", "time.y.y", "actual.x.x", "time.x.x", "time.y",
+                   "actual.y")) %>% rename(time = time.x, actual = actual.x) %>%
+  mutate_at(vars(2:9), as.numeric)
+
+### single lasso LM models 
+basic_lm <- lm(actual ~ predicted_basic, merged_lasso_preds)
+meta_lm <- lm(actual~ predicted_meta, merged_lasso_preds)
+grs_lm <- lm(actual ~ predicted_grs, merged_lasso_preds)
+taxa_lm <- lm(actual ~ predicted_taxa, merged_lasso_preds)
+micom_lm <- lm(actual ~ predicted_micom, merged_lasso_preds)
+path_lm <- lm(actual ~ predicted_path, merged_lasso_preds)
+anova(basic_lm, meta_lm)
+anova(basic_lm, grs_lm)
+anova(basic_lm, taxa_lm)
+anova(basic_lm, micom_lm)
+anova(basic_lm, path_lm)
+
+### combined lasso LM models
+basic_lm <- lm(actual ~ predicted_basic, merged_lasso_preds)
+basic_meta_lm <- lm(actual~ predicted_basic + predicted_meta, merged_lasso_preds)
+basic_grs_lm <- lm(actual ~ predicted_basic + predicted_grs, merged_lasso_preds)
+basic_taxa_lm <- lm(actual ~ predicted_basic + predicted_taxa, merged_lasso_preds)
+basic_micom_lm <- lm(actual ~ predicted_basic + predicted_micom, merged_lasso_preds)
+basic_path_lm <- lm(actual ~ predicted_basic + predicted_path, merged_lasso_preds)
+anova(basic_lm, basic_meta_lm)
+anova(basic_lm, basic_grs_lm)
+anova(basic_lm, basic_taxa_lm)
+anova(basic_lm, basic_micom_lm)
+anova(basic_lm, basic_path_lm)
+
+### RF results and PREDICTIONS
+rf_mod_basic <- results[["basic_BL_bmi0_6m"]]$rf_model
+pred_basic_rf <- best_rf_predictions(rf_mod_basic, basic, "bmi_bL_6m", test_basic) %>% 
+  rename(pred_basic_rf = predicted) %>% unique()
+
+rf_mod_meta <- results[["meta_BL_bmi0_6m"]]$rf_model
+pred_meta_rf <- best_rf_predictions(rf_mod_meta, meta, "bmi_bL_6m", test_meta) %>% 
+  rename(pred_meta_rf = predicted) %>% unique()
+
+rf_mod_grs <- results[["grs_BL_bmi0_6m"]]$rf_model
+pred_grs_rf <- best_rf_predictions(rf_mod_grs, grs, "bmi_bL_6m", test_grs) %>% 
+  rename(pred_grs_rf = predicted) %>% unique()
+
+rf_mod_taxa <- results[["taxa_BL_bmi0_6m"]]$rf_model
+pred_taxa_rf <- best_rf_predictions(rf_mod_taxa, taxa, "bmi_bL_6m", test_taxa) %>% 
+  rename(pred_taxa_rf = predicted) %>% unique()
+
+rf_mod_micom <- results[["micom_BL_bmi0_6m"]]$rf_model
+pred_micom_rf <- best_rf_predictions(rf_mod_micom, micom, "bmi_bL_6m", test_micom) %>% 
+  rename(pred_micom_rf = predicted) %>% unique()
+
+rf_mod_path <- results[["path_BL_bmi0_6m"]]$rf_model
+pred_path_rf <- best_rf_predictions(rf_mod_path, path, "bmi_bL_6m", test_path) %>% 
+  rename(pred_path_rf = predicted) %>% unique()
+
+## Combine predictions
+merged_rf_preds <- pred_basic_rf %>%
+  left_join(pred_meta_rf, by = "subject_id") %>%
+  left_join(pred_grs_rf, by = "subject_id") %>%
+  left_join(pred_taxa_rf, by = "subject_id") %>%
+  left_join(pred_micom_rf, by = "subject_id") %>%
+  left_join(pred_path_rf, by = "subject_id") %>% 
+  dplyr::select(-c("actual.y.y.y", "time.y.y.y", "actual.x.x.x", "time.x.x.x",
+                   "actual.y.y", "time.y.y", "actual.x.x", "time.x.x", "time.y",
+                   "actual.y")) %>% rename(time = time.x, actual = actual.x) %>%
+  mutate_at(vars(2:9), as.numeric)
+
+### Get ft imp
+models <- list(rf_mod_basic, rf_mod_meta, rf_mod_grs, 
+               rf_mod_taxa, rf_mod_micom, rf_mod_path)
+labels <- c("rf_basic", "rf_meta", "rf_grs", "rf_taxa", "rf_micom", "rf_path") 
+rf_importances <- combine_importances(models, labels) # Combine importances 
+
+### single rf LM models 
+basic_lm_rf <- lm(actual ~ pred_basic_rf, merged_rf_preds)
+meta_lm_rf <- lm(actual~ pred_meta_rf, merged_rf_preds)
+grs_lm_rf <- lm(actual ~ pred_grs_rf, merged_rf_preds)
+taxa_lm_rf <- lm(actual ~ pred_grs_rf, merged_rf_preds)
+micom_lm_rf <- lm(actual ~ pred_micom_rf, merged_rf_preds)
+path_lm_rf <- lm(actual ~ pred_path_rf, merged_rf_preds)
+anova(basic_lm_rf, meta_lm_rf)
+anova(basic_lm_rf, grs_lm_rf)
+anova(basic_lm_rf, taxa_lm_rf)
+anova(basic_lm_rf, micom_lm_rf)
+anova(basic_lm_rf, path_lm_rf)
+
+### combined lasso LM models
+basic_lm_rf <- lm(actual ~ pred_basic_rf, merged_rf_preds)
+basic_meta_lm_rf <- lm(actual~ pred_basic_rf + pred_meta_rf, merged_rf_preds)
+basic_grs_lm_rf <- lm(actual ~ pred_basic_rf + pred_grs_rf, merged_rf_preds)
+basic_taxa_lm_rf <- lm(actual ~ pred_basic_rf + pred_grs_rf, merged_rf_preds)
+basic_micom_lm_rf <- lm(actual ~ pred_basic_rf + pred_micom_rf, merged_rf_preds)
+basic_path_lm_rf <- lm(actual ~ pred_basic_rf + pred_path_rf, merged_rf_preds)
+anova(basic_lm_rf, basic_meta_lm_rf)
+anova(basic_lm_rf, basic_grs_lm_rf)
+anova(basic_lm_rf, basic_taxa_lm_rf)
+anova(basic_lm_rf, basic_micom_lm_rf)
+anova(basic_lm_rf, basic_path_lm_rf)
+
+# Combine LASSO and RF
+lasso_rf <- left_join(merged_lasso_preds, merged_rf_preds, by = "subject_id") %>% 
+  rename(time = time.x, actual = actual.x) %>% dplyr::select(-c(actual.y, time.y))
+
+summary(basic_lm)$adj.r.squared  
+summary(basic_lm_rf)$adj.r.squared   
+
+
+##### IGNORE BELOW ####################################
+# remove target var & 'subject_id' 
+test_x <- as.data.frame(test_imputed[, -which(names(test_imputed) %in% c("bmi_bL_6m", "subject_id"))])
+
+# Make predictions on the test dataset
+predictions <- predict(lasso_model, newdata = test_x)
+
+# If the target variable is continuous (regression), you can now evaluate the predictions:
+# Example for regression evaluation (using RMSE):
+rmse <- sqrt(mean((predictions - test_data[[target]])^2))
+print(paste("Root Mean Squared Error (RMSE):", rmse))
+
+# If it's a classification task, you can check accuracy, confusion matrix, etc.
+# Example for classification evaluation (using accuracy):
+accuracy <- mean(predictions == test_data[[target]])
+print(paste("Accuracy:", accuracy))
+
+###### OLD SCHOOL WAY BELOW - IGNORE ###########################################
+
 set.seed(123)
 train_control <- trainControl(method = "cv", number = 5, search = "grid")
 

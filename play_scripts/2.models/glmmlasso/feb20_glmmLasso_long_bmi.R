@@ -335,7 +335,7 @@ pred_df_meta <- as.data.frame(cbind(test_meta_filtered$subject_id,
                                     test_meta_filtered$BMI,
                                     scale(pred_risk_scores_meta))); colnames(pred_df_meta) <- c("subject_id", "time", "actual", "predicted_meta")
 file_path <- file.path(out_dir, "long_meta_predictions_feb20.csv")
-3#rite.csv(pred_df_meta, file_path, row.names = FALSE)
+#rite.csv(pred_df_meta, file_path, row.names = FALSE)
 
 #############################################################################################
 ### Taxa data set

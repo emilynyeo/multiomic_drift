@@ -17,126 +17,122 @@ predict_dir_only <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omi
 
 predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_plots/long_combined/feb20/"
 
+
+# Function to get best MERF model
+get_best_model <- function(df) {
+  # Step 1: Calculate average R-squared for each model
+  avg_r_squared <- df %>%
+    dplyr::group_by(Model) %>%
+    dplyr::summarise(avg_R_squared = mean(R_squared, na.rm = TRUE))
+  
+  # Step 2: Find the model with the highest average R-squared
+  best_model <- avg_r_squared %>%
+    dplyr::filter(avg_R_squared == max(pull(avg_r_squared, avg_R_squared))) %>%
+    pull(Model)
+  
+  # Step 3: Filter the original data for rows corresponding to the best model
+  df_best_model <- df %>%
+    dplyr::filter(Model %in% best_model)
+  
+  return(df_best_model)
+}
+
 basic <- read.csv(file.path(predict_dir, 
                            "merf_basic_only_bmi_long_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_basic = y_hat_new)
 
 meta <- read.csv(file.path(predict_dir, 
                            "merf_meta_only_bmi_long_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_meta = y_hat_new)
 
 only_meta <- read.csv(file.path(predict_dir_only, 
                                 "merf_results_long_only_meta_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_meta_only = y_hat_new)
 
 # Genetic merf resulst 
 basic_grs <- read.csv(file.path(predict_dir, 
                                 "merf_basic_grs_bmi_long_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_grs = y_hat_new)
 
 only_grs <- read.csv(file.path(predict_dir_only, 
                                 "merf_results_long_grs_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_grs_only = y_hat_new)
 
 # Taxa merf results 
 basic_taxa <- read.csv(file.path(predict_dir, 
                                  "merf_basic_taxa_bmi_long_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_taxa = y_hat_new)
 
 only_taxa <- read.csv(file.path(predict_dir_only, 
                                    "merf_results_long_only_taxa_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_taxa_only = y_hat_new)
 
 # Pathway merf results 
 basic_pathway <- read.csv(file.path(predict_dir, 
                                     "merf_basic_pathway_bmi_long_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_pathway = y_hat_new)
 
 only_pathway <- read.csv(file.path(predict_dir_only, 
                                  "merf_results_long_only_pathway_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_path_only = y_hat_new)
 
 # Micom merf results 
 basic_micom <- read.csv(file.path(predict_dir, 
                                   "merf_basic_micom_bmi_long_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_micom = y_hat_new)
 
 only_micom <- read.csv(file.path(predict_dir_only, 
                                   "merf_results_long_only_micom_feb20.csv")) %>% 
+  get_best_model() %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% dplyr::rename(y_new_micom_only = y_hat_new)
 
-# Merge meta and basic 
-meta_basic <- merge (basic, meta, by = c("Model", "Cluster", "Time"))
-merged_grs_meta <- merge(basic_grs, meta_basic, by = c("Model", "Cluster", "Time"))
-
-merged_grs_meta_micom <- merge(merged_grs_meta, basic_micom, 
-                               by = c("Model", "Cluster", "Time"))
-
-merged_grs_meta_micom_pathway <- merge(merged_grs_meta_micom, basic_pathway, 
-                                       by = c("Model", "Cluster", "Time"))
-
-merged_all <- merge(merged_grs_meta_micom_pathway, basic_taxa, 
-                    by = c("Model", "Cluster", "Time"))
-
-merged <- merge(merged_all, test, 
-                by.x = c("Cluster", "Time"), 
-                by.y = c("all_samples", "time")) %>% 
-  dplyr::rename(bmi = outcome_BMI_fnl)
-
 # Merge meta and only 
-meta_basic_only <- merge(basic, only_meta, by = c("Model", "Cluster", "Time"))
-merged_grs_meta_only <- merge(only_grs, meta_basic_only, by = c("Model", "Cluster", "Time"))
+meta_basic_only <- merge(basic, only_meta, by = c("Cluster", "Time")) %>% 
+  dplyr::select(-c("Model.x", "Model.y"))
+
+merged_grs_meta_only <- merge(only_grs, meta_basic_only, by = c("Cluster", "Time")) %>% 
+  dplyr::select(-c("Model"))
 
 merged_grs_meta_micom_only <- merge(merged_grs_meta_only, only_micom, 
-                               by = c("Model", "Cluster", "Time"))
+                               by = c("Cluster", "Time")) %>% 
+  dplyr::select(-c("Model"))
 
 merged_grs_meta_micom_pathway_only <- merge(merged_grs_meta_micom_only, only_pathway, 
-                                       by = c("Model", "Cluster", "Time"))
+                                       by = c("Cluster", "Time")) %>% 
+  dplyr::select(-c("Model"))
 
 merged_only <- merge(merged_grs_meta_micom_pathway_only, only_taxa, 
-                    by = c("Model", "Cluster", "Time"))
+                    by = c("Cluster", "Time")) %>% 
+  dplyr::select(-c("Model"))
 
 merged_only <- merge(merged_only, test, 
                 by.x = c("Cluster", "Time"), 
                 by.y = c("all_samples", "time")) %>% 
   dplyr::rename(bmi = outcome_BMI_fnl)
 
-### REMOVE 
-rm(merged_df, test_all, merged_grs_meta, meta_basic, 
-   merged_grs_meta_micom, merged_grs_meta_micom_pathway,
-   merged_grs_meta_micom_pathway_only, meta_basic_only,
-   merged_grs_meta_micom_only, merged_grs_meta_only, merged_all)
-rm(basic, basic_grs, basic_micom, basic_pathway, basic_taxa, only_grs,
-   only_meta, only_micom, only_pathway, only_taxa, meta)
 
-### Filter MSE
-df_mse <- merged_only %>%
-  dplyr::filter(Model == "MSE Model")
-df_prev <- merged_only %>%
-  dplyr::filter(Model == "Prev Model")
-df_ptev <- merged_only %>%
-  dplyr::filter(Model == "PTEV Model")
-df_oob <- merged_only %>%
-  dplyr::filter(Model == "OOB Model")
-
-# Remove duplicates 
-df_ptev <- distinct(df_ptev)
-df_mse <- distinct(df_mse)
-df_prev <- distinct(df_prev)
-df_oob <- distinct(df_oob)
-
-mod_dat = df_oob
+mod_dat = merged_only %>% distinct()
 mod_dat$Time <- as.numeric(mod_dat$Time)
 
 ### PTEV 

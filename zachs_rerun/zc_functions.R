@@ -447,8 +447,49 @@ get_top_n_features_all_models <- function(feature_importance, n = 20) {
   return(top_features_list)
 }
 
+##### 
+train_multiple_models <- function(datasets, target_vars, 
+                                  train_control, result_prefixes, 
+                                  test_size = 0.3) {
+  
+  # Check if lengths of datasets, target_vars, and result_prefixes are equal
+  if (length(datasets) != length(target_vars) || length(datasets) != length(result_prefixes)) {
+    stop("The number of datasets, target variables, and result prefixes must be the same.")
+  }
+  
+  # Initialize an empty list to store the results
+  all_results <- list()
+  
+  # Loop over each dataset, target variable, and result prefix
+  for (i in seq_along(datasets)) {
+    data <- datasets[[i]]
+    target_var <- target_vars[i]
+    result_prefix <- result_prefixes[i]
+    
+    # Split data into training and testing sets
+    set.seed(123) # Ensure reproducibility
+    train_indices <- sample(seq_len(nrow(data)), size = (1 - test_size) * nrow(data))
+    train_data <- data[train_indices, ]
+    test_data <- data[-train_indices, ]
+    
+    # Train models
+    results <- train_all_models(train_data, target_var, train_control)
+    
+    # Save results with a unique name based on result_prefix
+    all_results[[result_prefix]] <- results
+  }
+  
+  # Return the list of all results
+  return(all_results)
+}
+
+
+#####
+
 # Function to plot Venn diagram for top features
-plot_venn_diagram <- function(feature_sets, colors = NULL, figurename = "venn_diagram.png", output_dir = "drift_fs/figures/") {
+plot_venn_diagram <- function(feature_sets, colors = NULL, 
+                              figurename = "venn_diagram.png", 
+                              output_dir = "drift_fs/figures/") {
   if (is.null(colors)) {
     colors <- viridis(length(feature_sets))
   }
@@ -747,3 +788,243 @@ extract_metrics <- function(dataset_name, datasets) {
 }
 
 
+#### Get LASSO features
+get_lasso_features <- function(lasso_model) {
+  # Ensure the model is of class 'train' and that 'finalModel' is available
+  if (!inherits(lasso_model, "train")) {
+    stop("The provided object is not a valid 'train' model object.")
+  }
+  
+  # Extract the best lambda value based on cross-validation
+  best_lambda <- lasso_model$bestTune$lambda
+  
+  # Extract coefficients for the final model at the best lambda
+  best_coefs <- coef(lasso_model$finalModel, s = best_lambda)
+  
+  # Get selected features (non-zero coefficients)
+  selected_features <- rownames(best_coefs)[which(best_coefs != 0)]
+  
+  # Remove intercept from selected features
+  selected_features <- selected_features[selected_features != "(Intercept)"]
+  
+  # Return the outcomes as a list
+  result <- list(
+    best_lambda = best_lambda,
+    selected_features = selected_features,
+    coefficients = best_coefs
+  )
+  
+  return(result)
+}
+
+#### Extract best model from LASSO ###
+
+get_lasso_features <- function(lasso_model, data, outcome_col) {
+  # Ensure the model is of class 'train' and that 'finalModel' is available
+  if (!inherits(lasso_model, "train")) {
+    stop("The provided object is not a valid 'train' model object.")
+  }
+  
+  # Extract the best lambda value based on cross-validation
+  best_lambda <- lasso_model$bestTune$lambda
+  
+  # Extract coefficients for the final model at the best lambda
+  best_coefs <- coef(lasso_model$finalModel, s = best_lambda)
+  
+  # Get selected features (non-zero coefficients)
+  selected_features <- rownames(best_coefs)[which(best_coefs != 0)]
+  
+  # Remove intercept from selected features
+  selected_features <- selected_features[selected_features != "(Intercept)"]
+  
+  # Extract the suffix from the model name (after the last underscore)
+  model_name <- deparse(substitute(lasso_model))
+  model_suffix <- sub(".*_(.*)", "\\1", model_name)
+  
+  # Create a new data frame with the selected features
+  train_selected <- data[, c(outcome_col, selected_features)]
+  
+  # Create the formula for the final model using the selected features
+  final_formula <- as.formula(paste(outcome_col, "~", paste(selected_features, collapse = " + ")))
+  
+  # Fit the final model (use lm, or modify depending on your desired model type)
+  final_model <- lm(final_formula, data = train_selected)
+  
+  # Store the final model with a dynamic name
+  assign(paste0("final_model_", model_suffix), final_model, envir = .GlobalEnv)
+  
+  # Return the outcomes as a list, including the model and selected features
+  result <- list(
+    best_lambda = best_lambda,
+    selected_features = selected_features,
+    coefficients = best_coefs,
+    final_model = final_model
+  )
+  
+  return(result)
+}
+
+### Get predictions 
+best_lasso_predictions <- function(lasso_model, data, outcome_col, test_data) { 
+  # Ensure the model is of class 'train' and that 'finalModel' is available
+  if (!inherits(lasso_model, "train")) {
+    stop("The provided object is not a valid 'train' model object.")
+  }
+  
+  # Extract the best lambda value based on cross-validation
+  best_lambda <- lasso_model$bestTune$lambda
+  
+  # Extract coefficients for the final model at the best lambda
+  best_coefs <- coef(lasso_model$finalModel, s = best_lambda)
+  
+  # Get selected features (non-zero coefficients)
+  selected_features <- rownames(best_coefs)[which(best_coefs != 0)]
+  
+  # Remove intercept from selected features
+  selected_features <- selected_features[selected_features != "(Intercept)"]
+  
+  # Extract the suffix from the model name (after the last underscore)
+  model_name <- deparse(substitute(lasso_model))
+  model_suffix <- sub(".*_(.*)", "\\1", model_name)
+  
+  # Create a new data frame with the selected features
+  train_selected <- data[, c(outcome_col, selected_features)]
+  
+  # Create the formula for the final model using the selected features
+  final_formula <- as.formula(paste(outcome_col, "~", paste(selected_features, collapse = " + ")))
+  
+  # Fit the final model (use lm, or modify depending on your desired model type)
+  final_model <- lm(final_formula, data = train_selected)
+  
+  # Store the final model with a dynamic name
+  assign(paste0("final_model_", model_suffix), final_model, envir = .GlobalEnv)
+  
+  # Extract summary information of the model
+  mymodsum <- summary(final_model)
+  mod_coef_df <- as.data.frame(mymodsum[["coefficients"]])  # Extract coefficients from model summary
+  
+  # prediction on reserved validation samples
+  test <- test_data[complete.cases(test_data), ]  # remove rows with missing values
+  
+  # Grab only the columns that we have coefficients for (starting at index 2 removes the intercept)
+  test_vars <- test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+  test_vars$Intercept <- 1  # add a column for the intercept
+  test_vars <- test_vars %>% dplyr::select(Intercept, everything())
+  
+  # Predict the risk scores without covariates
+  pred_risk_scores <- as.matrix(test_vars) %*% as.matrix(mod_coef_df$Estimate)
+  
+  # Combine the predicted and actual values into a data frame
+  pred_df <- as.data.frame(cbind(
+    test$subject_id,
+    test$time,
+    test$bmi_bL_6m,
+    scale(pred_risk_scores)  # Scale the predictions if needed
+  ))
+  
+  # Rename the columns for clarity
+  colnames(pred_df) <- c("subject_id", "time", "actual", "predicted")
+  
+  # Return the prediction data frame as the result
+  return(pred_df)
+}
+
+####
+best_lasso_predictions <- function(lasso_model, data, outcome_col, test_data, s = NULL) {  
+  # Ensure the model is of class 'train' and that 'finalModel' is available
+  if (!inherits(lasso_model, "train")) {
+    stop("The provided object is not a valid 'train' model object.")
+  }
+  
+  # Extract the best lambda value based on cross-validation if s is NULL
+  best_lambda <- if (is.null(s)) {
+    lasso_model$bestTune$lambda
+  } else {
+    s  # Use the provided s if not NULL
+  }
+  
+  # Extract coefficients for the final model at the selected lambda (s)
+  best_coefs <- coef(lasso_model$finalModel, s = best_lambda)
+  
+  # Get selected features (non-zero coefficients)
+  selected_features <- rownames(best_coefs)[which(best_coefs != 0)]
+  
+  # Remove intercept from selected features
+  selected_features <- selected_features[selected_features != "(Intercept)"]
+  
+  # Extract the suffix from the model name (after the last underscore)
+  model_name <- deparse(substitute(lasso_model))
+  model_suffix <- sub(".*_(.*)", "\\1", model_name)
+  
+  # Create a new data frame with the selected features
+  train_selected <- data[, c(outcome_col, selected_features)]
+  
+  # Create the formula for the final model using the selected features
+  final_formula <- as.formula(paste(outcome_col, "~", paste(selected_features, collapse = " + ")))
+  
+  # Fit the final model (use lm, or modify depending on your desired model type)
+  final_model <- lm(final_formula, data = train_selected)
+  
+  # Store the final model with a dynamic name
+  assign(paste0("final_model_", model_suffix), final_model, envir = .GlobalEnv)
+  
+  # Extract summary information of the model
+  mymodsum <- summary(final_model)
+  mod_coef_df <- as.data.frame(mymodsum[["coefficients"]])  # Extract coefficients from model summary
+  
+  # Prediction on reserved validation samples
+  test <- test_data[complete.cases(test_data), ]  # Remove rows with missing values
+  
+  # Grab only the columns that we have coefficients for (starting at index 2 removes the intercept)
+  test_vars <- test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+  test_vars$Intercept <- 1  # Add a column for the intercept
+  test_vars <- test_vars %>% dplyr::select(Intercept, everything())
+  
+  # Predict the risk scores without covariates
+  pred_risk_scores <- as.matrix(test_vars) %*% as.matrix(mod_coef_df$Estimate)
+  
+  # Combine the predicted and actual values into a data frame
+  pred_df <- as.data.frame(cbind(
+    test$subject_id,
+    test$time,
+    test$bmi_bL_6m,
+    scale(pred_risk_scores)  # Scale the predictions if needed
+  ))
+  
+  # Rename the columns for clarity
+  colnames(pred_df) <- c("subject_id", "time", "actual", "predicted")
+  
+  # Return the prediction data frame as the result
+  return(pred_df)
+}
+
+### Get RF predictions
+best_rf_predictions <- function(rf_model, data, outcome_col, test_data) {  
+  # Ensure the model is of class 'train' and that 'finalModel' is available
+  if (!inherits(rf_model, "train")) {
+    stop("The provided object is not a valid 'train' model object.")
+  }
+  
+  # Extract the best mtry value from the model
+  best_mtry <- rf_model$bestTune$mtry
+  
+  # Extract the Random Forest model (final model)
+  rf_final_model <- rf_model$finalModel
+  
+  # Ensure that the test data is formatted similarly to the training data (excluding outcome column)
+  test_data_prepared <- test_data[, -which(names(test_data) %in% c(outcome_col, "subject_id"))]
+  
+  # Predict using the Random Forest model
+  predictions <- predict(rf_final_model, newdata = test_data_prepared)
+  
+  # Combine the predictions with actual values from the test set
+  pred_df <- data.frame(
+    subject_id = test_data$subject_id, 
+    time = test_data$time, 
+    actual = test_data[[outcome_col]], 
+    predicted = predictions
+  )
+  
+  # Return the prediction data frame
+  return(pred_df)
+}
