@@ -85,10 +85,6 @@ a2 <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, consent,
                                outcome_BMI_fnl_BL, Glucose_BL, HOMA_IR_BL, 
                                Insulin_endo_BL, HDL_Total_Direct_lipid_BL, 
                                LDL_Calculated_BL, Triglyceride_lipid_BL,
-                               # 3m
-                               #outcome_BMI_fnl_3m, Glucose_3m, HOMA_IR_3m,
-                               #Insulin_endo_3m, HDL_Total_Direct_lipid_3m,
-                               #LDL_Calculated_3m, Triglyceride_lipid_3m,
                                # 6m
                                outcome_BMI_fnl_6m, Glucose_6m, HOMA_IR_6m,
                                Insulin_endo_6m, HDL_Total_Direct_lipid_6m, 
@@ -98,9 +94,28 @@ a2 <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, consent,
                                Insulin_endo_12m, HDL_Total_Direct_lipid_12m,
                                LDL_Calculated_12m, Triglyceride_lipid_12m))
 
+# Use this dataframe if you want a more complex dataframe 
+a2_extra <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, consent,
+                               cohort_number, sex, race, age, completer,
+                               # BL
+                               outcome_BMI_fnl_BL, Glucose_BL, HOMA_IR_BL, 
+                               Insulin_endo_BL, HDL_Total_Direct_lipid_BL, 
+                               LDL_Calculated_BL, Triglyceride_lipid_BL,
+                               Peptide_YY_BL, Ghrelin_BL, Leptin_BL, Hemoglobin_A1C_BL,
+                               # 6m
+                               outcome_BMI_fnl_6m, Glucose_6m, HOMA_IR_6m,
+                               Insulin_endo_6m, HDL_Total_Direct_lipid_6m, 
+                               LDL_Calculated_6m, Triglyceride_lipid_6m,
+                               Peptide_YY_6m, Ghrelin_6m, Leptin_6m, Hemoglobin_A1C_6m,
+                               # 12m
+                               outcome_BMI_fnl_12m, Glucose_12m, HOMA_IR_12m,
+                               Insulin_endo_12m, HDL_Total_Direct_lipid_12m,
+                               LDL_Calculated_12m, Triglyceride_lipid_12m,
+                               Peptide_YY_12m, Ghrelin_12m, Leptin_12m, Hemoglobin_A1C_12m))
 
 # Remove non - 12 month completers 
-a2_meta <- a2 %>% 
+# Change the input dataframe depending on what you want 
+a2_meta <- a2_extra %>% 
   filter(completer != 0) %>% 
   dplyr::select(-c(completer, consent)) %>%
   mutate(across(where(is.logical), as.numeric)) # make logical numeric
@@ -110,10 +125,18 @@ length(unique(a2_meta$subject_id))
 
 ```{r}
 # Column names for the 12-month and 6-month data
+#columns_6m <- c("Glucose_6m", "HOMA_IR_6m", "Insulin_endo_6m", 
+#                "HDL_Total_Direct_lipid_6m", "LDL_Calculated_6m", "Triglyceride_lipid_6m")
+#columns_12m <- c("Glucose_12m", "HOMA_IR_12m", "Insulin_endo_12m", 
+#                 "HDL_Total_Direct_lipid_12m", "LDL_Calculated_12m", "Triglyceride_lipid_12m")
+
 columns_6m <- c("Glucose_6m", "HOMA_IR_6m", "Insulin_endo_6m", 
-                "HDL_Total_Direct_lipid_6m", "LDL_Calculated_6m", "Triglyceride_lipid_6m")
+                "HDL_Total_Direct_lipid_6m", "LDL_Calculated_6m", "Triglyceride_lipid_6m",
+                "Peptide_YY_6m", "Ghrelin_6m", "Leptin_6m", "Hemoglobin_A1C_6m")
+
 columns_12m <- c("Glucose_12m", "HOMA_IR_12m", "Insulin_endo_12m", 
-                 "HDL_Total_Direct_lipid_12m", "LDL_Calculated_12m", "Triglyceride_lipid_12m")
+                 "HDL_Total_Direct_lipid_12m", "LDL_Calculated_12m", "Triglyceride_lipid_12m",
+                 "Peptide_YY_12m", "Ghrelin_12m", "Leptin_12m", "Hemoglobin_A1C_12m")
 
 # Create a new column indicating rows with missing only 12-month data
 a2_meta$missing_12m_only <- rowSums(is.na(a2_meta[, columns_12m])) == length(columns_12m) &
@@ -150,7 +173,8 @@ k-nearest neighbor imputation is carried out by finding the k closest samples (E
 
 ```{r}
 # Preprocess the data - imputation and scaling 
-preProcValues <- preProcess(a2_meta[, 7:28], 
+#preProcValues <- preProcess(a2_meta[, 7:28], 
+preProcValues <- preProcess(a2_meta[, 7:40], 
                             method = c("scale", 
                                        #"center",
                                        "medianImpute",
@@ -170,7 +194,8 @@ preProcValues <- preProcess(a2_meta[, 7:28],
           rangeBounds = c(0, 1))
 
 a2_meta_Transformed <- cbind(a2_meta[, 1:6], 
-                             predict(preProcValues, a2_meta[,7:28]))
+                             #predict(preProcValues, a2_meta[,7:28]))
+                             predict(preProcValues, a2_meta[,7:40]))
 ```
 
 ## Make it match testing and training sets of metadata
@@ -221,7 +246,7 @@ plot_normality <- function(data) {
   }
 }
 
-plot_normality(a2_meta_Transformed[,5:28])
+plot_normality(a2_meta_Transformed[,5:40])
 ```
 
 
@@ -308,10 +333,18 @@ combined_train <- bind_rows(BL_train, m6_train, m12_train)
 ```
 
 ```{r}
+#write.csv(combined_train, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_train_samples_standard_clinical_feb20.csv")
+
+#write.csv(combined_test, 
+#        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_test_samples_standard_clinical_feb20.csv")
+```
+
+```{r}
 write.csv(combined_train, 
-        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_train_samples_standard_clinical_feb20.csv")
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_train_samples_extra_clinical_feb20.csv")
 
 write.csv(combined_test, 
-        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_test_samples_standard_clinical_feb20.csv")
+        "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/clinical/transformed/aim2/long_a2_test_samples_extra_clinical_feb20.csv")
 ```
 

@@ -20,6 +20,9 @@ p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn,
 ###############################
 ###     Caret Analysis
 ###############################
+# Define peptide variable at the top of the script
+extra_var <- "Peptide_YY"  # Change this if needed later
+
 # In[2] Load Datasets ----
 data_dir <- "drift_fs/csv/all_omic_processed_data/"
 
@@ -30,25 +33,26 @@ long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predic
 test <- read.csv(file.path(long_dir, 'feb20_test_merged_all_omics_extra_meta.csv'))
 train <- read.csv(file.path(long_dir, 'feb20_training_merged_all_omics_extra_meta.csv'))
 
-# FIRST JUST WITH OUTER JOINED 
+# FIRST JUST WITH OUTER JOINED
 omic_g_ra <- train
 
-### Make BL , 6m and 12m dfs 
+### Make BL, 6m and 12m dfs
 BL <- omic_g_ra %>%
   dplyr::filter(grepl("0$", time)) %>%
   dplyr::select(-matches("12$|6$"))
 
 m6 <- omic_g_ra %>%
   dplyr::filter(grepl("6$", time)) %>%
-  dplyr::select(-matches("0$|12$")) 
+  dplyr::select(-matches("0$|12$"))
 
 m12 <- omic_g_ra %>%
   dplyr::filter(grepl("12$", time)) %>%
   dplyr::select(-matches("0$|6$"))
 
-m6_slim <- m6 %>% dplyr::select(c("subject_id", "outcome_BMI_fnl")) %>% 
+m6_slim <- m6 %>% dplyr::select(c("subject_id", "outcome_BMI_fnl", extra_var)) %>%
   dplyr::rename(outcome_BMI_fnl_6m = outcome_BMI_fnl)
-m12_slim <- m12 %>% dplyr::select(c("subject_id", "outcome_BMI_fnl")) %>% 
+
+m12_slim <- m12 %>% dplyr::select(c("subject_id", "outcome_BMI_fnl", extra_var)) %>%
   dplyr::rename(outcome_BMI_fnl_12m = outcome_BMI_fnl)
 
 m12_6m <- merge(m12_slim, m6_slim, by = "subject_id", all = TRUE)
@@ -56,7 +60,7 @@ all <- merge(m12_6m, BL, by = "subject_id", all = TRUE)
 all$bmi_bL_6m <- all$outcome_BMI_fnl_6m - all$outcome_BMI_fnl
 all <- all[!is.na(all$bmi_bL_6m), ] # Remove rows with missing values in bmi_bL_6m (30)
 
-### Latent variables 
+### Latent variables
 latent_variables_BL <- c(
   "randomized_group", "score_std", "cohort_number", "sex", "race", "age", 
   "Glucose_BL", "HOMA_IR_BL", "Insulin_endo_BL", "HDL_Total_Direct_lipid_BL",             
@@ -67,12 +71,12 @@ all_columns <- colnames(all)
 columns_to_exclude <- c("subject_id", "sample_id", "all_samples", "record_id") # Exclude list
 all_latent <- setdiff(all_columns, columns_to_exclude)
 
-### Process DFs 
+### Process DFs
 # imputed <- preprocess_data(all, all_latent, "medianImpute")
 # remove outcome_BMI_fnl_BL from the genus and species dataframes
 imputed <- remove_columns(all, 
                           columns_to_remove = c("sample_id", "all_samples_y",
-                                                "record_id", "all_samples", 
+                                                "record_id", "all_samples",  
                                                 "time_y", "outcome_BMI_fnl_12m", 
                                                 "outcome_BMI_fnl_6m", "Unnamed..0_merged_data"))
 ## Set single omic DFs
@@ -82,18 +86,27 @@ proton_column <- which(colnames(imputed) == "proton")
 carbon_dioxide_column <- which(colnames(imputed) == "Carbon.dioxide")
 n10_col <- which(colnames(imputed) == "N10.formyl.tetrahydrofolate_biosynthesis")
 lval_col <- which(colnames(imputed) == "L.valine_biosynthesis")
+
 # Columns to KEEP for only meta 
-only_basic <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 'age', 'sex')
-meta_keep <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time', 'randomized_group', 'cohort_number', 
-               'sex', 'race', 'age', 'Glucose', 'HDL_Total_Direct_lipid', 'HOMA_IR', 
-               'Insulin_endo', 'LDL_Calculated', 'Triglyceride_lipid')
-only_grs <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'bmi_prs', 'time')
+only_basic <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 'age',  
+                'sex', extra_var) # Use extra_var here
+meta_keep <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time',  
+               'randomized_group', 'cohort_number', 'sex', 'race', 'age',  
+               'Glucose', 'HDL_Total_Direct_lipid', 'HOMA_IR',  
+               'Insulin_endo', 'LDL_Calculated', 'Triglyceride_lipid', 
+               extra_var) # Use extra_var here
+
+only_grs <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'bmi_prs', 'time', 
+              extra_var) # Use extra_var here
 only_taxa <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time', 
-               grep("^g__", colnames(imputed), value = TRUE))
+               extra_var, 
+               grep("^g__", colnames(imputed), value = TRUE)) # Use extra_var here
 only_micom <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 
-                colnames(imputed)[proton_column:carbon_dioxide_column])
-only_path <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time',
-               colnames(imputed)[n10_col:lval_col])
+                extra_var, 
+                colnames(imputed)[proton_column:carbon_dioxide_column]) # Use extra_var here
+only_path <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 
+               extra_var, 
+               colnames(imputed)[n10_col:lval_col]) # Use extra_var here
 
 basic <- imputed %>% select(all_of(only_basic))
 meta <- imputed %>% select(all_of(meta_keep))
@@ -102,94 +115,52 @@ taxa <- imputed %>% select(all_of(only_taxa))
 path <- imputed %>% select(all_of(only_path))
 micom <- imputed %>% select(all_of(only_micom))
 
-### Do the same for test set 
-test_omic_g_ra <- test
-
-# Apply the same filtering based on the 'time' variable
-test_BL <- test_omic_g_ra %>%
-  filter(grepl("0$", time)) %>%
-  select(-matches("12$|6$"))
-
-test_m6 <- test_omic_g_ra %>%
-  filter(grepl("6$", time)) %>%
-  select(-matches("0$|12$"))
-
-test_m12 <- test_omic_g_ra %>%
-  filter(grepl("12$", time)) %>%
-  select(-matches("0$|6$"))
-
-test_m6_slim <- test_m6 %>%
-  select(c("subject_id", "outcome_BMI_fnl")) %>%
-  rename(outcome_BMI_fnl_6m = outcome_BMI_fnl)
-
-test_m12_slim <- test_m12 %>%
-  select(c("subject_id", "outcome_BMI_fnl")) %>%
-  rename(outcome_BMI_fnl_12m = outcome_BMI_fnl)
-
-test_m12_6m <- merge(test_m12_slim, test_m6_slim, by = "subject_id", all = TRUE)
-test_all <- merge(test_m12_6m, test_BL, by = "subject_id", all = TRUE)
-test_all$bmi_bL_6m <- test_all$outcome_BMI_fnl_6m - test_all$outcome_BMI_fnl
-test_all <- test_all[!is.na(test_all$bmi_bL_6m), ]  # Remove rows with missing values in bmi_bL_6m
-
-# Now, apply the same exclusion of columns as was done in training
-test_imputed <- remove_columns(test_all,
-                               columns_to_remove = c("sample_id", "all_samples_y",
-                                                     "record_id", "all_samples",
-                                                     "time_y", "outcome_BMI_fnl_12m",
-                                                     "outcome_BMI_fnl_6m", 
-                                                     "Unnamed..0_merged_data"))
-
-# Process the test dataset similarly for the specific omic columns
-test_basic <- test_imputed %>% select(all_of(only_basic))
-test_meta <- test_imputed %>% select(all_of(meta_keep))
-test_grs <- test_imputed %>% select(all_of(only_grs))
-test_taxa <- test_imputed %>% select(all_of(only_taxa))
-test_path <- test_imputed %>% select(all_of(only_path))
-test_micom <- test_imputed %>% select(all_of(only_micom))
-
 rm(test_BL, test_m12, test_m12_6m, test_m12_slim, test_m6, 
    test_m6_slim, test_omic_g_ra, test, omic_g_ra, m6_slim, m6, m12, m12_slim, 
    m12_6m, BL, all)
 
 ############ RUN on Single Omics ##############################################
 datasets <- list(basic, meta, grs, taxa, path, micom)
-target_vars <- c("bmi_bL_6m", "bmi_bL_6m", "bmi_bL_6m", 
-                 "bmi_bL_6m", "bmi_bL_6m", "bmi_bL_6m")
+target_vars <- c(extra_var,extra_var,extra_var,extra_var,extra_var,extra_var)
 result_prefixes <- c("basic_BL_bmi0_6m", "meta_BL_bmi0_6m", "grs_BL_bmi0_6m", 
                      "taxa_BL_bmi0_6m", "path_BL_bmi0_6m", "micom_BL_bmi0_6m")
+# Append peptide_variable to each result prefix
+result_prefixes_with_peptide <- paste0(result_prefixes, "_", extra_var)
 set.seed(123)
 train_control <- trainControl(method = "cv", number = 5, search = "grid")
 train_and_save_multiple_models(datasets, target_vars, train_control, result_prefixes)
 
-### Call in the above results 
+# Define base path
 base_path <- "drift_fs/csv/results/feb20"
-# Define file paths in a structured list
+
+# Define file paths using paste0
 file_paths <- list(
   # basic
-  basic_beta = "basic_BL_bmi0_6m_beta.csv",
-  basic_ft_imp = "basic_BL_bmi0_6m_feature_importance.csv",
-  basic_metrics = "basic_BL_bmi0_6m_metrics.csv",
+  basic_beta = paste0("basic_BL_bmi0_6m_", extra_var, "_beta.csv"),
+  basic_ft_imp = paste0("basic_BL_bmi0_6m_", extra_var, "_feature_importance.csv"),
+  basic_metrics = paste0("basic_BL_bmi0_6m_", extra_var, "_metrics.csv"),
   # grs
-  grs_beta = "grs_BL_bmi0_6m_beta.csv",
-  grs_ft_imp = "grs_BL_bmi0_6m_feature_importance.csv",
-  grs_metrics = "grs_BL_bmi0_6m_metrics.csv",
+  grs_beta = paste0("grs_BL_bmi0_6m_", extra_var, "_beta.csv"),
+  grs_ft_imp = paste0("grs_BL_bmi0_6m_", extra_var, "_feature_importance.csv"),
+  grs_metrics = paste0("grs_BL_bmi0_6m_", extra_var, "_metrics.csv"),
   # meta
-  meta_beta = "meta_BL_bmi0_6m_beta.csv",
-  meta_ft_imp = "meta_BL_bmi0_6m_feature_importance.csv",
-  meta_metrics = "meta_BL_bmi0_6m_metrics.csv",
+  meta_beta = paste0("meta_BL_bmi0_6m_", extra_var, "_beta.csv"),
+  meta_ft_imp = paste0("meta_BL_bmi0_6m_", extra_var, "_feature_importance.csv"),
+  meta_metrics = paste0("meta_BL_bmi0_6m_", extra_var, "_metrics.csv"),
   # taxa
-  taxa_beta = "taxa_BL_bmi0_6m_beta.csv",
-  taxa_ft_imp = "taxa_BL_bmi0_6m_feature_importance.csv",
-  taxa_metrics = "taxa_BL_bmi0_6m_metrics.csv",
+  taxa_beta = paste0("taxa_BL_bmi0_6m_", extra_var, "_beta.csv"),
+  taxa_ft_imp = paste0("taxa_BL_bmi0_6m_", extra_var, "_feature_importance.csv"),
+  taxa_metrics = paste0("taxa_BL_bmi0_6m_", extra_var, "_metrics.csv"),
   # micom
-  micom_beta = "micom_BL_bmi0_6m_beta.csv",
-  micom_ft_imp = "micom_BL_bmi0_6m_feature_importance.csv",
-  micom_metrics = "micom_BL_bmi0_6m_metrics.csv",
+  micom_beta = paste0("micom_BL_bmi0_6m_", extra_var, "_beta.csv"),
+  micom_ft_imp = paste0("micom_BL_bmi0_6m_", extra_var, "_feature_importance.csv"),
+  micom_metrics = paste0("micom_BL_bmi0_6m_", extra_var, "_metrics.csv"),
   # pathway
-  path_beta = "path_BL_bmi0_6m_beta.csv",
-  path_ft_imp = "path_BL_bmi0_6m_feature_importance.csv",
-  path_metrics = "path_BL_bmi0_6m_metrics.csv"
+  path_beta = paste0("path_BL_bmi0_6m_", extra_var, "_beta.csv"),
+  path_ft_imp = paste0("path_BL_bmi0_6m_", extra_var, "_feature_importance.csv"),
+  path_metrics = paste0("path_BL_bmi0_6m_", extra_var, "_metrics.csv")
 )
+
 
 # Read all data into a named list using lapply
 data_list <- lapply(file_paths, function(path) read.csv(file.path(base_path, path)))
@@ -355,33 +326,33 @@ results <- train_multiple_models(datasets, target_vars, train_control, result_pr
 lasso_mod_basic <- results[["basic_BL_bmi0_6m"]]$lasso_model
 lasso_pred_basic <- best_lasso_predictions(lasso_mod_basic, 
                                            basic, "bmi_bL_6m", test_basic) %>% 
-                    rename(predicted_basic = predicted) %>% unique()
+  rename(predicted_basic = predicted) %>% unique()
 # meta
 lasso_mod_meta <- results[["meta_BL_bmi0_6m"]]$lasso_model
 lasso_pred_meta <- best_lasso_predictions(lasso_mod_meta, 
                                           meta, "bmi_bL_6m", test_meta) %>% 
-                  rename(predicted_meta = predicted) %>% unique()
+  rename(predicted_meta = predicted) %>% unique()
 # grs
 lasso_mod_grs <- results[["grs_BL_bmi0_6m"]]$lasso_model
 lasso_pred_grs <- best_lasso_predictions(lasso_mod_grs, 
                                          grs, "bmi_bL_6m", test_grs) %>% 
-                  rename(predicted_grs = predicted) %>% unique()
+  rename(predicted_grs = predicted) %>% unique()
 # taxa
 lasso_mod_taxa <- results[["taxa_BL_bmi0_6m"]]$lasso_model
 lasso_pred_taxa <- best_lasso_predictions(lasso_mod_taxa, 
                                           taxa, "bmi_bL_6m", test_taxa) %>% 
-                   rename(predicted_taxa = predicted) %>% unique()
+  rename(predicted_taxa = predicted) %>% unique()
 # micom 
 lasso_mod_micom <- results[["micom_BL_bmi0_6m"]]$lasso_model
 lasso_pred_micom <- best_lasso_predictions(lasso_mod_micom, 
                                            micom, "bmi_bL_6m", test_micom) %>% 
-                    rename(predicted_micom = predicted) %>% unique()
+  rename(predicted_micom = predicted) %>% unique()
 # path 
 lasso_mod_path <- results[["path_BL_bmi0_6m"]]$lasso_model
 lasso_pred_path <- best_lasso_predictions(lasso_mod_path, 
                                           path, "bmi_bL_6m", 
                                           test_path, s = 0.07) %>% 
-                   rename(predicted_path = predicted) %>% unique()
+  rename(predicted_path = predicted) %>% unique()
 
 merged_lasso_preds <- lasso_pred_basic %>%
   left_join(lasso_pred_meta, by = "subject_id") %>%
