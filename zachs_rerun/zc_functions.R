@@ -998,6 +998,75 @@ best_lasso_predictions <- function(lasso_model, data, outcome_col, test_data, s 
   return(pred_df)
 }
 
+best_lasso_predextra <- function(lasso_model, data, outcome_col, test_data, extra_var, s = NULL) {   
+  # Ensure the model is of class 'train' and that 'finalModel' is available 
+  if (!inherits(lasso_model, "train")) { 
+    stop("The provided object is not a valid 'train' model object.") 
+  } 
+  
+  # Extract the best lambda value based on cross-validation if s is NULL
+  best_lambda <- if (is.null(s)) { 
+    lasso_model$bestTune$lambda 
+  } else { 
+    s  # Use the provided s if not NULL
+  } 
+  
+  # Extract coefficients for the final model at the selected lambda (s)
+  best_coefs <- coef(lasso_model$finalModel, s = best_lambda) 
+  
+  # Get selected features (non-zero coefficients)
+  selected_features <- rownames(best_coefs)[which(best_coefs != 0)] 
+  
+  # Remove intercept from selected features
+  selected_features <- selected_features[selected_features != "(Intercept)"] 
+  
+  # Extract the suffix from the model name (after the last underscore)
+  model_name <- deparse(substitute(lasso_model)) 
+  model_suffix <- sub(".*_(.*)", "\\1", model_name) 
+  
+  # Create a new data frame with the selected features
+  train_selected <- data[, c(outcome_col, selected_features)] 
+  
+  # Create the formula for the final model using the selected features
+  final_formula <- as.formula(paste(outcome_col, "~", paste(selected_features, collapse = " + "))) 
+  
+  # Fit the final model (use lm, or modify depending on your desired model type)
+  final_model <- lm(final_formula, data = train_selected) 
+  
+  # Store the final model with a dynamic name
+  assign(paste0("final_model_", model_suffix), final_model, envir = .GlobalEnv) 
+  
+  # Extract summary information of the model
+  mymodsum <- summary(final_model) 
+  mod_coef_df <- as.data.frame(mymodsum[["coefficients"]])  # Extract coefficients from model summary 
+  
+  # Prediction on reserved validation samples
+  test <- test_data[complete.cases(test_data), ]  # Remove rows with missing values
+  
+  # Grab only the columns that we have coefficients for (starting at index 2 removes the intercept)
+  test_vars <- test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)]) 
+  test_vars$Intercept <- 1  # Add a column for the intercept
+  test_vars <- test_vars %>% dplyr::select(Intercept, everything()) 
+  
+  # Predict the risk scores without covariates
+  pred_risk_scores <- as.matrix(test_vars) %*% as.matrix(mod_coef_df$Estimate) 
+  
+  # Combine the predicted and actual values into a data frame
+  pred_df <- as.data.frame(cbind(
+    test$subject_id,
+    test$time,
+    test[[extra_var]],  # Use the extra_var instead of "bmi_bL_6m"
+    scale(pred_risk_scores)  # Scale the predictions if needed
+  )) 
+  
+  # Rename the columns for clarity
+  colnames(pred_df) <- c("subject_id", "time", "actual", "predicted") 
+  
+  # Return the prediction data frame as the result
+  return(pred_df) 
+}
+
+
 ### Get RF predictions
 best_rf_predictions <- function(rf_model, data, outcome_col, test_data) {  
   # Ensure the model is of class 'train' and that 'finalModel' is available
