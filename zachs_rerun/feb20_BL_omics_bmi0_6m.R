@@ -83,19 +83,19 @@ carbon_dioxide_column <- which(colnames(imputed) == "Carbon.dioxide")
 n10_col <- which(colnames(imputed) == "N10.formyl.tetrahydrofolate_biosynthesis")
 lval_col <- which(colnames(imputed) == "L.valine_biosynthesis")
 # Columns to KEEP for only meta 
-only_basic <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 'age', 'sex')
+only_basic <- c('subject_id', 'bmi_bL_6m', 'time', 'age', 'sex')
 meta_keep <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time', 'randomized_group', 'cohort_number', 
                'sex', 'race', 'age', 'Glucose', 'HDL_Total_Direct_lipid', 'HOMA_IR', 
                'Insulin_endo', 'LDL_Calculated', 'Triglyceride_lipid')
-only_grs <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'bmi_prs', 'time')
-only_taxa <- c('subject_id', 'bmi_bL_6m',  'outcome_BMI_fnl', 'time', 
+only_grs <- c('subject_id', 'bmi_bL_6m', 'bmi_prs', 'time')
+only_taxa <- c('subject_id', 'bmi_bL_6m', 'time', 
                grep("^g__", colnames(imputed), value = TRUE))
-only_micom <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time', 
+only_micom <- c('subject_id', 'bmi_bL_6m', 'time', 
                 colnames(imputed)[proton_column:carbon_dioxide_column])
-only_path <- c('subject_id', 'bmi_bL_6m', 'outcome_BMI_fnl', 'time',
+only_path <- c('subject_id', 'bmi_bL_6m','time',
                colnames(imputed)[n10_col:lval_col])
 
-basic <- imputed %>% select(all_of(only_basic))
+basic <- imputed %>% dplyr::select(all_of(only_basic))
 meta <- imputed %>% select(all_of(meta_keep))
 grs <- imputed %>% select(all_of(only_grs))
 taxa <- imputed %>% select(all_of(only_taxa))

@@ -954,6 +954,48 @@ anova(lmer_basic, lmer_meta_b, test = "LRT")
 anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
+
+
+glmmlass_lmer_models <- list(
+  c("lmer_basic", "lmer_meta_b"),
+  c("lmer_basic", "lmer_tax_b"),
+  c("lmer_basic", "lmer_micom_b"),
+  c("lmer_basic", "lmer_path_b"))
+
+library(lme4)  # Make sure the lme4 package is loaded
+
+anova_results <- list()  # empty list to store ANOVA results
+
+for (model_pair in glmmlass_lmer_models) {
+  model_1 <- get(model_pair[1])
+  model_2 <- get(model_pair[2])
+  
+  # Perform ANOVA and check if both models are of class lmerMod
+  if (inherits(model_1, "lmerMod") && inherits(model_2, "lmerMod")) {
+    # Perform ANOVA with mixed models
+    anova_result <- anova(model_1, model_2)  # This works with lmerMod objects
+    tidied_result <- tidy(anova_result)  # Tidy the ANOVA result using broom::tidy()
+    tidied_result$model_comparison <- paste(model_pair[1], "vs", model_pair[2])
+    anova_results[[length(anova_results) + 1]] <- tidied_result
+  } else {
+    message("One of the models in the pair is not a valid lmerMod object.")
+  }
+}
+
+# Combine all results into one dataframe
+anova_table <- do.call(rbind, anova_results)
+anova_table_clean <- anova_table %>%
+  filter(!is.na(statistic) & !is.na(p.value)) %>%
+  mutate(across(where(is.numeric), round, 3)) 
+
+# View the combined table
+print(anova_table_clean)
+# Create an HTML table from the cleaned anova table
+html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
+
+# Save the table as an HTML file
+writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/glmmlasso_delta_anova_table.html")
+
 ########################################################################################
 # Make linear models 
 basic_model <- lme(actual ~ predicted_basic + time, 
