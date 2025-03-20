@@ -101,7 +101,6 @@ preProcValues <- preProcess(path_all_time_cleaned[,2:267],
           na.remove = TRUE, # should missing values be removed from the calculations
           k = 5, # number of nearest neighbors from training set to use for imputation
           knnSummary = mean, # function to average neighbor values/column during imputation
-          #outcome = "outcome_BMI_fnl_BL",
           fudge = 0.2, # a tolerance value: Box-Cox transformation lambda values
           numUnique = 15, # no. unique values y has to estimate Box-Cox transformation
           verbose = TRUE, # a logical: prints a log as the computations proceed
