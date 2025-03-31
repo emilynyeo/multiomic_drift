@@ -94,7 +94,10 @@ subject_id_count <- train_meta %>%
   dplyr::summarize(range_count = n_distinct(range))  # Count the distinct range values
 
 # Filter `subject_id`s with fewer than 3 unique range values (0, 6, 12)
-missing_subjects <- subject_id_count %>%
+missing_subjects <- train_meta %>% 
+  dplyr::group_by(subject_id) %>%
+  dplyr::summarize(range_count = n_distinct(range)) %>% 
+  #subject_id_count %>%
   dplyr::filter(range_count < 3) %>%
   pull(subject_id)
 
@@ -176,6 +179,27 @@ mymod_basic <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_basic,
                            family = gaussian(link = "identity"))
 mymodsum <- summary(mymod_basic)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
+
+# Extract the fixed effects coefficients from the final model
+coef_df <- as.data.frame(summary(mymod_basic)$coefficients)
+coef_df$Feature <- rownames(coef_df)
+coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
+
+# Filter top 10 features by absolute coefficient magnitude
+top_features <- coef_df %>% 
+  mutate(abs_estimate = abs(Estimate)) %>% 
+  dplyr::filter(Feature != "(Intercept)") %>% 
+  mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
+         Feature = str_replace_all(Feature, "[._]", " ")) %>% 
+  arrange(desc(abs_estimate)) %>% head(10)  
+
+ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
+  geom_bar(stat = "identity", fill = "#1C4C98") +
+  coord_flip() + theme_bw() +
+  ggtitle("Top Features & Coefficients from the final Basic Model") +
+  xlab("Feature") + ylab("Coefficient Estimate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        axis.text.y = element_text(size = 12)) 
 
 # prediction on reserved validation samples
 test_basic <- test_basic[complete.cases(test_basic),] # complete cases
@@ -312,6 +336,27 @@ mymod_meta <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_meta,
                           family = gaussian(link = "identity"))
 mymodsum <- summary(mymod_meta)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
+
+# Extract the fixed effects coefficients from the final model
+coef_df <- as.data.frame(summary(mymod_meta)$coefficients)
+coef_df$Feature <- rownames(coef_df)
+coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
+
+# Filter top 10 features by absolute coefficient magnitude
+top_features <- coef_df %>% 
+  mutate(abs_estimate = abs(Estimate)) %>% 
+  dplyr::filter(Feature != "(Intercept)") %>% 
+  mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
+         Feature = str_replace_all(Feature, "[._]", " ")) %>% 
+  arrange(desc(abs_estimate)) %>% head(10)  
+
+ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
+  geom_bar(stat = "identity", fill = "#1C7C54") +
+  coord_flip() + theme_bw() +
+  ggtitle("Top Features & Coefficients from the final Meta Model") +
+  xlab("Feature") + ylab("Coefficient Estimate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        axis.text.y = element_text(size = 12)) 
 
 # prediction on reserved validation samples
 test_meta <- test_meta[complete.cases(test_meta),] # complete cases
@@ -544,7 +589,8 @@ file_path <- file.path(out_dir, "long_micom_predictions_feb20.csv")
 
 ##########################################################################################
 ### Pathway data set
-train_pathway_cleaned <- remove_high_corr_vars(train_pathway, threshold = 0.9)
+train_pathway_cleaned <- remove_high_corr_vars(train_pathway, threshold = 0.9) %>% 
+  dplyr::select(-c("cohort_number","time_y", "bmi_prs" ))
 train_pathway_filtered <- train_pathway_cleaned %>%
   dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
   dplyr::group_by(subject_id) %>%       # Group by subject_id
@@ -611,6 +657,28 @@ mymod_path <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_path,
 mymodsum <- summary(mymod_path)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
 
+# Plot pathway features
+# Extract the fixed effects coefficients from the final model
+coef_df <- as.data.frame(summary(mymod_path)$coefficients)
+coef_df$Feature <- rownames(coef_df)
+coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
+
+# Filter top 10 features by absolute coefficient magnitude
+top_features <- coef_df %>% 
+  mutate(abs_estimate = abs(Estimate)) %>% 
+  dplyr::filter(Feature != "(Intercept)") %>% 
+  mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
+         Feature = str_replace_all(Feature, "[._]", " ")) %>% 
+  arrange(desc(abs_estimate)) %>% head(10)  
+
+ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() + theme_bw() +
+  ggtitle("Top Features & Coefficients from the final Pathway Model") +
+  xlab("Feature") + ylab("Coefficient Estimate") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        axis.text.y = element_text(size = 12)) 
+
 # prediction on reserved validation samples
 test_path <- test_pathway[complete.cases(test_pathway),] # complete cases
 test_path_filtered <- test_path %>%
@@ -638,7 +706,7 @@ pred_df_path<- as.data.frame(cbind(test_path_filtered$subject_id,
                                                                                                "actual",
                                                                                                "predicted_pathway")
 file_path <- file.path(out_dir, "long_path_predictions_feb20.csv")
-#write.csv(pred_df_path, file_path, row.names = FALSE)
+write.csv(pred_df_path, file_path, row.names = FALSE)
 
 ##### Compare models
 # Convert the first 2 columns to factors
@@ -684,7 +752,6 @@ mod_dat = all_omic %>% rename(bmi = actual,
                               y_new_path_only = predicted_pathway,
                               y_new_tax_only = predicted_taxa)
 ### Change time to contimuous
-
 lmer_basic <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_meta <- lmer(bmi ~ y_new_meta_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom <- lmer(bmi ~ y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
