@@ -2,12 +2,13 @@
 # Combined all input processing script 
 
 pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
-               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, 
+               readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, missForest,
                AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
                summarytools, grid, mice, plyr, mlmRev, cowplot, ape, e1071,
                jtools, broom, patchwork, phyloseq, microbiome, glmnet, ISLR,
-               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor,
+               MicrobiomeStat, ANCOMBC, ape, vegan, zCompositions, janitor, MASS,
                RColorBrewer, DT, ggpubr, microbiomeutilities, compositions, VIM)
+
 ## Functions
 # Function to process the names BL
 process_names_bl <- function(names) {
@@ -99,6 +100,164 @@ make_unique_names <- function(names) {
   }
   return(names)
 }
+# fancy_processing
+fancy_process <- function(data, min_sample_threshold = 0.1, 
+                          var_threshold = 0.1, 
+                          correlation_threshold = 0.95, 
+                          center = TRUE, scale = TRUE) {
+  
+  # Check if the data is a data.frame or matrix
+  if (!is.data.frame(data) && !is.matrix(data)) {
+    stop("Input data must be a data frame or matrix.")
+  }
+  
+  # Initialize the removed_info list
+  removed_info <- list()
+  
+  # Step 0: Determine the most suitable transformation based on data distribution
+  cat("\nStep 0: Determining the most suitable transformation...\n")
+  
+  # Function to check normality with Shapiro-Wilk test
+  normality_test <- function(x) {
+    if (length(x) < 3) return(TRUE)  # Handle small data cases
+    p_value <- shapiro.test(x)$p.value
+    return(p_value > 0.05)  # p-value > 0.05 means data is normally distributed
+  }
+  
+  # Isolate numeric columns only
+  numeric_data <- data[sapply(data, is.numeric)]
+  
+  # Step 0.1: Test if the numeric data is normal (Shapiro-Wilk test) and skewness
+  normal_distrib <- apply(numeric_data, 2, normality_test)  # Apply to all numeric columns
+  skew_vals <- apply(numeric_data, 2, function(x) skewness(x, na.rm = TRUE))
+  
+  # Check if the majority of the data columns are normal
+  if (all(normal_distrib)) {
+    transformation <- "zscore"
+    cat("Data appears to be normally distributed. Using Z-score normalization.\n")
+  } else {
+    # If data is not normally distributed, check for skewness
+    skew_columns <- which(abs(skew_vals) > 0.5)  # Skew threshold (positive or negative skew)
+    
+    if (length(skew_columns) > 0) {
+      if (any(skew_vals[skew_columns] > 0)) {
+        # If positively skewed
+        transformation <- "log10"
+        cat("Data is positively skewed. Using Log10 transformation.\n")
+      } else {
+        # If negatively skewed or zero/negative values present
+        transformation <- "arcsinh"
+        cat("Data is negatively skewed or has zero/negative values. Using Arcsinh transformation.\n")
+      }
+    } else {
+      # If data isn't skewed, use Box-Cox for stabilization
+      transformation <- "boxcox"
+      cat("Data is not skewed. Using Box-Cox transformation.\n")
+    }
+  }
+  
+  # Step 0.2: Detect if the data is relative abundance (compositional data)
+  is_relative_abundance <- all(abs(rowSums(numeric_data) - 1) < 0.01)  # Adjust threshold as needed
+  if (is_relative_abundance) {
+    transformation <- "clr"
+    cat("Data appears to be relative abundance data. Using CLR transformation.\n")
+  }
+  
+  # Step 1: Normalize the numeric data using selected transformation
+  cat("\nStep 1: Normalizing the data...\n")
+  if (transformation == "log10") {
+    numeric_data <- log10(numeric_data + 1)
+    cat("Applied log10 transformation.\n")
+  } else if (transformation == "clr") {
+    gm <- apply(numeric_data, 1, function(x) exp(sum(log(x[x > 0])) / sum(x > 0)))  # Geometric mean/row
+    numeric_data <- t(apply(numeric_data, 1, function(x) log(x / gm)))
+    cat("Applied CLR transformation.\n")
+  } else if (transformation == "zscore") {
+    numeric_data <- scale(numeric_data)
+    cat("Applied Z-score normalization.\n")
+  } else if (transformation == "boxcox") {
+    numeric_data <- apply(numeric_data, 2, function(x) ifelse(all(x > 0), boxcox(x ~ 1)$y, x))
+    cat("Applied Box-Cox transformation.\n")
+  } else if (transformation == "arcsinh") {
+    numeric_data <- asinh(numeric_data)
+    cat("Applied Arcsinh transformation.\n")
+  }
+  
+  removed_info$step1 <- list(removed_rows = 0, removed_columns = 0)
+  
+  # Step 2: Centering and Scaling (standardize data)
+  cat("\nStep 2: Centering and Scaling the data...\n")
+  if (center) {
+    numeric_data <- scale(numeric_data, center = TRUE, scale = FALSE)  # Centering only
+    cat("Applied centering (subtracting mean).\n")
+  }
+  if (scale) {
+    numeric_data <- scale(numeric_data, center = FALSE, scale = TRUE)  # Scaling only
+    cat("Applied scaling (dividing by standard deviation).\n")
+  }
+  
+  removed_info$step2 <- list(removed_rows = 0, removed_columns = 0)
+  
+  # Step 3: Remove variables not present in a minimum % threshold of samples
+  cat("\nStep 3: Removing variables not present in a minimum percentage of samples...\n")
+  min_samples <- floor(min_sample_threshold * nrow(numeric_data))
+  cols_before_step3 <- ncol(numeric_data)
+  numeric_data <- numeric_data[, colSums(!is.na(numeric_data)) >= min_samples]
+  cols_removed_step3 <- cols_before_step3 - ncol(numeric_data)
+  cat(cols_removed_step3, "columns removed based on the minimum sample threshold of", 
+      min_sample_threshold * 100, "%.\n")
+  removed_info$step3 <- list(removed_rows = 0, removed_columns = cols_removed_step3)
+  
+  # Step 4: Remove variables with variance below the variance threshold
+  cat("\nStep 4: Removing variables with variance below", var_threshold, "...\n")
+  vars_before_step4 <- ncol(numeric_data)
+  numeric_data <- numeric_data[, apply(numeric_data, 2, var, na.rm = TRUE) >= var_threshold]
+  vars_removed_step4 <- vars_before_step4 - ncol(numeric_data)
+  cat(vars_removed_step4, "columns removed due to variance below the threshold.\n")
+  removed_info$step4 <- list(removed_rows = 0, removed_columns = vars_removed_step4)
+  
+  # Step 5: Remove highly collinear features (Pearson's > 0.95)
+  cat("\nStep 5: Removing highly collinear features (Pearson's > 0.95)...\n")
+  non_zero_variance_data <- numeric_data[, apply(numeric_data, 2, var, na.rm = TRUE) > 0]
+  if (ncol(non_zero_variance_data) > 1) {
+    correlation_matrix <- cor(non_zero_variance_data, use = "pairwise.complete.obs")
+    upper_tri <- correlation_matrix[upper.tri(correlation_matrix)]
+    highly_correlated <- which(abs(upper_tri) > correlation_threshold, arr.ind = TRUE)
+    if (length(highly_correlated) > 0) {
+      high_corr_idx <- unique(c(highly_correlated[, 1], highly_correlated[, 2]))
+      cols_before_step5 <- ncol(numeric_data)
+      numeric_data <- numeric_data[, -high_corr_idx]
+      cols_removed_step5 <- cols_before_step5 - ncol(numeric_data)
+      cat(cols_removed_step5, "columns removed due to high correlation ( > 0.95).\n")
+      removed_info$step5 <- list(removed_rows = 0, removed_columns = cols_removed_step5)
+    } else {
+      cat("No highly correlated features found (  > 0.95).\n")
+      removed_info$step5 <- list(removed_rows = 0, removed_columns = 0)
+    }
+  } else {
+    cat("Not enough columns left for correlation analysis.\n")
+    removed_info$step5 <- list(removed_rows = 0, removed_columns = 0)
+  }
+  
+  # Replace numeric data back into the original data frame, keeping non-numeric columns unchanged
+  non_numeric_data <- data[sapply(data, Negate(is.numeric))]
+  final_data <- cbind(non_numeric_data, numeric_data)
+  
+  # Return the processed data
+  return(final_data)
+}
+
+# Define a function to print taxa removal summary
+print_taxa_summary <- function(before, after, step) {
+  removed <- before - after
+  print(paste0("# Taxa removed in step ", step, ": ", removed))
+  print(paste0("# Taxa remaining after step ", step, ": ", after))
+}
+
+# Scaling ensures that all features contribute equally to the analysis, especially when the features have different units or ranges. 
+# Centering removes any biases caused by differences in the central values of the features.
+# The operations are applied in this order: zero-variance filter, near-zero variance filter, correlation filter, Box-Cox/Yeo-Johnson/exponential transformation, centering, scaling, range, imputation, PCA, ICA then spatial sign
+# se Exponential Transformations when the data represents rates, decay, or growth over time.
 
 #### META ##########################################################################################
 meta <- read_csv("~/projects/research/Stanislawski/BMI_risk_scores/data/correct_meta_files/ashleys_meta/DRIFT_working_dataset_meta_deltas_filtered_05.21.2024.csv")
@@ -124,20 +283,32 @@ a2_extra <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, co
                                      Glucose_12m, HOMA_IR_12m,
                                      Insulin_endo_12m, HDL_Total_Direct_lipid_12m,
                                      LDL_Calculated_12m, Triglyceride_lipid_12m,
-                                     Peptide_YY_12m, Ghrelin_12m, Leptin_12m, Hemoglobin_A1C_12m))
+                                     Peptide_YY_12m, Ghrelin_12m, Leptin_12m, Hemoglobin_A1C_12m))  %>% 
+  mutate(subject_id = as.factor(subject_id),
+         record_id = as.factor(record_id), 
+         randomized_group = as.factor(randomized_group),
+         consent = as.factor(consent),
+         sex = as.factor(sex), 
+         race = as.factor(race),
+         completer = as.factor(completer),
+         cohort_number = as.factor(cohort_number))
 
-meta_raw_plot <- my_plt_density(a2_extra, 9:39, c(-2, 80), "Meta Count")
+my_plt_density(a2_extra, 9:39, c(-2, 80), "Meta Count")
 check_normality_and_skewness(a2_extra, 9:39)
 
-preProcValues <- preProcess(a2_extra[,9:39], 
-                            method = c("scale", "center", "nzv"),
-                            thresh = 0.95, pcaComp = NULL, na.remove = TRUE, 
-                            k = 5, knnSummary = mean, fudge = 0.2, 
-                            numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.85, rangeBounds = c(0, 1))
-
-meta_cs <- predict(preProcValues, a2_extra[,1:39]) 
-meta_dis_plot <- my_plt_density(meta_cs, 9:39, c(-10, 10), "META CENTER SCALED")
+preProcValues <- preProcess(a2_extra, 
+                            method = c("scale", "center", "nzv", "YeoJohnson", 
+                                       "corr", "bagImpute"),
+                            thresh = 0.95, # % variance
+                            na.remove = TRUE, verbose = TRUE, 
+                            freqCut = 95/5, # ratio of most common val to 2nd most common val.
+                            uniqueCut = 10, # % distinct vals / total no. samples
+                            cutoff = 1) # correlation cut off 
+                            #rangeBounds = c(0, 1)) # interval for range transformation
+preProcValues
+meta_cs <- predict(preProcValues, a2_extra) 
+heatmap(cor(meta_cs[, 9:39]))
+my_plt_density(meta_cs, 9:39, c(-10, 10), "META CENTER SCALED")
 check_normality_and_skewness(meta_cs, 9:39)
 
 #### SET Y Vars ####################################################################################
@@ -149,23 +320,18 @@ my_plt_density(siy, 2:4, c(-5, 50), "raw Y")
 grs <- read_csv("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/full_cohort_pulling_snps/bigsnpr/made_scores/merge_meta_methyl.csv") %>%
   dplyr::select(c(subject_id, raw_score)) %>%
   dplyr::rename(bmi_prs = raw_score)
-grs_raw_plot <- my_plt_density(grs, 2:2, c(-1, 1), "GRS")
+my_plt_density(grs, 2:2, c(-1, 1), "GRS")
 check_normality_and_skewness(grs, 2:2)
 grs <- grs %>% distinct(subject_id, .keep_all = TRUE)
-# Testing Logs 
-#log_all_grs <- grs %>% mutate(across(-1, log1p))
-#my_plt_density(log_all_micom, 2:2, c(-100, 100), "GRS logged")
-#check_normality_and_skewness(log_all_grs, 2:2)
 
 preProcValues <- preProcess(grs[,2:2], 
-                            method = c("nzv"),#,"scale", "center"),
+                            method = c("nzv"), #"scale", "center"
                             thresh = 0.95, pcaComp = NULL, na.remove = TRUE, 
-                            k = 5, knnSummary = mean, fudge = 0.2, 
                             numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.85, rangeBounds = c(0, 1))
-
+                            uniqueCut = 10, cutoff = 0.95)
+preProcValues
 grs_transformed <- predict(preProcValues, grs[, 1:2]) 
-grs_dis_plot <- my_plt_density(grs_transformed, 2:2, c(-1, 1), "GRS nzv")
+my_plt_density(grs_transformed, 2:2, c(-1, 1), "GRS nzv")
 
 dub <- grs_transformed %>% filter(duplicated(subject_id) | duplicated(subject_id, fromLast = TRUE))
 
@@ -173,16 +339,18 @@ dub <- grs_transformed %>% filter(duplicated(subject_id) | duplicated(subject_id
 load("~/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/PhyloseqObj.RData")
 load("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/Genus_Sp_tables.RData")
 print_ps(drift.phy.count)
-# Remove taxa not seen more than 2 times in at least 20% of the samples.
-GP_count = filter_taxa(drift.phy.count, 
-                       function(x) sum(x > 3) > (0.1*length(x)), TRUE)
-print(paste0("#Taxa with >3 counts in > 10% samples if using count: ", ntaxa(GP_count)))
 
-# Coefficient of variation cut off 
-gpsf_count = filter_taxa(GP_count, function(x) sd(x)/mean(x) > 1.0, TRUE)
-print(paste0("# Taxa with coefficient of variation > 10 if using count: ", ntaxa(gpsf_count)))
+# Step 1: Remove taxa not seen more than 3 times in at least 10% of the samples
+initial_taxa_count <- ntaxa(drift.phy.count)
+GP_count <- filter_taxa(drift.phy.count, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
+print_taxa_summary(initial_taxa_count, ntaxa(GP_count), "1")
 
-# Get gennus 
+# Step 2: Apply coefficient of variation cutoff
+initial_taxa_count_gp <- ntaxa(GP_count)
+gpsf_count <- filter_taxa(GP_count, function(x) sd(x)/mean(x) > 1.0, TRUE)
+print_taxa_summary(initial_taxa_count_gp, ntaxa(gpsf_count), "2")
+
+# Get genus 
 tax_genus <- tax_glom(gpsf_count, "Genus")
 genus_filtered_count <- otu_table(tax_genus) 
 genus_filtered_count <- t(genus_filtered_count) %>% as.data.frame()
@@ -193,7 +361,7 @@ rm(drift.phy.clr,drift.phy.count,GP_count,gpsf_count,sp.clr, tax_genus,sp.count,
 # Function to make column names unique
 colnames(genus_filtered_count) <- make_unique_names(colnames(genus_filtered_count)) # rename the columns
 genus_count <- genus_filtered_count %>% rownames_to_column(var = "subject_id") 
-genus_raw_plot <- my_plt_density(genus_count, 2:180, c(-10, 10), "Genus Count")
+my_plt_density(genus_count, 2:180, c(-10, 100), "Genus Count")
 check_normality_and_skewness(genus_count, 2:180)
 
 # Relative abundance conversion
@@ -204,66 +372,75 @@ Genus_relative_abundance <- genus_filtered_count %>%
   mutate(across(g__Parabacteroides_B_862066:`g__Massilistercora`, ~ .x / total)) %>%
   dplyr::select(-total) %>%
   column_to_rownames(var = "subject_id")
+
 # Plot RA distribuitions 
 any(genus_count < 0, na.rm = TRUE)
 any(Genus_relative_abundance < 0, na.rm = TRUE)
-genus_ra_plot <- my_plt_density(Genus_relative_abundance, 2:179, c(-0.001, 0.01), "Genus RA")
+my_plt_density(Genus_relative_abundance, 2:179, c(-0.001, 0.01), "Genus RA")
 check_normality_and_skewness(Genus_relative_abundance, 2:179)
 
+##  removes any column where the proportion of zeros is greater than or equal to 80%.
+threshold <- 0.80
+zero_percentage <- colSums(Genus_relative_abundance == 0, na.rm = TRUE) / nrow(Genus_relative_abundance) # % zeros / column
+Genus_relative_abundance_cleaned <- Genus_relative_abundance[, zero_percentage < threshold] # only colz < 20% zeros
+dim(Genus_relative_abundance) - dim(Genus_relative_abundance_cleaned) # 47 
+
 # CLR Transformation
-#genus_clr_transformed <- apply(Genus_relative_abundance, 2, clr) %>% as.data.frame()
-#my_plt_density(genus_clr_transformed, 1:179, c(-0.005, 0.005), "Genus RA CLR")
-#check_normality_and_skewness(genus_clr_transformed, 1:179)
+genus_clr_transformed <- apply(Genus_relative_abundance_cleaned, 2, clr) %>% as.data.frame()
+my_plt_density(genus_clr_transformed, 1:132, c(-0.005, 0.005), "Genus RA CLR")
+my_plt_density(genus_clr_transformed, 1:132, c(-0.1, 0.1), "Genus RA CLR")
+check_normality_and_skewness(genus_clr_transformed, 1:132)
 
 # Log transform
-log_all_RA_genus <- Genus_relative_abundance %>% mutate(across(-1, log1p))
-genus_log_plot <- my_plt_density(log_all_RA_genus, 2:179, c(-0.001, 0.001), "Gen. RA Log")
+# log_all_RA_genus <- Genus_relative_abundance %>% mutate(across(-1, log1p))
+# genus_log_plot <- my_plt_density(log_all_RA_genus, 2:179, c(-0.001, 0.001), "Gen. RA Log")
 
+#  with more than 95% of its values being the same (or near-zero variance) will be excluded from the dataset.
 # CENTER AND SCALE
-preProcValues <- preProcess(log_all_RA_genus[,1:179], 
-                            method = c("scale", #"center", 
-                                       "nzv"),
-                            thresh = 0.95, pcaComp = NULL, na.remove = TRUE, 
-                            k = 5, knnSummary = mean, fudge = 0.2, 
+preProcValues <- preProcess(genus_clr_transformed[,1:132], 
+                            method = c( "nzv", "corr"), # , "expoTrans""scale", "center",
+                            thresh = 0.95, na.remove = TRUE, 
+                            fudge = 0.2, 
                             numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.85, rangeBounds = c(0, 1))
+                            uniqueCut = 10, cutoff = 0.95, rangeBounds = c(0, 1))
 
-cs_transformed <- predict(preProcValues, log_all_RA_genus[, 1:179]) %>% 
+preProcValues
+cs_transformed <- predict(preProcValues, genus_clr_transformed[, 1:132]) %>% 
                    rownames_to_column(var = "subject_id")
-genus_dis_plot <- my_plt_density(cs_transformed, 2:180, c(-0.1, 0.1), "GenusRA log SCALED")
-check_normality_and_skewness(cs_transformed, 2:180)
-# Process names 
-cs_transformed$all_samples <- process_names_all(rownames(cs_transformed))
+heatmap(cor(cs_transformed[, 2:133]))
+my_plt_density(cs_transformed, 2:133, c(-1, 1), "GenusRA CLR")
+check_normality_and_skewness(cs_transformed, 2:133)
+cs_transformed$all_samples <- process_names_all(cs_transformed$subject_id)
 
 ### Functional ####################################################################################################
 pathways <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/pathways_out/path_abun_unstrat_descrip.tsv") %>% .[, -1] %>% t() %>% as.data.frame() %>% 
   row_to_names(1) %>% rownames_to_column("SampleID") %>% 
   mutate(across(-1, as.numeric))
+my_plt_density(pathways, 2:391, c(-50, 50), "Pathways")
 
 # Remove variables with low presence thresholds 
-threshold <- 0.20
+threshold <- 0.80
 zero_percentage <- colSums(pathways == 0, na.rm = TRUE) / nrow(pathways) # % zeros / column
 path_all_time_cleaned <- pathways[, zero_percentage < threshold] # only colz < 20% zeros
-dim(pathways) - dim(path_all_time_cleaned) 
+dim(pathways) - dim(path_all_time_cleaned) #79
 any(path_all_time_cleaned < 0, na.rm = TRUE)
-path_raw_plot <- my_plt_density(path_all_time_cleaned, 2:267, c(-5, 5), "Pathways")
-check_normality_and_skewness(path_all_time_cleaned, 2:267)
+my_plt_density(path_all_time_cleaned, 2:312, c(-5, 5), "Pathways")
+check_normality_and_skewness(path_all_time_cleaned, 2:312)
 
 # imputation and scaling 
-preProcValues <- preProcess(path_all_time_cleaned[,2:267], 
-                            method = c("scale", "center", 
-                                       "nzv"),
-                            thresh = 0.95, pcaComp = NULL, na.remove = TRUE, 
-                            k = 5, knnSummary = mean, fudge = 0.2, 
-                            numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.85, rangeBounds = c(0, 1))
-
-path_all_time_cs <- predict(preProcValues, path_all_time_cleaned[,1:267])
-path_dis_plot <- my_plt_density(path_all_time_cs, 2:266, c(-5, 5), "Pathways Center Scaled")
-check_normality_and_skewness(path_all_time_cs, 2:266)
+preProcValues <- preProcess(path_all_time_cleaned[,2:312], 
+                            method = c("scale", "center", "nzv",
+                                       "corr", "YeoJohnson"),
+                            thresh = 0.95,  na.remove = TRUE, 
+                            fudge = 0.2, numUnique = 15, verbose = TRUE,  
+                            freqCut = 95/5, uniqueCut = 10, cutoff = 0.95)
+preProcValues
+path_all_time_cs <- predict(preProcValues, path_all_time_cleaned[,1:312])
+heatmap(cor(path_all_time_cs[, 2:147]))
+my_plt_density(path_all_time_cs, 2:147, c(-5, 5), "Pathways Center Scaled")
+check_normality_and_skewness(path_all_time_cs, 2:147)
 # Process samples 
 path_all_time_cs$all_samples <- process_names_all(path_all_time_cs$SampleID)
-# Make pathway names unique
 colnames(path_all_time_cs) <- make.names(colnames(path_all_time_cs), unique = TRUE)
 # make time column 
 path_all_time_cs <- path_all_time_cs %>%
@@ -279,29 +456,34 @@ flux <- products.all %>%
   pivot_wider(names_from = description, values_from = flux, values_fill = list(flux = 0))
 any(flux < 0, na.rm = TRUE)
 
-# Remove variables with low presence thresholds 
-threshold <- 0.20
+# Remove variables with % of zero values is greater than or equal to the threshold
+threshold <- 0.80
 zero_percentage <- colSums(flux == 0, na.rm = TRUE) / nrow(flux)
 flux_cleaned <- flux[, zero_percentage < threshold]
-micom_raw_plot <- my_plt_density(flux_cleaned, 2:104, c(-0.001, 0.001), "MICOM raw")
+dim(flux) - dim(flux_cleaned) # 0 
+my_plt_density(flux_cleaned, 2:104, c(-0.001, 0.001), "MICOM raw")
 check_normality_and_skewness(flux_cleaned, 2:104)
 
-log_all_micom <- flux_cleaned %>% mutate(across(-1, log1p))
-micom_log_plot <- my_plt_density(log_all_micom, 2:104, c(-0.001, 0.001), "MICOM logged")
-check_normality_and_skewness(log_all_micom, 2:104)
+#log_all_micom <- flux_cleaned %>% mutate(across(-1, log1p))
+#micom_log_plot <- my_plt_density(log_all_micom, 2:104, c(-0.001, 0.001), "MICOM logged")
+#check_normality_and_skewness(log_all_micom, 2:104)
+heatmap(cor(flux_cleaned[, 2:104]))
 
-# Preprocess the data - imputation and Centering
-preProcValues <- preProcess(log_all_micom[,2:104], 
-                            method = c("scale", #"center", 
-                                       "nzv"),
-                            thresh = 0.95, pcaComp = NULL, na.remove = TRUE, 
-                            k = 5, knnSummary = mean, fudge = 0.2, 
+flux_cleaned <- as.data.frame(flux_cleaned)
+preProcValues <- preProcess(flux_cleaned[, 2:104], 
+                            method = c("scale", "center", "nzv", 
+                                       "corr", "YeoJohnson"),
+                            thresh = 0.95, na.remove = TRUE, fudge = 0.2, 
                             numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.85, rangeBounds = c(0, 1))
+                            uniqueCut = 10, cutoff = 0.95)
+preProcValues
 
-flux_all_time_cs <- predict(preProcValues, log_all_micom[,1:104])
-micom_dis_plot <- my_plt_density(flux_all_time_cs, 2:92, c(-0.001, 0.001), "MICOM Center Scaled")
-check_normality_and_skewness(flux_all_time_cs, 2:92)
+flux_all_time_cs <- predict(preProcValues, flux_cleaned[,1:104])
+heatmap(cor(flux_all_time_cs[, 2:61]))
+
+dim(flux_cleaned) - dim(flux_all_time_cs) # 60 
+my_plt_density(flux_all_time_cs, 2:61, c(-2.5, 2.5), "MICOM Center Scaled")
+check_normality_and_skewness(flux_all_time_cs, 2:61)
 
 # Process names
 flux_all_time_cs$all_samples <- process_names_all(flux_all_time_cs$sample_id)
@@ -310,14 +492,6 @@ flux_all_time_cs <- flux_all_time_cs %>%
   mutate(time = case_when(grepl("BL", sample_id) ~ 0, grepl("6m", sample_id) ~ 6, 
                           grepl("12m", sample_id) ~ 12, TRUE ~ NA_real_)) %>%
   filter(!grepl("\\.3m$", sample_id))
-
-
-grid.arrange(meta_raw_plot, meta_dis_plot, 
-             grs_raw_plot, grs_dis_plot, 
-             genus_raw_plot, genus_ra_plot, genus_log_plot, genus_dis_plot, 
-             path_raw_plot, path_dis_plot, 
-             micom_raw_plot, micom_log_plot, micom_dis_plot, 
-             ncol = 2, nrow = 7)  # Adjust ncol and nrow as needed
 
 ##### Merging DFs ###########################################################################
 # siy, meta_cs, grs_transformed, 
@@ -370,7 +544,9 @@ m6_m12 <- full_join(m6, m12, by = c("subject_id" = "subject_id")) %>% unique()
 length(unique(BL_6m$subject_id))
 length(unique(m6_m12$subject_id))
 # % of rows with >45% missing data 
+vis_miss(BL_6m)
 cat("BL_6m missing >45% data:", mean(apply(BL_6m, 1, function(x) sum(is.na(x)) / length(x)) > 0.45) * 100, "%\n")
+vis_miss(m6_m12)
 cat("m6_m12 missing >45% data:", mean(apply(m6_m12, 1, function(x) sum(is.na(x)) / length(x)) > 0.45) * 100, "%\n")
 # Remove rows where more than 45% of the data is missing
 BL_6m_clean <- BL_6m[apply(BL_6m, 1, function(x) sum(is.na(x)) / length(x)) <= 0.45, ]
@@ -425,21 +601,27 @@ sapply(long_df[cols_with_na], class) # Check the class of these columns
 long_df <- long_df[complete.cases(long_df$outcome_BMI_fnl), ]
 table(table(long_df$subject_id))
 
+# Impute missing data using knn 
 library(DMwR)
-long_df_imputed <- cbind(long_df[, !sapply(long_df, is.numeric)], 
+long_df_imputed_knn <- cbind(long_df[, !sapply(long_df, is.numeric)], 
                          knnImputation(long_df[, sapply(long_df, is.numeric)])) %>% 
   dplyr::select(-c(all_samples, all_samples.x, all_samples.y, subject_id.y, time.y))
+vis_miss(long_df_imputed_knn[1:10])
+length(unique(long_df_imputed_knn$subject_id))
+table(table(long_df_imputed_knn$subject_id))
+
+# Impute missing values using missForest
+long_df_imputed <- cbind(long_df[, !sapply(long_df, is.numeric)], 
+                         missForest(long_df[, sapply(long_df, is.numeric)])$ximp) %>%
+  dplyr::select(-c(all_samples, all_samples.x, all_samples.y, subject_id.y, time.y))
+# Visualize missing data in the first 10 rows
 vis_miss(long_df_imputed[1:10])
 length(unique(long_df_imputed$subject_id))
 table(table(long_df_imputed$subject_id))
 
-# Plot the distribution of all numeric variables in one plot
-ggplot(melt(long_df_imputed[, sapply(long_df_imputed, is.numeric)]), aes(x = value)) + 
-  geom_density(binwidth = 1, fill = "purple", color = "black", alpha = 0.7) + 
-  theme_minimal() + 
-  labs(title = "Distribution of Numeric Variables", x = "Value", y = "Frequency") + 
-  theme(legend.position = "none") + xlim(-10, 10)
-
+# scale longitdinally and make all between 0-1 
+long_df_scaled <- long_df_imputed %>% 
+  mutate(across(where(is.numeric), scale))
 ########### Make delta's ##################################################################
 
 #BL to 6m
@@ -531,6 +713,7 @@ change_m6_m12 <- change_m6_m12[complete.cases(change_m6_m12$outcome_BMI_fnl_12m,
 # make change var 
 change_m6_m12$BMI6_12m <- change_m6_m12$outcome_BMI_fnl_12m - change_m6_m12$outcome_BMI_fnl_6m
 
+# impute final missing 
 colnames(change_m6_m12) <- make.names(colnames(change_m6_m12))
 change_m6_m12_imputed <- mice(change_m6_m12, method = 'pmm', m = 1)
 change_m6_m12_imputed <- complete(change_m6_m12_imputed) # Get the completed dataset

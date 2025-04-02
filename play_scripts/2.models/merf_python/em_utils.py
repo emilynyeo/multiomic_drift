@@ -288,6 +288,14 @@ def create_parameter_grids(df):
     print("max_iter:", highest_oob_row['max_iter'])
     print("n_splits:", highest_oob_row['n_splits'])
 
+def manual_r2_score(y_true, y_pred):
+    y_true = np.array(y_true) # Convert to numpy arrays for easier calculations
+    y_pred = np.array(y_pred)
+    mean_y_true = np.mean(y_true) # Calculate the mean of the actual values
+    ss_tot = np.sum((y_true - mean_y_true) ** 2) # (Total Sum of Squares)
+    ss_res = np.sum((y_true - y_pred) ** 2) # (Sum of Squares of Residuals)
+    r2 = 1 - (ss_res / ss_tot) # Calculate R^2
+    return r2
 
 def run_merf_analysis(X, Y, Z, clusters_train, 
                       X_new, Y_new, Z_new, clusters_new,
@@ -404,13 +412,21 @@ def run_merf_analysis(X, Y, Z, clusters_train,
 
     ### Calculate R-squared values for each model
     r2_mse = r2_score(Y_new, y_hat_new_mse)
+    r2_mse_adj = manual_r2_score(Y_new, y_hat_new_mse)
     print(f"R-squared for MSE Model: {r2_mse:.4f}")
+    print(f"R-squared Adj. for MSE Model: {r2_mse_adj:.4f}")
     r2_prev = r2_score(Y_new, y_hat_new_prev)
+    r2_prev_adj = manual_r2_score(Y_new, y_hat_new_prev)
     print(f"R-squared for Prev Model: {r2_prev:.4f}") 
+    print(f"R-squared adj for Prev Model: {r2_prev_adj:.4f}") 
     r2_ptev = r2_score(Y_new, y_hat_new_ptev)
+    r2_ptev_adj = manual_r2_score(Y_new, y_hat_new_ptev)
     print(f"R-squared for PTEV Model: {r2_ptev:.4f}")
+    print(f"R-squared adj for PTEV Model: {r2_ptev_adj:.4f}")
     r2_oob = r2_score(Y_new, y_hat_new_oob)
+    r2_oob_adj = manual_r2_score(Y_new, y_hat_new_oob)
     print(f"R-squared for OOB Model: {r2_oob:.4f}")
+    print(f"R-squared adj for OOB Model: {r2_oob_adj:.4f}")
 
     # Store R-squared values in a dictionary for plotting
     r2_values = {
@@ -418,6 +434,12 @@ def run_merf_analysis(X, Y, Z, clusters_train,
         'Prev Model': r2_prev,
         'PTEV Model': r2_ptev,
         'OOB Model': r2_oob
+    }
+    r2_adj_values = {
+        'MSE Model': r2_mse_adj,
+        'Prev Model': r2_prev_adj,
+        'PTEV Model': r2_ptev_adj,
+        'OOB Model': r2_oob_adj
     }
 
     # Plot R-squared values
@@ -641,7 +663,7 @@ def run_merf_analysis_old2(X, Y, Z, clusters_train,
 def run_merf_analysis2(X, Y, Z, clusters_train, 
                       X_new, Y_new, Z_new, clusters_new,
                       df, 
-                      output_dir, r2_out, feature_imp_out, results_filename, time_new):
+                      output_dir, r2_out, r2_adj_out, feature_imp_out, results_filename, time_new):
     import pandas as pd
     import numpy as np
     from merf import MERF
@@ -783,6 +805,13 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
         'OOB Model': r2_score(Y_new, oob_merf.predict(X_new, Z_new, clusters_new))
     }
 
+    r2_adj_values = {
+        'MSE Model': manual_r2_score(Y_new, mse_merf.predict(X_new, Z_new, clusters_new)),
+        'Prev Model': manual_r2_score(Y_new, prev_merf.predict(X_new, Z_new, clusters_new)),
+        'PTEV Model': manual_r2_score(Y_new, ptev_merf.predict(X_new, Z_new, clusters_new)),
+        'OOB Model': manual_r2_score(Y_new, oob_merf.predict(X_new, Z_new, clusters_new))
+    }
+
     # Plot R-squared values
     plt.figure(figsize=(8, 5))
     plt.bar(r2_values.keys(), r2_values.values(), color=['#F88F79', '#F0F879', '#ACF0F8', '#86B874'])
@@ -791,6 +820,16 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
     plt.ylim(0, 1)  # Adjusted to show full range of R-squared values
     plt.xticks(rotation=45)
     plt.savefig(os.path.join(output_dir, r2_out), dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # Plot adj R-squared values
+    plt.figure(figsize=(8, 5))
+    plt.bar(r2_adj_values.keys(), r2_adj_values.values(), color=['#F88F79', '#F0F879', '#ACF0F8', '#86B874'])
+    plt.ylabel('R-squared Value')
+    plt.title('R-squared Comparison of MERF Models')
+    plt.ylim(0, 1)  # Adjusted to show full range of R-squared values
+    plt.xticks(rotation=45)
+    plt.savefig(os.path.join(output_dir, r2_adj_out), dpi=300, bbox_inches='tight')
     plt.show()
 
     # Determine the model with the highest R-squared value
