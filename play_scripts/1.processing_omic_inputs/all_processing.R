@@ -295,10 +295,11 @@ a2_extra <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, co
 
 my_plt_density(a2_extra, 9:39, c(-2, 80), "Meta Count")
 check_normality_and_skewness(a2_extra, 9:39)
-
+vis_miss(a2_extra)
+# LOOk 
 preProcValues <- preProcess(a2_extra, 
-                            method = c("scale", "center", "nzv", "YeoJohnson", 
-                                       "corr", "bagImpute"),
+                            method = c("scale", "center", "nzv", #"YeoJohnson", 
+                                       "corr"), # "bagImpute"
                             thresh = 0.95, # % variance
                             na.remove = TRUE, verbose = TRUE, 
                             freqCut = 95/5, # ratio of most common val to 2nd most common val.
@@ -325,13 +326,13 @@ check_normality_and_skewness(grs, 2:2)
 grs <- grs %>% distinct(subject_id, .keep_all = TRUE)
 
 preProcValues <- preProcess(grs[,2:2], 
-                            method = c("nzv"), #"scale", "center"
-                            thresh = 0.95, pcaComp = NULL, na.remove = TRUE, 
+                            method = c("nzv", "scale", "center"), 
+                            thresh = 0.95, na.remove = TRUE, 
                             numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
                             uniqueCut = 10, cutoff = 0.95)
 preProcValues
 grs_transformed <- predict(preProcValues, grs[, 1:2]) 
-my_plt_density(grs_transformed, 2:2, c(-1, 1), "GRS nzv")
+my_plt_density(grs_transformed, 2:2, c(-10, 10), "GRS nzv")
 
 dub <- grs_transformed %>% filter(duplicated(subject_id) | duplicated(subject_id, fromLast = TRUE))
 
@@ -350,7 +351,7 @@ initial_taxa_count_gp <- ntaxa(GP_count)
 gpsf_count <- filter_taxa(GP_count, function(x) sd(x)/mean(x) > 1.0, TRUE)
 print_taxa_summary(initial_taxa_count_gp, ntaxa(gpsf_count), "2")
 
-# Get genus 
+# Get genus --- double check MATTS email 
 tax_genus <- tax_glom(gpsf_count, "Genus")
 genus_filtered_count <- otu_table(tax_genus) 
 genus_filtered_count <- t(genus_filtered_count) %>% as.data.frame()
@@ -361,7 +362,7 @@ rm(drift.phy.clr,drift.phy.count,GP_count,gpsf_count,sp.clr, tax_genus,sp.count,
 # Function to make column names unique
 colnames(genus_filtered_count) <- make_unique_names(colnames(genus_filtered_count)) # rename the columns
 genus_count <- genus_filtered_count %>% rownames_to_column(var = "subject_id") 
-my_plt_density(genus_count, 2:180, c(-10, 100), "Genus Count")
+my_plt_density(genus_count, 2:180, c(-100, 100), "Genus Count")
 check_normality_and_skewness(genus_count, 2:180)
 
 # Relative abundance conversion
@@ -376,7 +377,7 @@ Genus_relative_abundance <- genus_filtered_count %>%
 # Plot RA distribuitions 
 any(genus_count < 0, na.rm = TRUE)
 any(Genus_relative_abundance < 0, na.rm = TRUE)
-my_plt_density(Genus_relative_abundance, 2:179, c(-0.001, 0.01), "Genus RA")
+my_plt_density(Genus_relative_abundance, 2:179, c(-0.001, 0.09), "Genus RA")
 check_normality_and_skewness(Genus_relative_abundance, 2:179)
 
 ##  removes any column where the proportion of zeros is greater than or equal to 80%.
@@ -385,15 +386,11 @@ zero_percentage <- colSums(Genus_relative_abundance == 0, na.rm = TRUE) / nrow(G
 Genus_relative_abundance_cleaned <- Genus_relative_abundance[, zero_percentage < threshold] # only colz < 20% zeros
 dim(Genus_relative_abundance) - dim(Genus_relative_abundance_cleaned) # 47 
 
-# CLR Transformation
+# CLR Transformation - CHANGE THIS TO ONLY BE DONE ON THE COUNT
 genus_clr_transformed <- apply(Genus_relative_abundance_cleaned, 2, clr) %>% as.data.frame()
 my_plt_density(genus_clr_transformed, 1:132, c(-0.005, 0.005), "Genus RA CLR")
 my_plt_density(genus_clr_transformed, 1:132, c(-0.1, 0.1), "Genus RA CLR")
 check_normality_and_skewness(genus_clr_transformed, 1:132)
-
-# Log transform
-# log_all_RA_genus <- Genus_relative_abundance %>% mutate(across(-1, log1p))
-# genus_log_plot <- my_plt_density(log_all_RA_genus, 2:179, c(-0.001, 0.001), "Gen. RA Log")
 
 #  with more than 95% of its values being the same (or near-zero variance) will be excluded from the dataset.
 # CENTER AND SCALE
@@ -427,18 +424,20 @@ any(path_all_time_cleaned < 0, na.rm = TRUE)
 my_plt_density(path_all_time_cleaned, 2:312, c(-5, 5), "Pathways")
 check_normality_and_skewness(path_all_time_cleaned, 2:312)
 
+# MAYBE CLR TRANSFORMATION
+
 # imputation and scaling 
 preProcValues <- preProcess(path_all_time_cleaned[,2:312], 
-                            method = c("scale", "center", "nzv",
-                                       "corr", "YeoJohnson"),
+                            method = c("scale", "center", "nzv", #  "YeoJohnson"
+                                       "corr"),
                             thresh = 0.95,  na.remove = TRUE, 
                             fudge = 0.2, numUnique = 15, verbose = TRUE,  
-                            freqCut = 95/5, uniqueCut = 10, cutoff = 0.95)
+                            freqCut = 95/5, uniqueCut = 10, cutoff = 0.90)
 preProcValues
 path_all_time_cs <- predict(preProcValues, path_all_time_cleaned[,1:312])
-heatmap(cor(path_all_time_cs[, 2:147]))
-my_plt_density(path_all_time_cs, 2:147, c(-5, 5), "Pathways Center Scaled")
-check_normality_and_skewness(path_all_time_cs, 2:147)
+heatmap(cor(path_all_time_cs[, 2:121]))
+my_plt_density(path_all_time_cs, 2:121, c(-5, 5), "Pathways Center Scaled")
+check_normality_and_skewness(path_all_time_cs, 2:121)
 # Process samples 
 path_all_time_cs$all_samples <- process_names_all(path_all_time_cs$SampleID)
 colnames(path_all_time_cs) <- make.names(colnames(path_all_time_cs), unique = TRUE)
@@ -463,26 +462,28 @@ flux_cleaned <- flux[, zero_percentage < threshold]
 dim(flux) - dim(flux_cleaned) # 0 
 my_plt_density(flux_cleaned, 2:104, c(-0.001, 0.001), "MICOM raw")
 check_normality_and_skewness(flux_cleaned, 2:104)
-
-#log_all_micom <- flux_cleaned %>% mutate(across(-1, log1p))
-#micom_log_plot <- my_plt_density(log_all_micom, 2:104, c(-0.001, 0.001), "MICOM logged")
-#check_normality_and_skewness(log_all_micom, 2:104)
 heatmap(cor(flux_cleaned[, 2:104]))
 
-flux_cleaned <- as.data.frame(flux_cleaned)
-preProcValues <- preProcess(flux_cleaned[, 2:104], 
-                            method = c("scale", "center", "nzv", 
-                                       "corr", "YeoJohnson"),
-                            thresh = 0.95, na.remove = TRUE, fudge = 0.2, 
-                            numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.95)
-preProcValues
+# CHECK MICOM DATA TRANSFORMATIONS - SEE WHAT THEY DO - APPLIED USING MICOM ON HUMAN DATA
+# https://github.com/Gibbons-Lab/scfa_predictions/blob/main/notebooks/summarized_exvivos.ipynb
+# This paper uses z-score normalization for micom
 
+# Z socre tramsformation as per the paper 
+flux_cleaned <- as.data.frame(flux_cleaned)
+flux_cleaned[] <- lapply(flux_cleaned, function(x) if(is.numeric(x)) scale(x) else x)
+my_plt_density(flux_cleaned, 2:104, c(-0.001, 0.001), "MICOM z-scored")
+
+# remove low variance 
+preProcValues <- preProcess(flux_cleaned[, 2:104], 
+                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                            uniqueCut = 10, cutoff = 0.95, na.remove = TRUE)
+preProcValues
 flux_all_time_cs <- predict(preProcValues, flux_cleaned[,1:104])
 heatmap(cor(flux_all_time_cs[, 2:61]))
 
 dim(flux_cleaned) - dim(flux_all_time_cs) # 60 
-my_plt_density(flux_all_time_cs, 2:61, c(-2.5, 2.5), "MICOM Center Scaled")
+my_plt_density(flux_all_time_cs, 2:61, c(-2.5, 2.5), "MICOM z-scored var corr")
 check_normality_and_skewness(flux_all_time_cs, 2:61)
 
 # Process names
@@ -548,6 +549,8 @@ vis_miss(BL_6m)
 cat("BL_6m missing >45% data:", mean(apply(BL_6m, 1, function(x) sum(is.na(x)) / length(x)) > 0.45) * 100, "%\n")
 vis_miss(m6_m12)
 cat("m6_m12 missing >45% data:", mean(apply(m6_m12, 1, function(x) sum(is.na(x)) / length(x)) > 0.45) * 100, "%\n")
+
+# DONT REMOVE HERE 
 # Remove rows where more than 45% of the data is missing
 BL_6m_clean <- BL_6m[apply(BL_6m, 1, function(x) sum(is.na(x)) / length(x)) <= 0.45, ]
 m6_m12_clean <- m6_m12[apply(m6_m12, 1, function(x) sum(is.na(x)) / length(x)) <= 0.45, ]
@@ -590,6 +593,7 @@ long_df <- bind_rows(BL_clean, m6_clean, m12_clean) %>% unique()
 length(long_df$subject_id)
 length(unique(long_df$subject_id))
 vis_miss(long_df[1:50])
+vis_miss(long_df)
 
 aggr_plot <- aggr(long_df[1:50], col=c('navyblue','red'), numbers=TRUE, 
                   sortVars=TRUE, labels=names(long_df), cex.axis=.7, 
@@ -610,20 +614,45 @@ vis_miss(long_df_imputed_knn[1:10])
 length(unique(long_df_imputed_knn$subject_id))
 table(table(long_df_imputed_knn$subject_id))
 
-# Impute missing values using missForest
+# Impute missing values using missForest <- DONT DO IMPUTATION ALL TOGETHER - Mayne do it up above and only for meta BL 
 long_df_imputed <- cbind(long_df[, !sapply(long_df, is.numeric)], 
                          missForest(long_df[, sapply(long_df, is.numeric)])$ximp) %>%
   dplyr::select(-c(all_samples, all_samples.x, all_samples.y, subject_id.y, time.y))
+
 # Visualize missing data in the first 10 rows
-vis_miss(long_df_imputed[1:10])
+vis_miss(long_df_imputed[1:100])
 length(unique(long_df_imputed$subject_id))
 table(table(long_df_imputed$subject_id))
+my_plt_density(long_df_imputed, 10:335, c(-5, 40), "long df bag imputed")
 
-# scale longitdinally and make all between 0-1 
+### DONT DO BELOW> ALL SHOULD BE DONE ON INDIVIDUAL OMICS 
+# scale longitdinally 
 long_df_scaled <- long_df_imputed %>% 
   mutate(across(where(is.numeric), scale))
+
+my_plt_density(long_df_scaled, 10:335, c(-25, 25), "long df bag imputed scaled")
+
+# Center and Scale
+long_df_center_scaled <- long_df_imputed %>%
+  mutate(across(where(is.numeric), ~ scale(.)))  # Apply scale function column-wise
+
+my_plt_density(long_df_center_scaled, 10:335, c(-25, 25), "long df bag imputed scaled")
+check_normality_and_skewness(long_df_center_scaled, 10:361)
+
+# Range Bounds 
+preprocess_long_df_range <- preProcess(long_df_imputed, method =  "range", rangeBounds = c(0, 1))
+preprocess_long_df_range
+long_imputed_range <- predict(preprocess_long_df_range, long_df_imputed)
+
+my_plt_density(long_imputed_range, 10:335, c(-0.15, 1.1), "long df bag imputed scaled range 0-1")
+heatmap(cor(long_imputed_range[, 10:361]))
+check_normality_and_skewness(long_imputed_range, 10:361)
+heatmap(cor(long_imputed_range[, 10:361]))
+
 ########### Make delta's ##################################################################
 
+# CHECK PETA LIBRARY - for taxa - CHANGE DATA - genus change CLR 
+# fine for micom and meta 
 #BL to 6m
 colnames_BL_6m <- colnames(BL_6m_clean)
 base_names <- sub("_BL$|_6m$", "", colnames_BL_6m)
@@ -661,22 +690,52 @@ change_BL_m6$BMI0_6m <- change_BL_m6$outcome_BMI_fnl_6m - change_BL_m6$outcome_B
 
 table(table(change_BL_m6$subject_id))
 vis_miss(change_BL_m6[1:20])
-vis_miss(change_BL_m6[530:558])
+vis_miss(change_BL_m6[21:364])
 
-# Impute missing data using mice
+# Impute missing data using miss Forest 
 colnames(change_BL_m6) <- make.names(colnames(change_BL_m6))
-change_BL_m6_imputed <- mice(change_BL_m6, method = 'pmm', m = 1)
+#change_BL_m6_imputed <- mice(change_BL_m6, method = 'pmm', m = 1)
+change_BL_m6_imputed <- cbind(change_BL_m6[, !sapply(change_BL_m6, is.numeric)], 
+                         missForest(change_BL_m6[, sapply(change_BL_m6, is.numeric)])$ximp)
+
 change_BL_m6_imputed <- complete(change_BL_m6_imputed) # Get the completed dataset
 vis_miss(change_BL_m6_imputed)
 
-# Plot the distribution of all numeric variables in one plot
-ggplot(melt(change_BL_m6[, sapply(change_BL_m6, is.numeric)]), aes(x = value)) + 
-  geom_density(binwidth = 1, fill = "pink", color = "black", alpha = 0.7) + 
-  theme_minimal() + 
-  labs(title = "Distribution of Numeric Variables", x = "Value", y = "Frequency") + 
-  theme(legend.position = "none") + xlim(-10, 10) 
+my_plt_density(change_BL_m6_imputed, 9:364, c(-5, 5), "BL_m6")
   
-#6m - 12m
+### PREPROCESS DELTA
+# first just remove low presence/ vaiance and highly correlated vars 
+preprocess_BL_6m <- preProcess(change_BL_m6_imputed, 
+                               method = c("nzv", "corr"),
+                               thresh = 0.95, # % variance
+                               na.remove = TRUE, verbose = TRUE, 
+                               freqCut = 95/5, # ratio of most common val to 2nd most common val.
+                               uniqueCut = 10, # % distinct vals / total no. samples
+                               cutoff = 1) # correlation cut off 
+preprocess_BL_6m
+change_BL_m6_imputed_var_corr <- predict(preprocess_BL_6m, change_BL_m6_imputed)
+my_plt_density(change_BL_m6_imputed_var_corr, 9:355, c(-5, 5), "BL_m6 var corr checked")
+check_normality_and_skewness(change_BL_m6_imputed_var_corr, 9:355)
+setdiff(colnames(change_BL_m6_imputed), colnames(change_BL_m6_imputed_var_corr))
+
+# then center and scale 
+change_BL_m6_center_scaled <- change_BL_m6_imputed_var_corr %>%
+  mutate(across(where(is.numeric), ~ scale(.)))  # Apply scale function column-wise
+
+my_plt_density(change_BL_m6_center_scaled, 10:355, c(-5, 5), "BL-6m imputed var corr center scaled")
+check_normality_and_skewness(change_BL_m6_center_scaled, 10:355)
+
+# Maybe convert to a range 
+preprocess_BL_6m_range <- preProcess(change_BL_m6_imputed_var_corr, 
+                                       method =  c("range"), rangeBounds = c(0, 1))
+preprocess_BL_6m_range
+BL_6m_range <- predict(preprocess_BL_6m_range, change_BL_m6_imputed_var_corr)
+
+my_plt_density(BL_6m_range, 10:355, c(-0.1, 1.1), "BL-6m imputed var corr range")
+check_normality_and_skewness(BL_6m_range, 10:355)
+heatmap(cor(BL_6m_range[, 10:355]))
+
+### Repeat for 6m - 12m ########################################################
 colnames_m6_m12 <- colnames(m6_m12_clean)
 base_names <- sub("_6m$|_12m$", "", colnames_m6_m12)
 unique_base_names <- unique(base_names)
@@ -713,29 +772,82 @@ change_m6_m12 <- change_m6_m12[complete.cases(change_m6_m12$outcome_BMI_fnl_12m,
 # make change var 
 change_m6_m12$BMI6_12m <- change_m6_m12$outcome_BMI_fnl_12m - change_m6_m12$outcome_BMI_fnl_6m
 
-# impute final missing 
+# impute final missing with miss Forest 
 colnames(change_m6_m12) <- make.names(colnames(change_m6_m12))
-change_m6_m12_imputed <- mice(change_m6_m12, method = 'pmm', m = 1)
+#change_m6_m12_imputed <- mice(change_m6_m12, method = 'pmm', m = 1)
+change_m6_m12_imputed <- cbind(change_m6_m12[, !sapply(change_m6_m12, is.numeric)], 
+                              missForest(change_m6_m12[, sapply(change_m6_m12, is.numeric)])$ximp)
+
 change_m6_m12_imputed <- complete(change_m6_m12_imputed) # Get the completed dataset
 
-table(table(change_m6_m12$subject_id))
+table(table(change_m6_m12_imputed$subject_id))
 vis_miss(change_m6_m12_imputed[1:10])
 colnames(change_m6_m12_imputed)[colSums(is.na(change_m6_m12_imputed)) > 0]
+my_plt_density(change_m6_m12_imputed, 9:364, c(-5, 5), "m6_m12")
 
-# Plot the distribution of all numeric variables in one plot
-ggplot(melt(change_m6_m12_imputed[, sapply(change_m6_m12_imputed, is.numeric)]), aes(x = value)) + 
-  geom_density(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) + 
-  theme_minimal() + 
-  labs(title = "Distribution of Numeric Variables", x = "Value", y = "Frequency") +
-  theme(legend.position = "none") + xlim(-10, 10)
+### PREPROCESS DELTA
+# first just remove low presence/ vaiance and highly correlated vars 
+preprocessL_6m_12m <- preProcess(change_m6_m12_imputed, 
+                               method = c("nzv", "corr"),
+                               thresh = 0.95, # % variance
+                               na.remove = TRUE, verbose = TRUE, 
+                               freqCut = 95/5, # ratio of most common val to 2nd most common val.
+                               uniqueCut = 10, # % distinct vals / total no. samples
+                               cutoff = 1) # correlation cut off 
+preprocessL_6m_12m
+change_m6_12m_imputed_var_corr <- predict(preprocessL_6m_12m, change_m6_m12_imputed)
+my_plt_density(change_m6_12m_imputed_var_corr, 9:355, c(-5, 5), "m6-m12var corr checked")
+check_normality_and_skewness(change_m6_12m_imputed_var_corr, 9:355)
+setdiff(colnames(change_m6_m12_imputed), colnames(change_m6_12m_imputed_var_corr))
+
+# then center and scale 
+change_m6_m12_center_scaled <- change_m6_12m_imputed_var_corr %>%
+  mutate(across(where(is.numeric), ~ scale(.)))  # Apply scale function column-wise
+
+my_plt_density(change_m6_m12_center_scaled, 10:355, c(-5, 5), "6m-12m imputed var corr center scaled")
+check_normality_and_skewness(change_m6_m12_center_scaled, 10:355)
+
+# Maybe convert to a range 
+preprocess_6m_12m_range <- preProcess(change_m6_12m_imputed_var_corr, 
+                                     method =  c("range"), rangeBounds = c(0, 1))
+preprocess_6m_12m_range
+m6_m12_range <- predict(preprocess_6m_12m_range, change_m6_12m_imputed_var_corr)
+
+my_plt_density(m6_m12_range, 10:355, c(-0.1, 1.1), "6m-12m imputed var corr range")
+check_normality_and_skewness(m6_m12_range, 10:355)
+
+heatmap(cor(m6_m12_range[, 10:355]))
+
+# Save files made
+# Define the base path
+base_path <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/"
+# List of filenames and corresponding data frames
+files <- list(
+  list(filename = "long_df_imputed.csv", data = long_df_imputed),
+  list(filename = "long_df_imputed_cent_scale.csv", data = long_df_center_scaled),
+  list(filename = "long_df_imputed_range.csv", data = long_imputed_range),
+  # BL-6m
+  list(filename = "BL_6m.csv", data = change_BL_m6_imputed_var_corr),
+  list(filename = "BL_6m_cent_scale.csv", data = change_BL_m6_center_scaled),
+  list(filename = "BL_6m_range.csv", data = BL_6m_range),
+  # 6m-12m
+  list(filename = "m6_m12.csv", data = change_m6_12m_imputed_var_corr),
+  list(filename = "m6_m12_cent_scale.csv", data = change_m6_m12_center_scaled),
+  list(filename = "m6_m12_range.csv", data = m6_m12_range)
+)
+lapply(files, function(x) write.csv(x$data, file.path(base_path, x$filename), row.names = FALSE))
+
+
 
 # Save them 
-march_20 <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/all_processing_long.csv"
-write.csv(long_df_imputed, march_20, row.names = FALSE)
-march_25 <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/all_processing_0_6m.csv"
-write.csv(change_BL_m6_imputed, march_25, row.names = FALSE)
-march_30 <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/all_processing_6_12m.csv"
-write.csv(change_m6_m12_imputed, march_30, row.names = FALSE)
+#march_20 <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/all_processing_long.csv"
+#write.csv(long_df_imputed, march_20, row.names = FALSE)
+#march_25 <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/all_processing_0_6m.csv"
+#write.csv(change_BL_m6_imputed, march_25, row.names = FALSE)
+#march_30 <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/all_processing_6_12m.csv"
+#write.csv(change_m6_m12_imputed, march_30, row.names = FALSE)
+
+
 
 
 

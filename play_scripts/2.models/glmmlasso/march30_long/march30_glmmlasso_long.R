@@ -14,9 +14,9 @@ out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predict
 #long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_dfs/5.combined/"
 long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/"
 
-long <- read.csv(file.path(long_dir, 'all_processing_long.csv')) %>% 
+long <- read.csv(file.path(long_dir, 'long_df_imputed_cent_scale.csv')) %>% 
                  dplyr::select(-c("consent", "record_id", "completer", "Peptide_YY",
-                                  "Ghrelin", "Leptin")) %>%
+                                  "Ghrelin", "Leptin", "time.x")) %>%
   dplyr::mutate(time = as.factor(time),
     subject_id = as.factor(subject_id),
     randomized_group = as.numeric(randomized_group),
@@ -45,7 +45,7 @@ meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race',
 only_taxa <- c('subject_id','BMI', 'range', 
                grep("^g__", names(long), value = TRUE))
 proton_column <- which(names(long) == "proton")
-carbon_dioxide_column <- which(names(long) == "Carbon.dioxide")
+carbon_dioxide_column <- which(names(long) == "X3.methyl.2.oxopentanoate")
 only_micom <- c('subject_id','BMI', 'range', 
                 names(long)[proton_column:carbon_dioxide_column])
 exclude_columns <- unique(c(meta_keep, only_taxa, only_micom))
@@ -93,7 +93,9 @@ for (df in data_frames) {
 }
 
 #### ATTEMPT TO LOOP ALL GLMMLASSO ############################################
-data_frames <- c("taxa")
+#"basic", "meta",
+#, "", "taxa", micom, taxa
+data_frames <- c("pathway")
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -218,6 +220,9 @@ for (df_name in data_frames) {
   file_path <- file.path(out_dir, paste0(df_name, "_predictions.csv"))
   write.csv(pred_df, file_path, row.names = FALSE)
 }
+
+
+# Old way
 
 ################################################################################
 ### BASIC data set
