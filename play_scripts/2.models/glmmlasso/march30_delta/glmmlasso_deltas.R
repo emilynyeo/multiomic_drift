@@ -1,82 +1,65 @@
 # Trying out long lasso
 rm(list = ls())
 #source("zc_functions.R") 
+#install.packages("rsq")  
+library(rsq)
 library(pacman)
 p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn, 
        caret, caretEnsemble, glmnet, xgboost, ggplot2, glmmLasso, corrplot,
        readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest,  
        reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM)
-#remotes::install_github("thepira/cv.glmmLasso")
-library(cv.glmmLasso)
-library(kneedle)
+#library(nlme)
+library(gridExtra)
+library(sjPlot)
+library(htmltools)
+library(officer)
+library(flextable)
+library(webshot)
+library(apaTables)
+library(MuMIn)
 '%ni%' <- Negate('%in%')
+r2_general <-function(preds,actual){ 
+  return(1- sum((preds - actual) ^ 2)/sum((actual - mean(actual))^2))
+}
 
-#out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20_long/"
-out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/"
-
-#long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_dfs/5.combined/"
-#long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/"
-long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
-
-long <- read.csv(file.path(long_dir, 'long.csv')) %>% 
-                 dplyr::select(-c("consent", "record_id", "completer", 
-                                  "Peptide_YY", "Ghrelin", "Leptin")) %>%
+out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/"
+#data_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/all_omic_processed_data/deltas/"
+data_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
+all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>% 
+                       dplyr::select(-c("...1", "consent", "completer", 
+                                        "Peptide_YY", "Ghrelin", "Leptin")) %>%
   dplyr::mutate(time = as.factor(time),
-    subject_id = as.factor(subject_id.x),
-    randomized_group = as.factor(randomized_group),
-    sex = as.numeric(sex),
-    randomized_group = as.numeric(randomized_group),
-    cohort_number = as.numeric(cohort_number),
-    race = as.numeric(race)) %>% rename(BMI = outcome_BMI_fnl,
-                                    range = time,
-                                    homo_ir = HOMA_IR,
-                                    insulin = Insulin_endo,
-                                    LDL = LDL_Calculated,
-                                    HDL = HDL_Total_Direct_lipid,
-                                    HbA1c = Hemoglobin_A1C)
-
-# Create the plot with lines between dots of the same subject_id
-ggplot(long, aes(x = range, y = bmi_prs, color = factor(subject_id), group = factor(subject_id))) + 
-  geom_point() +  # Scatter plot
-  geom_line() +   # Add lines between points of the same subject_id
-  labs(title = "BMI PRS by Range and Subject ID", 
-       x = "Time", y = "BMI PRS") + 
-  theme(legend.position = "none") +  # Remove the legend
-  scale_color_manual(values = rainbow(length(unique(long$subject_id)))) 
+                subject_id = as.factor(subject_id.x),
+                randomized_group = as.factor(randomized_group),
+                sex = as.numeric(sex),
+                race = as.numeric(race)) %>% rename(BMI = outcome_BMI_fnl,
+                                                    range = time,
+                                                    homo_ir = HOMA_IR,
+                                                    insulin = Insulin_endo,
+                                                    LDL = LDL_Calculated,
+                                                    HDL = HDL_Total_Direct_lipid,
+                                                    HbA1c = Hemoglobin_A1C)
 
 # Define the column names based on your lists
-basic <- c('subject_id','BMI', 'range','age', 'sex')
+basic <- c('subject_id','BMI', 'range', 'sex')
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
-               'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose')
-only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(long), value = TRUE))
+                'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose')
+only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(all_deltas), value = TRUE))
 
-micom_start <- which(names(long) == "Diacetyl")
-micom_end <- which(names(long) == "aldehydo.D.xylose")
-only_micom <- c('subject_id','BMI', 'range', names(long)[micom_start:micom_end])
+micom_start <- which(names(all_deltas) == "Diacetyl")
+micom_end <- which(names(all_deltas) == "aldehydo.D.xylose")
+only_micom <- c('subject_id','BMI', 'range', names(all_deltas)[micom_start:micom_end])
 
-path_start <- which(names(long) == "arginine..ornithine.and.proline.interconversion")
-path_end <- which(names(long) == "UDP.N.acetyl.D.glucosamine.biosynthesis.I")
-only_pathway <- c('subject_id','BMI', 'range', names(long)[path_start:path_end])
-
-#exclude_columns <- unique(c(meta_keep, only_taxa, only_micom))
-#only_pathway <- c('subject_id', 'BMI', 'range', setdiff(names(long), exclude_columns))
+path_start <- which(names(all_deltas) == "arginine..ornithine.and.proline.interconversion")
+path_end <- which(names(all_deltas) == "UDP.N.acetyl.D.glucosamine.biosynthesis.I")
+only_pathway <- c('subject_id','BMI', 'range', names(all_deltas)[path_start:path_end])
 
 # Create data frames based on the columns defined
-basic <- long[, basic, drop = FALSE] %>% unique()
-meta <- long[, meta_keep, drop = FALSE] %>% unique()
-taxa <- long[, only_taxa, drop = FALSE] %>% unique()
-micom <- long[, only_micom, drop = FALSE] %>% unique()
-pathway <- long[, only_pathway, drop = FALSE] %>% unique()
-
-subject_id_count <- meta %>%
-  dplyr::filter(range %in% c("0","6", "12")) %>%
-  dplyr::group_by(subject_id) %>%
-  dplyr::summarize(range_count = n_distinct(range))  # Count the distinct range values
-table(subject_id_count$range_count)
-
-# Filter `subject_id`s with fewer than 3 unique range values (0, 6, 12)
-missing_subjects  <- subject_id_count %>% dplyr::filter(range_count != 3)
-missing_subjects
+basic <- all_deltas[, basic, drop = FALSE] %>% unique()
+meta <- all_deltas[, meta_keep, drop = FALSE] %>% unique()
+taxa <- all_deltas[, only_taxa, drop = FALSE] %>% unique()
+micom <- all_deltas[, only_micom, drop = FALSE] %>% unique()
+pathway <- all_deltas[, only_pathway, drop = FALSE] %>% unique()
 
 # Make train and test set
 # Test sample names
@@ -87,6 +70,13 @@ train_names <- c("AAL-144", "ACO-053", "ADA-105", "AKE-009", "AKI-011", "AKO-139
 
 cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
+
+subject_id_count <- meta %>%
+  dplyr::filter(range %in% c("0","6", "12")) %>%
+  dplyr::group_by(subject_id) %>%
+  dplyr::summarize(range_count = n_distinct(range))  # Count the distinct range values
+table(subject_id_count$range_count)
+missing_subjects  <- subject_id_count %>% dplyr::filter(range_count != 3)
 
 # Make test and tain sets for each omic 
 data_frames <- c("basic", "meta", "micom", "pathway", "taxa")
@@ -101,134 +91,9 @@ for (df in data_frames) {
   assign(paste0(df, "_test"), test_set)
 }
 
-#### Test CV LASSO
-
-# Step 1: run glmmlasso through a grid of lambdas for the best one
-# Step 2: re-run glmmlasso using the best lambdas
-# Step 4: Use that model in step 3 to predict BMI in the test set
-# Step 5: That prediction in step 4 becomes the "risk score" for that omic
-
-# STEP 1
-data_frames <- c("micom")
-df_name <- "micom"
-#data_frames <- c("basic", "meta", "taxa", "pathway", "micom")
-#for (df_name in data_frames) {
-  train_data <- get(paste0(df_name, "_train"))
-  test_data <- get(paste0(df_name, "_test"))
-  numvar <- c() 
-  lambdavec <- seq(from = 10, to = 50, by = 1)
-  lambdy <- 5
-  # Loop through each lambda value to perform Lasso regression
-  for (lambdy in lambdavec) {
-    predictors <- setdiff(names(train_data), c("BMI", "subject_id", "range"))
-    predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
-    fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
-    # Run the Lasso regression with GLMM
-    lm1 <- glmmLasso(fix = long_temp,
-                     data = train_data,
-                     rnd = list(subject_id = ~ 1, range = ~ 1),
-                     lambda = lambdy,
-                     family = gaussian(link = "identity"))
-    summary(lm1)
-    # Get the non-zero lasso features
-    lassoFeatures <- names(lm1$coefficients[which(lm1$coefficients != 0)])
-    lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
-    lassoFeatures <- unique(c(lassoFeatures))
-    numvar <- c(numvar, length(lassoFeatures)) # Store the number of variables included for this lambda
-  }
-  
-  lam <- plot(lambdavec, numvar,  xlab = "lambda", ylab = "numvars", 
-       pch=21, col="blue", bg="lightblue", type = "b")
-  lam
-  lambda_value <- kneedle(lambdavec, numvar)
-  lambda_value <- lambda_value[1]
-  
-  # STEP 2 Create the final model on the training data using the chosen lambda
-  best_model <- glmmLasso(fix = fix_formula,
-                          data = train_data,
-                          rnd = list(subject_id = ~ 1, range = ~ 1),
-                          lambda = lambda_value,  # Use the lambda_value set manually
-                          family = gaussian(link = "identity"))
-  
-  # Extract lasso features
-  lassoFeatures <- names(best_model$coefficients)
-  lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
-  lassoFeatures <- unique(c(lassoFeatures))
-  lassoFeatures <- lassoFeatures[grep("subject_id|BMI|range", lassoFeatures, invert = TRUE)]  # Exclude specific features
-  lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
-  assign(paste0(df_name, "_lassoFeatures"), lassoFeatures)
-  
-  # Extract coefficients and plot the top features
-  coef_df <- as.data.frame(summary(best_model)$coefficients)
-  coef_df$Feature <- rownames(coef_df)
-  coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
-  assign(paste0(df_name, "_coef_df"), coef_df)
-  
-  # Filter top 10 features by absolute coefficient magnitude
-  top_features <- coef_df %>%
-    mutate(abs_estimate = abs(Estimate)) %>%
-    dplyr::filter(Feature != "(Intercept)") %>%
-    mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
-           Feature = str_replace_all(Feature, "[._]", " ")) %>%
-    arrange(desc(abs_estimate)) %>%
-    head(10)
-  
-  # Plot top features
-  features <- ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
-    geom_bar(stat = "identity", fill = "#1C4C98") +
-    coord_flip() + theme_bw() +
-    ggtitle(paste("Top Features & Coefficients from", df_name)) +
-    xlab("Feature") + ylab("Coefficient Estimate") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-          axis.text.y = element_text(size = 12))
-  
-  features 
-  
-  # Save the plot using ggsave
-  ggsave(filename = paste0(out_dir, paste0(df_name, "_top_features_april7.png")),
-         plot = features, width = 8, height = 6, units = "in", dpi = 300)
-  
-  # STEP Predict on test data 
-  test_data <- test_data[complete.cases(test_data),]  # Filter complete cases
-  pred_risk_scores <- predict(best_model, test_data)
-  
-  # Combine predicted and actual values
-  pred_df <- as.data.frame(cbind(test_data$subject_id, test_data$range, test_data$BMI, pred_risk_scores))
-  colnames(pred_df) <- c("subject_id", "time", "actual", "predicted")
-  assign(paste0(df_name, "_pred_df"), pred_df) # Dynamically assign the prediction results
-  
-  # Calculate R-squared value
-  actual <- test_data$BMI
-  predicted <- pred_risk_scores
-  pred_plot <- plot(predicted, actual, xlab = paste0(df_name, " Predicted BMI"), ylab = "Actual BMI",
-       pch = 21, col = "blue", bg = "lightblue") +
-  abline(lm(actual ~ predicted), col = "red", lwd = 2)
-  
-  pred_plot
-  
-  sse <- sum((actual - predicted)^2)
-  sst <- sum((actual - mean(actual))^2)
-  testing_rsq <- 1 - sse / sst
-
-  mean_actual <- mean(actual)
-  ss_total <- sum((actual - mean_actual)^2)
-  ss_residual <- sum((actual - predicted)^2)
-  r_squared <- 1 - (ss_residual / ss_total)
-  assign(paste0(df_name, "_r_squared"), r_squared)
-
-  # Print R-squared for the current dataset
-  print(paste(df_name, "R-squared:", round(r_squared, 3)))
-  
-  # Save predictions to a CSV file
-  file_path <- file.path(out_dir, paste0(df_name, "_predictions_april7.csv"))
-  write.csv(pred_df, file_path, row.names = FALSE)
-}
-
-
 #### ATTEMPT TO LOOP ALL GLMMLASSO ############################################
 
 data_frames <- c("basic", "meta", "taxa", "pathway", "micom")
-df_name <- "meta"
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -243,14 +108,14 @@ for (df_name in data_frames) {
     # Run the Lasso regression with GLMM
     lm1 <- glmmLasso(fix = fix_formula,
                      data = train_data,
-                     rnd = list(subject_id = ~ 1),
+                     rnd = list(subject_id = ~ 1, range = ~ 1),
                      lambda = lambdy,
                      family = gaussian(link = "identity"))
     summary(lm1)
     # Get the non-zero lasso features
     lassoFeatures <- names(lm1$coefficients[which(lm1$coefficients != 0)])
     lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
-    #lassoFeatures <- lassoFeatures[grep("as.factor", lassoFeatures, invert = TRUE)]  # Exclude factor variables
+    lassoFeatures <- lassoFeatures[grep("as.factor", lassoFeatures, invert = TRUE)]  # Exclude factor variables
     lassoFeatures <- unique(c(lassoFeatures))
     numvar <- c(numvar, length(lassoFeatures)) # Store the number of variables included for this lambda
   }
@@ -271,7 +136,7 @@ for (df_name in data_frames) {
   # Create the final model on the training data using lambda = 30
   best_model <- glmmLasso(fix = fix_formula,
                           data = train_data,
-                          rnd = list(subject_id = ~ 1), # Took range out here 
+                          rnd = list(subject_id = ~ 1, range = ~ 1),
                           lambda = 30,
                           family = gaussian(link = "identity"))
   
@@ -320,7 +185,8 @@ for (df_name in data_frames) {
           axis.text.y = element_text(size = 12))
   
   # Save the top features plot for the current dataset
-  ggsave(paste0(out_dir, paste0(df_name, "_top_features_april7.png")), width = 8, height = 6, units = "in", dpi = 300)
+  ggsave(paste0(out_dir, paste0(df_name, "_top_features_april7.png")), 
+         width = 8, height = 6, units = "in", dpi = 300)
   
   # Predict on test data and calculate R-squared
   test_data <- test_data[complete.cases(test_data),]  # Filter complete cases
@@ -356,8 +222,6 @@ for (df_name in data_frames) {
 }
 
 
-# Old way
-
 ################################################################################
 ### BASIC data set
 numvar_basic <- c()
@@ -389,7 +253,7 @@ ggplot() +
 ggsave(paste0(out_dir,"lambda_elbow_only_basic.png"), width=6, height=4, units="in", dpi=320)
 
 best_basic <- glmmLasso(fix = fix_formula,
-                        data = train_meta,
+                        data = meta_train,
                         rnd = list(subject_id = ~ 1, range = ~ 1),
                         lambda = 30,
                         family = gaussian(link = "identity"))
@@ -398,7 +262,7 @@ lassoFeatures <- names(best_basic$coefficients)
 lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
 lassoFeatures <- lassoFeatures[grep("as.factor",lassoFeatures,invert=T)] ####
 lassoFeatures <- unique(c(lassoFeatures))
-#lassoFeatures <- gsub("range0.997860960117438", "range", lassoFeatures)
+lassoFeatures <- gsub("range0.997860960117438", "range", lassoFeatures)
 lassoFeatures <- lassoFeatures[grep("subject_id|BMI|range", lassoFeatures, invert = T)]
 lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
 
@@ -419,48 +283,27 @@ mymod_basic <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_basic,
 mymodsum <- summary(mymod_basic)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
 
-# Extract the fixed effects coefficients from the final model
-coef_df <- as.data.frame(summary(mymod_basic)$coefficients)
-coef_df$Feature <- rownames(coef_df)
-coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
-
-# Filter top 10 features by absolute coefficient magnitude
-top_features <- coef_df %>% 
-  mutate(abs_estimate = abs(Estimate)) %>% 
-  dplyr::filter(Feature != "(Intercept)") %>% 
-  mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
-         Feature = str_replace_all(Feature, "[._]", " ")) %>% 
-  arrange(desc(abs_estimate)) %>% head(10)  
-
-ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
-  geom_bar(stat = "identity", fill = "#1C4C98") +
-  coord_flip() + theme_bw() +
-  ggtitle("Top Features & Coefficients from the final Basic Model") +
-  xlab("Feature") + ylab("Coefficient Estimate") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-        axis.text.y = element_text(size = 12)) 
-
 # prediction on reserved validation samples
-test_basic <- test_basic[complete.cases(test_basic),] # complete cases
+basic_test <- basic_test[complete.cases(basic_test),] # complete cases
 
 # grab only the columns that we have coefs for (starting at index 2 removes the intercept)
-test_basic_vars <- test_basic %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
-test_basic_vars$Intercept <- 1 # make a column for the intercept
-test_basic_vars <- test_basic_vars %>% dplyr::select(Intercept, everything())
+basic_test_vars <- basic_test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+basic_test_vars$Intercept <- 1 # make a column for the intercept
+basic_test_vars <- basic_test_vars %>% dplyr::select(Intercept, everything())
 
 #--predict the risk scores without covariates--########
-pred_risk_scores_basic <- as.matrix(test_basic_vars) %*% as.matrix(mod_coef_df$Estimate)
+pred_risk_scores_basic <- as.matrix(basic_test_vars) %*% as.matrix(mod_coef_df$Estimate)
 
 # combine the predicted and actual
-pred_df_basic <- as.data.frame(cbind(test_basic$subject_id,
-                                     test_basic$range,
-                                     test_basic$BMI,
+pred_df_basic <- as.data.frame(cbind(basic_test$subject_id,
+                                     basic_test$range,
+                                     basic_test$BMI,
                                      scale(pred_risk_scores_basic))); colnames(pred_df_basic) <- c("subject_id",
                                                                                                    "time", 
                                                                                                    "actual",
                                                                                                    "predicted_basic")
 # Calculate R-squared value
-actual <- test_basic$BMI
+actual <- basic_test$BMI
 predicted <- pred_risk_scores_basic
 mean_actual <- mean(actual)
 ss_total <- sum((actual - mean_actual)^2)
@@ -470,7 +313,7 @@ r_squared <- 1 - (ss_residual / ss_total)
 # Print R-squared value
 r_squared
 # Via function R2
-#r2_general(predicted,actual)
+r2_general(predicted,actual)
 
 # Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
 coef_df <- as.data.frame(best_basic$coefficients)
@@ -505,25 +348,20 @@ ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
 ggsave(paste0(out_dir, "basic_feature_importances_with_r2.png"), 
        width = 8, height = 6, units = "in", dpi = 300)
 
-file_path <- file.path(out_dir, "long_basic_predictions_feb20.csv")
-#write.csv(pred_df_basic, file_path, row.names = FALSE)
+file_path <- file.path(out_dir, "basic_predictions_feb20.csv")
+# write.csv(pred_df_basic, file_path, row.names = FALSE)
 
 #############################################################################################
 
 ### Meta data set
-train_meta_filtered <- train_meta %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
 numvar_meta <- c()
 lambdavec <- seq(from = 10, to = 50, by = 1)
 for (lambdy in lambdavec) {
-  predictors <- setdiff(names(train_meta_filtered), c("BMI", "subject_id"))  
+  predictors <- setdiff(names(meta_train), c("BMI", "subject_id"))  
   predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
   fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
   lm1_meta <- glmmLasso(fix = fix_formula,
-                        data = train_meta_filtered,
+                        data = meta_train,
                         rnd = list(subject_id = ~ 1, range = ~ 1),
                         lambda = lambdy,
                         family = gaussian(link = "identity"))
@@ -537,18 +375,17 @@ for (lambdy in lambdavec) {
 plot(x = lambdavec, y = numvar_meta)
 ggplot() +
   geom_point(aes(x = lambdavec, y = numvar_meta)) +
-  geom_vline(xintercept = 38, color = "blue", linetype = "dashed") +
+  geom_vline(xintercept = 25, color = "blue", linetype = "dashed") +
   theme_bw() +
   ggtitle("Only Meta Delta") +
   xlab("Penalty Coefficient (Lambda)") +
   ylab("Number of Included Variables")
-ggsave(paste0(out_dir,"long_lambda_elbow_only_meta_feb20.png"), 
-       width=6, height=4, units="in", dpi=320)
+ggsave(paste0(out_dir,"lambda_elbow_only_meta.png"), width=6, height=4, units="in", dpi=320)
 
 best_meta <- glmmLasso(fix = fix_formula,
-                       data = train_meta_filtered,
+                       data = meta_train,
                        rnd = list(subject_id = ~ 1, range = ~ 1),
-                       lambda = 38,
+                       lambda = 30,
                        family = gaussian(link = "identity"))
 
 lassoFeatures <- names(best_meta$coefficients[which(best_meta$coefficients != 0)])
@@ -562,7 +399,7 @@ lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
 # Check the updated vector
 lassoFeatures
 
-bestglm_meta <- as.data.frame(train_meta_filtered[,lassoFeatures])
+bestglm_meta <- as.data.frame(meta_train[,lassoFeatures])
 summary(bestglm_meta$BMI)
 varlist_meta <- names(bestglm_meta)[which(names(bestglm_meta) %ni% 
                                             c("BMI", "subject_id", "range"))]
@@ -576,50 +413,71 @@ mymod_meta <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_meta,
 mymodsum <- summary(mymod_meta)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
 
-# Extract the fixed effects coefficients from the final model
-coef_df <- as.data.frame(summary(mymod_meta)$coefficients)
-coef_df$Feature <- rownames(coef_df)
-coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
-
-# Filter top 10 features by absolute coefficient magnitude
-top_features <- coef_df %>% 
-  mutate(abs_estimate = abs(Estimate)) %>% 
-  dplyr::filter(Feature != "(Intercept)") %>% 
-  mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
-         Feature = str_replace_all(Feature, "[._]", " ")) %>% 
-  arrange(desc(abs_estimate)) %>% head(10)  
-
-ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
-  geom_bar(stat = "identity", fill = "#1C7C54") +
-  coord_flip() + theme_bw() +
-  ggtitle("Top Features & Coefficients from the final Meta Model") +
-  xlab("Feature") + ylab("Coefficient Estimate") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-        axis.text.y = element_text(size = 12)) 
-
 # prediction on reserved validation samples
-test_meta <- test_meta[complete.cases(test_meta),] # complete cases
-test_meta_filtered <- test_meta %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
+meta_test <- meta_test[complete.cases(meta_test),] # complete cases
+
 # grab only the columns that we have coefs for (starting at index 2 removes the intercept)
-test_meta_vars <- test_meta_filtered %>% 
-  dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
-test_meta_vars$Intercept <- 1 # make a column for the intercept
-test_meta_vars <- test_meta_vars %>% dplyr::select(Intercept, everything())
+meta_test_vars <- meta_test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+meta_test_vars$Intercept <- 1 # make a column for the intercept
+meta_test_vars <- meta_test_vars %>% dplyr::select(Intercept, everything())
 
 #--predict the risk scores without covariates--########
-pred_risk_scores_meta <- as.matrix(test_meta_vars) %*% as.matrix(mod_coef_df$Estimate)
+pred_risk_scores_meta <- as.matrix(meta_test_vars) %*% as.matrix(mod_coef_df$Estimate)
 
 # combine the predicted and actual
-pred_df_meta <- as.data.frame(cbind(test_meta_filtered$subject_id,
-                                    test_meta_filtered$range,
-                                    test_meta_filtered$BMI,
-                                    scale(pred_risk_scores_meta))); colnames(pred_df_meta) <- c("subject_id", "time", "actual", "predicted_meta")
-file_path <- file.path(out_dir, "long_meta_predictions_feb20.csv")
-#rite.csv(pred_df_meta, file_path, row.names = FALSE)
+pred_df_meta <- as.data.frame(cbind(meta_test$subject_id,
+                                    meta_test$range,
+                                    meta_test$BMI,
+                                    scale(pred_risk_scores_meta))); colnames(pred_df_meta) <- c("subject_id",
+                                                                                                "time", 
+                                                                                                "actual",
+                                                                                                "predicted_meta")
+# Calculate R-squared value
+actual <- meta_test$BMI
+predicted <- pred_risk_scores_meta
+mean_actual <- mean(actual)
+ss_total <- sum((actual - mean_actual)^2)
+ss_residual <- sum((actual - predicted)^2)
+r_squared <- 1 - (ss_residual / ss_total)
+
+# Print R-squared value
+r_squared
+
+# Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
+coef_df <- as.data.frame(best_meta$coefficients)
+#coef_df <- as.data.frame(coef_df[rownames(coef_df) != "(Intercept)", ]) # Remove intercept
+coef_df$Feature <- rownames(coef_df) 
+coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
+coef_df$Importance <- coef_df$`best_meta$coefficients`
+
+# Filter out rows where Importance is 0
+coef_df <- coef_df[coef_df$Importance != 0, ]
+
+# Plot the feature importances
+library(ggplot2)
+ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Meta Feature Importances from GLM Lasso Model") +
+  xlab("Features") +
+  ylab("Importance (Absolute Coefficients)") +
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(t = 20, r = 20, b = 20, l = 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
+
+# Save the plot to a file
+ggsave(paste0(out_dir, "meta_feature_importances_with_r2.png"), 
+       width = 8, height = 6, units = "in", dpi = 300)
+
+file_path <- file.path(out_dir, "meta_predictions_feb20.csv")
+#write.csv(pred_df_meta, file_path, row.names = FALSE)
 
 #############################################################################################
 ### Taxa data set
@@ -635,21 +493,15 @@ remove_high_corr_vars <- function(data, threshold = 0.8) {
   return(data_cleaned)
 }
 
-train_taxa_cleaned <- remove_high_corr_vars(train_taxa)
-train_taxa_filtered <- train_taxa_cleaned %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
-
+taxa_train_cleaned <- remove_high_corr_vars(taxa_train)
 numvar_taxa <- c()
 lambdavec <- seq(from = 32, to = 50, by = 1)
 for (lambdy in lambdavec) {
-  predictors <- setdiff(names(train_taxa_filtered), c("BMI", "subject_id", "range"))
+  predictors <- setdiff(names(taxa_train_cleaned), c("BMI", "subject_id", "range"))
   predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
   fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
   lm1_taxa <- glmmLasso(fix = fix_formula,
-                        data = train_taxa_filtered,
+                        data = taxa_train_cleaned,
                         rnd = list(subject_id = ~ 1, range = ~ 1),
                         lambda = lambdy,
                         family = gaussian(link = "identity"))
@@ -664,16 +516,15 @@ for (lambdy in lambdavec) {
 plot(x = lambdavec, y = numvar_taxa)
 ggplot() +
   geom_point(aes(x = lambdavec, y = numvar_taxa)) +
-  geom_vline(xintercept = 42, color = "blue", linetype = "dashed") +
+  geom_vline(xintercept = 43, color = "blue", linetype = "dashed") +
   theme_bw() +
   ggtitle("Only Taxa Delta") +
   xlab("Penalty Coefficient (Lambda)") +
   ylab("Number of Included Variables")
-ggsave(paste0(out_dir,"long_lambda_elbow_only_taxa_feb20.png"), 
-       width=6, height=4, units="in", dpi=320)
+ggsave(paste0(out_dir,"lambda_elbow_only_taxa.png"), width=6, height=4, units="in", dpi=320)
 
 best_taxa <- glmmLasso(fix = fix_formula,
-                       data = train_taxa_filtered,
+                       data = taxa_train_cleaned,
                        rnd = list(subject_id = ~ 1, range = ~ 1),
                        lambda = 43,
                        family = gaussian(link = "identity"))
@@ -688,7 +539,7 @@ lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
 lassoFeatures <- gsub("`", "", lassoFeatures)
 # Check the updated vector
 lassoFeatures
-bestglm_taxa <- as.data.frame(train_taxa_filtered[,lassoFeatures])
+bestglm_taxa <- as.data.frame(taxa_train_cleaned[,lassoFeatures])
 summary(bestglm_taxa$BMI)
 varlist_taxa <- names(bestglm_taxa)[which(names(bestglm_taxa) %ni% 
                                             c("BMI", "subject_id", "range"))]
@@ -703,50 +554,90 @@ mymodsum <- summary(mymod_taxa)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
 
 # prediction on reserved validation samples
-test_taxa <- test_taxa[complete.cases(test_taxa),] # complete cases
-test_taxa_filtered <- test_taxa %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
+taxa_test <- taxa_test[complete.cases(taxa_test),] # complete cases
+
 # grab only the columns that we have coefs for (starting at index 2 removes the intercept)
 rownames(mod_coef_df) <- gsub("`", "", rownames(mod_coef_df))
-test_taxa_vars <- test_taxa_filtered %>% 
-  dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
-test_taxa_vars$Intercept <- 1 # make a column for the intercept
-test_taxa_vars <- test_taxa_vars %>% dplyr::select(Intercept, everything())
+taxa_test_vars <- taxa_test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+taxa_test_vars$Intercept <- 1 # make a column for the intercept
+taxa_test_vars <- taxa_test_vars %>% dplyr::select(Intercept, everything())
 
 #--predict the risk scores without covariates--########
-pred_risk_scores_taxa <- as.matrix(test_taxa_vars) %*% as.matrix(mod_coef_df$Estimate)
+pred_risk_scores_taxa <- as.matrix(taxa_test_vars) %*% as.matrix(mod_coef_df$Estimate)
 
 # combine the predicted and actual
-pred_df_taxa <- as.data.frame(cbind(test_taxa_filtered$subject_id,
-                                    test_taxa_filtered$range,
-                                    test_taxa_filtered$BMI,
+pred_df_taxa <- as.data.frame(cbind(taxa_test$subject_id,
+                                    taxa_test$range,
+                                    taxa_test$BMI,
                                     scale(pred_risk_scores_taxa))); colnames(pred_df_taxa) <- c("subject_id",
                                                                                                 "time", 
                                                                                                 "actual",
                                                                                                 "predicted_taxa")
-file_path <- file.path(out_dir, "long_taxa_predictions_feb20.csv")
+# Calculate R-squared value
+actual <- taxa_test$BMI
+predicted <- pred_risk_scores_taxa
+mean_actual <- mean(actual)
+ss_regression <- sum((predicted - mean_actual)^2)
+
+ss_total <- sum((actual - mean_actual)^2)
+ss_regression/ss_total
+
+ss_residual <- sum((actual - predicted)^2)
+r_squared <- 1 - (ss_residual / ss_total)
+
+# OTHER FORMULAS:
+rsq <- function (x, y) cor(x, y) ^ 2
+rsq(actual, predicted)
+
+# Print R-squared value
+r_squared
+
+# Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
+coef_df <- as.data.frame(best_taxa$coefficients)
+#coef_df <- as.data.frame(coef_df[rownames(coef_df) != "(Intercept)", ]) # Remove intercept
+coef_df$Feature <- rownames(coef_df) 
+coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
+coef_df$Importance <- coef_df$`best_taxa$coefficients`
+
+# Filter out rows where Importance is 0
+coef_df <- coef_df[coef_df$Importance != 0, ]
+
+# Plot the feature importances
+ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Taxa Feature Importances from GLM Lasso Model") +
+  xlab("Features") +
+  ylab("Importance (Absolute Coefficients)") +
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
+
+# Save the plot to a file
+ggsave(paste0(out_dir, "taxa_feature_importances_with_r2.png"), 
+       width = 8, height = 6, units = "in", dpi = 300)
+
+file_path <- file.path(out_dir, "taxa_predictions_feb20.csv")
 #write.csv(pred_df_taxa, file_path, row.names = FALSE)
 
 ##########################################################################################
 ### Micom data set
-train_micom_cleaned <- remove_high_corr_vars(train_micom, threshold = 0.9)
-train_micom_filtered <- train_micom_cleaned %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
-
+micom_train_cleaned <- remove_high_corr_vars(micom_train, threshold = 0.9)
 numvar_micom <- c()
 lambdavec <- seq(from = 10, to = 50, by = 1)
 for (lambdy in lambdavec) {
-  predictors <- setdiff(names(train_micom_filtered), c("BMI", "subject_id", "range"))
+  predictors <- setdiff(names(micom_train_cleaned), c("BMI", "subject_id", "range"))
   predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
   fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
   lm1_micom <- glmmLasso(fix = fix_formula,
-                         data = train_micom_filtered,
+                         data = micom_train_cleaned,
                          rnd = list(subject_id = ~ 1, range = ~ 1),
                          lambda = lambdy,
                          family = gaussian(link = "identity"))
@@ -765,13 +656,12 @@ ggplot() +
   ggtitle("Only Micom Delta") +
   xlab("Penalty Coefficient (Lambda)") +
   ylab("Number of Included Variables")
-ggsave(paste0(out_dir,"long_lambda_elbow_only_micom_feb20.png"), 
-       width=6, height=4, units="in", dpi=320)
+ggsave(paste0(out_dir,"lambda_elbow_only_micom.png"), width=6, height=4, units="in", dpi=320)
 
 best_micom <- glmmLasso(fix = fix_formula,
-                        data = train_micom_filtered,
+                        data = micom_train_cleaned,
                         rnd = list(subject_id = ~ 1, range = ~ 1),
-                        lambda = 35,
+                        lambda = 30,
                         family = gaussian(link = "identity"))
 
 lassoFeatures <- names(best_micom$coefficients[which(best_micom$coefficients != 0)])
@@ -784,7 +674,7 @@ lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
 lassoFeatures <- gsub("`", "", lassoFeatures)
 # Check the updated vector
 lassoFeatures
-bestglm_micom <- as.data.frame(train_micom_filtered[,lassoFeatures])
+bestglm_micom <- as.data.frame(micom_train_cleaned[,lassoFeatures])
 summary(bestglm_micom$BMI)
 varlist_micom <- names(bestglm_micom)[which(names(bestglm_micom) %ni% 
                                               c("BMI", "subject_id", "range"))]
@@ -799,50 +689,82 @@ mymodsum <- summary(mymod_micom)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
 
 # prediction on reserved validation samples
-test_micom <- test_micom[complete.cases(test_micom),] # complete cases
-test_micom_filtered <- test_micom %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
+micom_test <- micom_test[complete.cases(micom_test),] # complete cases
+
 # grab only the columns that we have coefs for (starting at index 2 removes the intercept)
 rownames(mod_coef_df) <- gsub("`", "", rownames(mod_coef_df))
-test_micom_vars <- test_micom_filtered %>% 
-  dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
-test_micom_vars$Intercept <- 1 # make a column for the intercept
-test_micom_vars <- test_micom_vars %>% dplyr::select(Intercept, everything())
+micom_test_vars <- micom_test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+micom_test_vars$Intercept <- 1 # make a column for the intercept
+micom_test_vars <- micom_test_vars %>% dplyr::select(Intercept, everything())
 
 #--predict the risk scores without covariates--########
-pred_risk_scores_micom <- as.matrix(test_micom_vars) %*% as.matrix(mod_coef_df$Estimate)
+pred_risk_scores_micom <- as.matrix(micom_test_vars) %*% as.matrix(mod_coef_df$Estimate)
 
 # combine the predicted and actual
-pred_df_micom<- as.data.frame(cbind(test_micom_filtered$subject_id,
-                                    test_micom_filtered$range,
-                                    test_micom_filtered$BMI,
+pred_df_micom<- as.data.frame(cbind(micom_test$subject_id,
+                                    micom_test$range,
+                                    micom_test$BMI,
                                     scale(pred_risk_scores_micom))); colnames(pred_df_micom) <- c("subject_id",
                                                                                                   "time", 
                                                                                                   "actual",
                                                                                                   "predicted_micom")
-file_path <- file.path(out_dir, "long_micom_predictions_feb20.csv")
+# Calculate R-squared value
+actual <- micom_test$BMI
+predicted <- pred_risk_scores_micom
+mean_actual <- mean(actual)
+ss_total <- sum((actual - mean_actual)^2)
+ss_residual <- sum((actual - predicted)^2)
+r_squared <- 1 - (ss_residual / ss_total)
+
+# Print R-squared value
+r_squared
+
+# Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
+coef_df <- as.data.frame(best_micom$coefficients)
+#coef_df <- as.data.frame(coef_df[rownames(coef_df) != "(Intercept)", ]) # Remove intercept
+coef_df$Feature <- rownames(coef_df) 
+coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
+coef_df$Importance <- coef_df$`best_micom$coefficients`
+
+# Filter out rows where Importance is 0
+coef_df <- coef_df[coef_df$Importance != 0, ]
+
+# Plot the feature importances
+ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Micom Feature Importances from GLM Lasso Model") +
+  xlab("Features") +
+  ylab("Importance (Absolute Coefficients)") +
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
+
+# Save the plot to a file
+ggsave(paste0(out_dir, "micom_feature_importances_with_r2.png"), 
+       width = 8, height = 6, units = "in", dpi = 300)
+
+file_path <- file.path(out_dir, "micom_predictions_feb20.csv")
 #write.csv(pred_df_micom, file_path, row.names = FALSE)
 
 ##########################################################################################
 ### Pathway data set
-train_pathway_cleaned <- remove_high_corr_vars(train_pathway, threshold = 0.9) %>% 
-  dplyr::select(-c("cohort_number","time_y", "bmi_prs" ))
-train_pathway_filtered <- train_pathway_cleaned %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
+pathway_train_cleaned <- remove_high_corr_vars(pathway_train, threshold = 0.9)
 numvar_path <- c()
 lambdavec <- seq(from = 10, to = 50, by = 1)
 for (lambdy in lambdavec) {
-  predictors <- setdiff(names(train_pathway_filtered), c("BMI", "subject_id", "range"))
+  predictors <- setdiff(names(pathway_train_cleaned), c("BMI", "subject_id", "range"))
   predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
   fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
   lm1_pathway <- glmmLasso(fix = fix_formula,
-                           data = train_pathway_filtered,
+                           data = pathway_train_cleaned,
                            rnd = list(subject_id = ~ 1, range = ~ 1),
                            lambda = lambdy,
                            family = gaussian(link = "identity"))
@@ -861,13 +783,12 @@ ggplot() +
   ggtitle("Only Pathway Delta") +
   xlab("Penalty Coefficient (Lambda)") +
   ylab("Number of Included Variables")
-ggsave(paste0(out_dir,"long_lambda_elbow_only_pathway_feb20.png"), 
-       width=6, height=4, units="in", dpi=320)
+ggsave(paste0(out_dir,"lambda_elbow_only_pathway.png"), width=6, height=4, units="in", dpi=320)
 
 best_path <- glmmLasso(fix = fix_formula,
-                       data = train_pathway_filtered,
+                       data = pathway_train_cleaned,
                        rnd = list(subject_id = ~ 1, range = ~ 1),
-                       lambda = 32,
+                       lambda = 26,
                        family = gaussian(link = "identity"))
 
 lassoFeatures <- names(best_path$coefficients[which(best_path$coefficients != 0)])
@@ -881,13 +802,12 @@ lassoFeatures <- gsub("`", "", lassoFeatures)
 
 # Check the updated vector
 lassoFeatures
-bestglm_path <- as.data.frame(train_pathway_filtered[,lassoFeatures])
+bestglm_path <- as.data.frame(pathway_train_cleaned[,lassoFeatures])
 summary(bestglm_path$BMI)
 varlist_path <- names(bestglm_path)[which(names(bestglm_path) %ni% 
                                             c("BMI", "subject_id", "range"))]
 varstring_path <- paste0(varlist_path, collapse = " + ", sep = "")
 varstring_path <- paste0("`", varlist_path, "`", collapse = " + ")
-
 # Use selected variables 
 mymod_path <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_path, 
                                             " + (1|range) +  (1|subject_id)")), 
@@ -896,40 +816,12 @@ mymod_path <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_path,
 mymodsum <- summary(mymod_path)
 mod_coef_df <- coef(mymodsum) %>% data.frame()
 
-# Plot pathway features
-# Extract the fixed effects coefficients from the final model
-coef_df <- as.data.frame(summary(mymod_path)$coefficients)
-coef_df$Feature <- rownames(coef_df)
-coef_df <- coef_df %>% arrange(desc(Estimate))  # Sort by coefficients
-
-# Filter top 10 features by absolute coefficient magnitude
-top_features <- coef_df %>% 
-  mutate(abs_estimate = abs(Estimate)) %>% 
-  dplyr::filter(Feature != "(Intercept)") %>% 
-  mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
-         Feature = str_replace_all(Feature, "[._]", " ")) %>% 
-  arrange(desc(abs_estimate)) %>% head(10)  
-
-ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
-  geom_bar(stat = "identity", fill = "skyblue") +
-  coord_flip() + theme_bw() +
-  ggtitle("Top Features & Coefficients from the final Pathway Model") +
-  xlab("Feature") + ylab("Coefficient Estimate") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-        axis.text.y = element_text(size = 12)) 
-
 # prediction on reserved validation samples
-test_path <- test_pathway[complete.cases(test_pathway),] # complete cases
-test_path_filtered <- test_path %>%
-  dplyr::filter(complete.cases(.)) %>%  # Keep only rows with complete cases
-  dplyr::group_by(subject_id) %>%       # Group by subject_id
-  dplyr::filter(all(c("0", "6", "12") %in% range)) %>%  # Ensure all three ranges are present
-  dplyr::ungroup()
+test_path <- pathway_test[complete.cases(pathway_test),] # complete cases
 
 # grab only the columns that we have coefs for (starting at index 2 removes the intercept)
 rownames(mod_coef_df) <- gsub("`", "", rownames(mod_coef_df))
-test_path_vars <- test_path_filtered %>% 
-  dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+test_path_vars <- test_path %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
 test_path_vars$Intercept <- 1 # make a column for the intercept
 test_path_vars <- test_path_vars %>% dplyr::select(Intercept, everything())
 
@@ -937,30 +829,200 @@ test_path_vars <- test_path_vars %>% dplyr::select(Intercept, everything())
 pred_risk_scores_path <- as.matrix(test_path_vars) %*% as.matrix(mod_coef_df$Estimate)
 
 # combine the predicted and actual
-pred_df_path<- as.data.frame(cbind(test_path_filtered$subject_id,
-                                   test_path_filtered$range,
-                                   test_path_filtered$BMI,
+pred_df_path<- as.data.frame(cbind(test_path$subject_id,
+                                   test_path$range,
+                                   test_path$BMI,
                                    scale(pred_risk_scores_path))); colnames(pred_df_path) <- c("subject_id",
                                                                                                "time", 
                                                                                                "actual",
                                                                                                "predicted_pathway")
-file_path <- file.path(out_dir, "long_path_predictions_feb20.csv")
-write.csv(pred_df_path, file_path, row.names = FALSE)
+
+
+# Calculate R-squared value
+actual <- test_path$BMI
+predicted <- pred_risk_scores_path
+mean_actual <- mean(actual)
+ss_total <- sum((actual - mean_actual)^2)
+ss_residual <- sum((actual - predicted)^2)
+r_squared <- 1 - (ss_residual / ss_total)
+
+# Print R-squared value
+r_squared
+
+# Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
+coef_df <- as.data.frame(best_path$coefficients)
+#coef_df <- as.data.frame(coef_df[rownames(coef_df) != "(Intercept)", ]) # Remove intercept
+coef_df$Feature <- rownames(coef_df) 
+coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
+coef_df$Importance <- coef_df$`best_path$coefficients`
+
+# Filter out rows where Importance is 0
+coef_df <- coef_df[coef_df$Importance != 0, ]
+
+# Plot the feature importances
+ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Micom Feature Importances from GLM Lasso Model") +
+  xlab("Features") +
+  ylab("Importance (Absolute Coefficients)") +
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
+# Save the plot to a file
+ggsave(paste0(out_dir, "path_feature_importances_with_r2.png"), 
+       width = 8, height = 6, units = "in", dpi = 300)
+
+file_path <- file.path(out_dir, "path_predictions_feb20.csv")
+#write.csv(pred_df_path, file_path, row.names = FALSE)
+
+### Basic model ###
+numvar_meta <- c()
+lambdavec <- seq(from = 10, to = 50, by = 1)
+for (lambdy in lambdavec) {
+  predictors <- c("age", "sex")
+  predictors_escaped <- paste0("`", predictors, "`", collapse = " + ")
+  fix_formula <- as.formula(paste("BMI ~", predictors_escaped))
+  lm1_meta <- glmmLasso(fix = fix_formula,
+                        data = meta_train,
+                        rnd = list(subject_id = ~ 1, range = ~ 1),
+                        lambda = lambdy,
+                        family = gaussian(link = "identity"))
+  summary(lm1_meta)
+  lassoFeatures <- names(lm1_meta$coefficients[which(lm1_meta$coefficients != 0)])
+  lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
+  lassoFeatures <- lassoFeatures[grep("as.factor",lassoFeatures,invert=T)] ####
+  lassoFeatures <- unique(c(lassoFeatures))
+  numvar_meta <- c(numvar_meta, length(lassoFeatures))
+}
+plot(x = lambdavec, y = numvar_meta)
+ggplot() +
+  geom_point(aes(x = lambdavec, y = numvar_meta)) +
+  geom_vline(xintercept = 25, color = "blue", linetype = "dashed") +
+  theme_bw() +
+  ggtitle("Only Meta Delta") +
+  xlab("Penalty Coefficient (Lambda)") +
+  ylab("Number of Included Variables")
+ggsave(paste0(out_dir,"lambda_elbow_only_basic.png"), width=6, height=4, units="in", dpi=320)
+
+best_meta <- glmmLasso(fix = fix_formula,
+                       data = meta_train,
+                       rnd = list(subject_id = ~ 1, range = ~ 1),
+                       lambda = 30,
+                       family = gaussian(link = "identity"))
+
+lassoFeatures <- names(best_meta$coefficients)
+lassoFeatures <- lassoFeatures[lassoFeatures %ni% c("(Intercept)")]
+lassoFeatures <- lassoFeatures[grep("as.factor",lassoFeatures,invert=T)] ####
+lassoFeatures <- unique(c(lassoFeatures))
+lassoFeatures <- gsub("range0.997860960117438", "range", lassoFeatures)
+lassoFeatures <- lassoFeatures[grep("subject_id|BMI|range", lassoFeatures, invert = T)]
+lassoFeatures <- unique(c(lassoFeatures, "subject_id", "BMI", "range"))
+
+# Check the updated vector
+lassoFeatures
+
+bestglm_meta <- as.data.frame(meta_train[,lassoFeatures])
+summary(bestglm_meta$BMI)
+varlist_meta <- names(bestglm_meta)[which(names(bestglm_meta) %ni% 
+                                            c("BMI", "subject_id", "range"))]
+varstring_meta <- paste0(varlist_meta, collapse = " + ", sep = "")
+
+# Use selected variables 
+mymod_meta <- lme4::glmer(as.formula(paste0("BMI ~ ",varstring_meta, 
+                                            " + (1|range) +  (1|subject_id)")), 
+                          data = bestglm_meta, 
+                          family = gaussian(link = "identity"))
+mymodsum <- summary(mymod_meta)
+mod_coef_df <- coef(mymodsum) %>% data.frame()
+
+# prediction on reserved validation samples
+basic_test <- meta_test[complete.cases(meta_test),] # complete cases
+
+# grab only the columns that we have coefs for (starting at index 2 removes the intercept)
+meta_test_vars <- basic_test %>% dplyr::select(rownames(mod_coef_df)[2:nrow(mod_coef_df)])
+meta_test_vars$Intercept <- 1 # make a column for the intercept
+meta_test_vars <- meta_test_vars %>% dplyr::select(Intercept, everything())
+
+#--predict the risk scores without covariates--########
+pred_risk_scores_basic <- as.matrix(meta_test_vars) %*% as.matrix(mod_coef_df$Estimate)
+
+# combine the predicted and actual
+pred_df_basic <- as.data.frame(cbind(basic_test$subject_id,
+                                     basic_test$range,
+                                     basic_test$BMI,
+                                     scale(pred_risk_scores_basic))); colnames(pred_df_basic) <- c("subject_id",
+                                                                                                   "time", 
+                                                                                                   "actual",
+                                                                                                   "predicted_basic")
+# Calculate R-squared value
+actual <- basic_test$BMI
+predicted <- pred_risk_scores_path
+mean_actual <- mean(actual)
+ss_total <- sum((actual - mean_actual)^2)
+ss_residual <- sum((actual - predicted)^2)
+r_squared <- 1 - (ss_residual / ss_total)
+
+# Print R-squared value
+r_squared
+
+# Extract the coefficients (excluding intercept) and calculate absolute values for feature importance
+coef_df <- as.data.frame(best_basic$coefficients)
+#coef_df <- as.data.frame(coef_df[rownames(coef_df) != "(Intercept)", ]) # Remove intercept
+coef_df$Feature <- rownames(coef_df) 
+coef_df$Feature <- gsub("range3.99098082279631", "time", coef_df$Feature)
+coef_df$Importance <- coef_df$`best_basic$coefficients`
+
+# Plot the feature importances
+ggplot(coef_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Basic Feature Importances from GLM Lasso Model") +
+  xlab("Features") +
+  ylab("Importance (Absolute Coefficients)") +
+  # Add extra space around the plot using plot.margin
+  #theme(plot.margin = margin(20, 20, 20, 40)) +  # top, right, bottom, left margins
+  annotate("text", 
+           x = 1, 
+           y = max(coef_df$Importance) * 0.95, 
+           label = paste("R� =", round(r_squared, 3)), 
+           size = 5, 
+           color = "red", 
+           hjust = 0.9)  # hjust = 0 will align the label to the left
+
+# Save the plot to a file
+ggsave(paste0(out_dir, "basic_feature_importances_with_r2.png"), 
+       width = 8, height = 6, units = "in", dpi = 300)
+
+file_path <- file.path(out_dir, "basic_predictions_feb20.csv")
+#write.csv(pred_df_basic, file_path, row.names = FALSE)
+
+################################################################################
 
 ##### Compare models
-# Convert the first 2 columns to factors
-pred_df_basic[, head(names(pred_df_basic), 2)] <- 
-  lapply(pred_df_basic[, head(names(pred_df_basic), 2)], as.factor)
-pred_df_meta[, head(names(pred_df_meta), 2)] <- 
-  lapply(pred_df_meta[, head(names(pred_df_meta), 2)], as.factor)
-pred_df_taxa[, head(names(pred_df_taxa), 2)] <- 
-  lapply(pred_df_taxa[, head(names(pred_df_taxa), 2)], as.factor)
-pred_df_micom[, head(names(pred_df_micom), 2)] <- 
-  lapply(pred_df_micom[, head(names(pred_df_micom), 2)], as.factor)
-pred_df_path[, head(names(pred_df_path), 2)] <- 
-  lapply(pred_df_path[, head(names(pred_df_path), 2)], as.factor)
 
-met_basic <- merge(pred_df_basic, pred_df_meta, by = c("subject_id", "time")) %>% 
+# Convert the last 3 columns to numeric
+pred_df_basic[, tail(names(pred_df_basic), 3)] <- 
+  lapply(pred_df_basic[, tail(names(pred_df_basic), 3)], as.numeric)
+pred_df_meta[, tail(names(pred_df_meta), 3)] <- 
+  lapply(pred_df_meta[, tail(names(pred_df_meta), 3)], as.numeric)
+pred_df_taxa[, tail(names(pred_df_taxa), 3)] <- 
+  lapply(pred_df_taxa[, tail(names(pred_df_taxa), 3)], as.numeric)
+pred_df_micom[, tail(names(pred_df_micom), 3)] <- 
+  lapply(pred_df_micom[, tail(names(pred_df_micom), 3)], as.numeric)
+pred_df_path[, tail(names(pred_df_path), 3)] <- 
+  lapply(pred_df_path[, tail(names(pred_df_path), 3)], as.numeric)
+
+met_basic <- merge(pred_df_meta, pred_df_basic, 
+                   by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
 met_tax <- merge(met_basic, pred_df_taxa, 
@@ -976,10 +1038,10 @@ met_tax_micom_path <- merge(met_tax_micom, pred_df_path,
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
 all_omic <- unique(met_tax_micom_path)
-
-# Center and scale the last 5 columns of the dataframe
+all_omic$predicted_taxa <- as.numeric(all_omic$predicted_taxa)
+all_omic$predicted_micom <- as.numeric(all_omic$predicted_micom)
+all_omic$predicted_pathway <- as.numeric(all_omic$predicted_pathway)
 all_omic[, 3:8] <- scale(all_omic[, 3:8])
-head(all_omic)
 
 ########################################################################################
 mod_dat = all_omic %>% rename(bmi = actual, 
@@ -990,7 +1052,8 @@ mod_dat = all_omic %>% rename(bmi = actual,
                               y_new_micom_only = predicted_micom,
                               y_new_path_only = predicted_pathway,
                               y_new_tax_only = predicted_taxa)
-### Change time to contimuous
+
+mod_dat$Time <- as.numeric(mod_dat$Time)
 lmer_basic <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_meta <- lmer(bmi ~ y_new_meta_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom <- lmer(bmi ~ y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
@@ -1021,7 +1084,7 @@ meta_basic_tax_path_micom <- lmer(bmi ~ y_new_basic + y_new_meta_only +
 sjPlot::tab_model(basic, meta_basic, 
                   meta_basic_tax, meta_basic_tax_path, 
                   meta_basic_tax_path_micom,
-                  title = "glmlasso long sequential lmer models",
+                  title = "glmlasso delta sequential lmer models",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
@@ -1043,14 +1106,18 @@ anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
 
-glmmlong_models <- list(
+
+glmmlass_lmer_models <- list(
   c("lmer_basic", "lmer_meta_b"),
-  c("lmer_basic", "lmer_micom_b"),
   c("lmer_basic", "lmer_tax_b"),
+  c("lmer_basic", "lmer_micom_b"),
   c("lmer_basic", "lmer_path_b"))
-library(lme4)  # Make sure the lme4 package is loaded=
-anova_results <- list()
-for (model_pair in glmmlong_models) {
+
+library(lme4)  # Make sure the lme4 package is loaded
+
+anova_results <- list()  # empty list to store ANOVA results
+
+for (model_pair in glmmlass_lmer_models) {
   model_1 <- get(model_pair[1])
   model_2 <- get(model_pair[2])
   
@@ -1076,18 +1143,22 @@ anova_table_clean <- anova_table %>%
 print(anova_table_clean)
 # Create an HTML table from the cleaned anova table
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
-# Save the table as an HTML file
-writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/lasso_anova_table.html")
-########################################################################################
 
-# Make linear models MSE
+# Save the table as an HTML file
+writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/glmmlasso_delta_anova_table.html")
+
+########################################################################################
+# Make linear models 
+basic_model <- lme(actual ~ predicted_basic + time, 
+                   random = ~1|subject_id, data = all_omic)
+
+
 # Combined models 
 lm_meta_tax_time <- lme(actual ~ predicted_meta + predicted_taxa + time, 
                         random = ~1|subject_id, data = all_omic)
 summary(lm_meta_tax_time)
 
 ### Checks before models 
-library(car)
 vif(lm(actual ~ predicted_meta + predicted_taxa + predicted_micom + time, data = all_omic))
 summary(all_omic)
 table(all_omic$subject_id)
@@ -1100,18 +1171,18 @@ lm_path <- lme(actual ~ predicted_pathway, random = ~1|subject_id, data = all_om
 lm_micom <- lme(actual ~ predicted_micom, random = ~1|subject_id, data = all_omic)
 lm_tax <- lme(actual ~ predicted_taxa, random = ~1|subject_id, data = all_omic)
 lm_meta <- lme(actual ~ predicted_meta, random = ~1|subject_id, data = all_omic)
+lm_basic <- lme(actual ~ predicted_basic, random = ~1|subject_id, data = all_omic)
 
-anova(lm_meta, lm_path)
-anova(lm_meta, lm_micom)
+model_titles <- c("1: Basic",
+                  "2: Meta", 
+                  "3: Taxa", 
+                  "4: Micom", 
+                  "5: Pathway")
 
-model_titles <- c("Model 1: Meta", 
-                  "Model 2: Taxa", 
-                  "Model 3: Micom", 
-                  "Model 4: Pathway")
-
-sjPlot::tab_model(lm_meta, lm_tax, 
+# Create the table as a grid object
+sjPlot::tab_model(lm_basic, lm_meta, lm_tax, 
                   lm_micom, lm_path, 
-                  title = "Comparing single omic glmLASSO models 6m, BL, 12m",
+                  title = "Comparing single omic glmLASSO models deltas",
                   string.pred = "Predictors",
                   string.est = "Estimate",
                   string.std = "std. Beta",
@@ -1122,12 +1193,32 @@ sjPlot::tab_model(lm_meta, lm_tax,
                   dv.labels = model_titles,
                   auto.label = FALSE)
 ### Combined 
+lm_meta_basic <- lme(actual ~ predicted_basic + predicted_meta, 
+                     random = ~1|subject_id, data = all_omic)
 lm_meta_tax <- lme(actual ~ predicted_meta + predicted_taxa, 
                    random = ~1|subject_id, data = all_omic)
-summary(lm_meta_tax)
+lm_basic_tax <- lme(actual ~ predicted_basic + predicted_taxa, 
+                    random = ~1|subject_id, data = all_omic)
+lm_basic_micom <- lme(actual ~ predicted_basic + predicted_micom, 
+                      random = ~1|subject_id, data = all_omic)
+lm_basic_path <- lme(actual ~ predicted_basic + predicted_pathway, 
+                     random = ~1|subject_id, data = all_omic)
+
+lm_meta_tax <- lme(actual ~ predicted_meta + predicted_taxa, 
+                   random = ~1|subject_id, data = all_omic)
+lm_basic_tax <- lme(actual ~ predicted_basic + predicted_taxa, 
+                    random = ~1|subject_id, data = all_omic)
+lm_basic_micom <- lme(actual ~ predicted_basic + predicted_micom, 
+                      random = ~1|subject_id, data = all_omic)
+lm_basic_path <- lme(actual ~ predicted_basic + predicted_pathway, 
+                     random = ~1|subject_id, data = all_omic)
+
+lm_basic_all_omic <- lme(actual ~ predicted_basic + predicted_meta + 
+                           predicted_taxa + predicted_pathway + predicted_micom, 
+                         random = ~1|subject_id, data = all_omic)
+# No basic 
 lm_meta_tax_micom <- lme(actual ~ predicted_meta + predicted_taxa + 
                            predicted_micom, random = ~1|subject_id, data = all_omic)
-summary(lm_meta_tax_micom)
 lm_meta_tax_micom_path <- lme(actual ~ predicted_meta + predicted_taxa + 
                                 predicted_micom + predicted_pathway, 
                               random = ~1|subject_id, data = all_omic)
@@ -1135,23 +1226,37 @@ lm_no_meta <- lme(actual ~ predicted_taxa +
                     predicted_micom + predicted_pathway, 
                   random = ~1|subject_id, data = all_omic)
 summary(lm_meta_tax_micom_path)
-anova(lm_meta, lm_meta_tax)
-anova(lm_meta_tax, lm_meta_tax_micom)
-anova(lm_meta_tax_micom, lm_meta_tax_micom_path)
-anova(lm_meta_tax, lm_meta_tax_micom_path)
-anova(lm_meta, lm_meta_tax_micom_path)
 
-model_titles <- c("Model 1: Meta", 
+
+
+# Fit both models using Maximum Likelihood (ML)
+lm_basic_ml <- lme(fixed = actual ~ predicted_basic,  # Fixed effects
+                   random = ~ 1 | subject_id,  # Random effects
+                   method = "ML",  # Use Maximum Likelihood
+                   data = all_omic)
+
+lm_basic_path_ml <- lme(fixed = actual ~ predicted_basic + predicted_taxa,  # Different fixed effects
+                        random = ~ 1 | subject_id,  # Random effects
+                        method = "ML",  # Use Maximum Likelihood
+                        data = all_omic)
+
+# Now perform ANOVA (ML comparison)
+anova(lm_basic_ml, lm_basic_path_ml)
+
+
+# Define model titles for clarity
+model_titles <- c("Model 0: Basic" ,
+                  "Model 1: Basic + Meta", 
                   "Model 2: Meta + Taxa", 
                   "Model 3: Meta + Taxa + Micom", 
                   "Model 4: Taxa + Micom + Pathway", 
                   "Model 5: Meta + Taxa + Micom + Pathway")
 
-sjPlot::tab_model(lm_meta, lm_meta_tax, 
+sjPlot::tab_model(lm_basic, lm_meta_basic, lm_meta_tax, 
                   lm_meta_tax_micom, lm_no_meta, lm_meta_tax_micom_path, 
-                  title = "Comparing combined omic models 6m, BL, 12m",
+                  title = "Comparing combined omic delta models",
                   string.pred = "Predictors",
-                  string.est = "Estimate",
+                  string.est = "Estimates",
                   string.std = "std. Beta",
                   string.ci = "95% CI",
                   string.se = "std. Error",
@@ -1160,28 +1265,9 @@ sjPlot::tab_model(lm_meta, lm_meta_tax,
                   dv.labels = model_titles,
                   auto.label = FALSE)
 
-#### PLOT AIC values
-# Extract AIC and BIC for each model
-aic_values <- c(AIC(lm_meta), AIC(lm_meta_tax), 
-                AIC(lm_meta_tax_micom), AIC(lm_meta_tax_micom_path))
-bic_values <- c(BIC(lm_meta), BIC(lm_meta_tax), 
-                BIC(lm_meta_tax_micom), BIC(lm_meta_tax_micom_path))
-
-# Create a data frame for plotting
-model_names <- c("lm_meta","lm_meta_tax", "lm_meta_tax_micom", "lm_meta_tax_micom_path")
-df <- data.frame(Model = model_names, AIC = aic_values, BIC = bic_values)
-
-# Plot AIC and BIC side by side
-ggplot(df, aes(x = Model)) +
-  geom_bar(aes(y = AIC), stat = "identity", position = "dodge", fill = "blue", alpha = 0.7) +
-  geom_bar(aes(y = BIC), stat = "identity", position = "dodge", fill = "red", alpha = 0.7) +
-  ylab("Value") +
-  ggtitle("Comparison of AIC and BIC for Models") +
-  theme_minimal() +
-  scale_y_continuous(sec.axis = sec_axis(~., name = "BIC")) +
-  theme(axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1))
-
+# Save the plot
+#output_file <- file.path(out_dir, "delta_combined_omics_models_feb20.png")
+#ggsave(output_file, plot_model, width = 10, height = 6)
 
 ### Check Correlations
 cor_matrix <- cor((all_omic)[3:7], 
@@ -1196,4 +1282,70 @@ ggplot(melted_cor_matrix,
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1, size = 3),
     axis.text.y = element_text(angle = 0, hjust = 1, size = 3)) + 
-  labs(title = "Correlations btwn single omics & actual BMI", fill = "Correlation")
+  labs(title = "Correlations btwn HIGH corr pathway2", fill = "Correlation")
+
+# Run the ANOVA tests
+anova_basic_meta <- anova(lm_basic, lm_meta_basic)
+anova_basic_tax <- anova(lm_basic, lm_basic_tax)
+anova_basic_micom <- anova(lm_basic, lm_basic_micom)
+anova_basic_path <- anova(lm_basic, lm_basic_path)
+anova_basic_all <- anova(lm_basic, lm_basic_all_omic)
+
+meta_r <- rsq.lmm(lm_meta,adj=TRUE)
+basic_r <- rsq.lmm(lm_basic,adj=TRUE)
+meta_basic_r <- rsq.lmm(lm_meta_basic,adj=TRUE)
+tax_basic_r <- rsq.lmm(lm_basic_tax,adj=TRUE)
+micom_basic_r <- rsq.lmm(lm_basic_micom,adj=TRUE)
+path_basic_r <- rsq.lmm(lm_basic_path,adj=TRUE)
+all_r <- rsq.lmm(lm_basic_all_omic,adj=TRUE)
+
+### Plot r-squared 
+# Create a data frame with model names and their corresponding R-squared values
+r_squared_data <- data.frame(
+  Model = rep(c("lm_basic", "lm_basic_meta", "lm_basic_tax", 
+                "lm_basic_micom", "lm_basic_path", "basic_all_omic"), each = 3),
+  Type = rep(c("Model_Total", "Fixed_Effects", "Random_Effects"), times = 6),
+  R_squared = c(path_basic_r$model, path_basic_r$fixed, path_basic_r$random,
+                meta_basic_r$model, meta_basic_r$fixed, meta_basic_r$random,
+                tax_basic_r$model, tax_basic_r$fixed, tax_basic_r$random,
+                micom_basic_r$model, micom_basic_r$fixed, micom_basic_r$random,
+                basic_r$model, basic_r$fixed, basic_r$random,
+                all_r$model, all_r$fixed, all_r$random))
+
+# Plot the data using ggplot2
+r2_plot <- ggplot(r_squared_data, aes(x = Model, y = R_squared, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(x = "Model", y = "R Squared", 
+       title = "R Squared for Different Models (glmlasso delta)") +
+  scale_fill_manual(values = c("lightblue", "lightgreen", "lightcoral")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ylim(0, 0.6)
+
+output_file <- file.path(out_dir, "glm_delta_r2_models_feb20.png")
+ggsave(output_file, r2_plot, width = 10, height = 6)
+
+### PLOT ANOVA RESULTS
+anova_results <- data.frame(
+  Model_Comparison = c("basic vs meta + basic", "basic vs basic + tax", 
+                       "basic vs basic + micom", "basic vs basic + path",
+                       "basic vs basic + all omic"),
+  L_Ratio = c(anova_basic_meta$L.Ratio[2], anova_basic_tax$L.Ratio[2], 
+              anova_basic_micom$L.Ratio[2], anova_basic_path$L.Ratio[2],
+              anova_basic_all$L.Ratio[2]),
+  p_value = c(anova_basic_meta$`p-value`[2], anova_basic_tax$`p-value`[2], 
+              anova_basic_micom$`p-value`[2], anova_basic_path$`p-value`[2],
+              anova_basic_all$`p-value`[2]))
+
+# Plot ANOVA
+anova_plot <- ggplot(anova_results, aes(x = Model_Comparison, y = L_Ratio)) +
+  geom_bar(stat = "identity", fill = "skyblue") +  # Create bars
+  geom_text(aes(label = round(p_value, 3)), vjust = -0.5) +  # Add p_value above the bars
+  theme_minimal() +  # Clean theme
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  
+  labs(x = "Model Comparison", y = "L Ratio", 
+       title = "L Ratio for Each Model Comparison (glmlasso delta models)") +
+  ylim(0, 7)
+
+output_file <- file.path(out_dir, "glm_delta_anova_models_feb20.png")
+ggsave(output_file, anova_plot, width = 10, height = 6)
