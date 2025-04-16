@@ -662,8 +662,8 @@ def run_merf_analysis_old2(X, Y, Z, clusters_train,
 
 def run_merf_analysis2(X, Y, Z, clusters_train, 
                       X_new, Y_new, Z_new, clusters_new,
-                      df, 
-                      output_dir, r2_out, r2_adj_out, feature_imp_out, results_filename, time_new):
+                      df, output_dir, r2_out, r2_adj_out, 
+                      feature_imp_out, results_filename, time_new):
     import pandas as pd
     import numpy as np
     from merf import MERF
@@ -782,6 +782,22 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
         })
         top_features = feature_importance_df.sort_values(by='Importance', ascending=False).head(15)
 
+        # Check if top_features is empty
+        if top_features.empty:
+            print(f"No top features found for {model_name}. Skipping plot.")
+        else:
+            # Plot top feature importances
+            plt.figure(figsize=(10, 6))
+            plt.barh(top_features['Feature'], top_features['Importance'], color='skyblue')
+            plt.xlabel('Importance')
+            plt.title('Top 15 Feature Importances')
+            plt.gca().invert_yaxis()  # Invert y-axis to have the highest importance on top
+            plt.tight_layout()
+
+            # Save the plot
+            plt.savefig(os.path.join(output_dir, feature_imp_out), dpi=300, bbox_inches='tight')
+            plt.show()
+
         # Append results to the DataFrame for each y_hat_new value
         for y_hat, cluster, time in zip(y_hat_new, clusters_new, time_new):  # Associate each y_hat_new with its corresponding cluster and time
             new_row = pd.DataFrame({
@@ -793,9 +809,6 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
                 'Time': [time]  # Added time information
             })
             results_df = pd.concat([results_df, new_row], ignore_index=True)
-
-    # Save results to CSV
-    results_df.to_csv(os.path.join(output_dir, results_filename), index=False)
 
     # Calculate R-squared values for each model
     r2_values = {
@@ -812,6 +825,9 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
         'OOB Model': manual_r2_score(Y_new, oob_merf.predict(X_new, Z_new, clusters_new))
     }
 
+    # Save results to CSV
+    results_df.to_csv(os.path.join(output_dir, results_filename), index=False)
+
     # Plot R-squared values
     plt.figure(figsize=(8, 5))
     plt.bar(r2_values.keys(), r2_values.values(), color=['#F88F79', '#F0F879', '#ACF0F8', '#86B874'])
@@ -819,7 +835,8 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
     plt.title('R-squared Comparison of MERF Models')
     plt.ylim(0, 1)  # Adjusted to show full range of R-squared values
     plt.xticks(rotation=45)
-    plt.savefig(os.path.join(output_dir, r2_out), dpi=300, bbox_inches='tight')
+    r2_plot = plt.gcf()  # Get current figure
+    r2_plot.savefig(os.path.join(output_dir, r2_out), dpi=300, bbox_inches='tight')  # Save the plot to the output directory
     plt.show()
 
     # Plot adj R-squared values
@@ -829,7 +846,8 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
     plt.title('R-squared Comparison of MERF Models')
     plt.ylim(0, 1)  # Adjusted to show full range of R-squared values
     plt.xticks(rotation=45)
-    plt.savefig(os.path.join(output_dir, r2_adj_out), dpi=300, bbox_inches='tight')
+    r2_adj_plot = plt.gcf()  # Get current figure
+    r2_adj_plot.savefig(os.path.join(output_dir, r2_adj_out), dpi=300, bbox_inches='tight')  # Save the plot to the output directory
     plt.show()
 
     # Determine the model with the highest R-squared value

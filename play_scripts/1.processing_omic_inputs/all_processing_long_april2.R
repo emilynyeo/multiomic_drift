@@ -1,6 +1,6 @@
 # April 2nd 
 # Combined all input processing script 
-
+rm(list = ls())
 pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
                readr, car, RColorBrewer, gridExtra, mlbench, earth, ggplot2, missForest,
                AppliedPredictiveModeling, caret, reshape2, corrplot, stringr,
@@ -471,19 +471,21 @@ flux_cleaned[, 2:121] <- lapply(flux_cleaned[, 2:121], as.numeric)
 preProcValues <- preProcess(flux_cleaned[, 2:121], 
                             method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
                             numUnique = 15, verbose = TRUE, freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.95, na.remove = TRUE)
+                            uniqueCut = 10, cutoff = 0.85, na.remove = TRUE)
 
 preProcValues
-flux_all_time_cs <- predict(preProcValues, flux_cleaned[,1:121])
-heatmap(cor(flux_all_time_cs[, 2:71]))
+flux_all_time_cs <- predict(preProcValues, flux_cleaned)
+heatmap(cor(flux_all_time_cs[, 2:ncol(flux_all_time_cs)]))
 
 dim(flux_cleaned) - dim(flux_all_time_cs) # 60 
-my_plt_density(flux_all_time_cs, 2:61, c(-2.5, 2.5), "MICOM z-scored var corr")
-check_normality_and_skewness(flux_all_time_cs, 2:61)
+my_plt_density(flux_all_time_cs, 2:ncol(flux_all_time_cs), 
+               c(-2.5, 2.5), "MICOM z-scored var corr")
+check_normality_and_skewness(flux_all_time_cs, 2:ncol(flux_all_time_cs))
 
 # Process names
 flux_all_time_cs$all_samples <- process_names_all(flux_all_time_cs$sample_id)
 colnames(flux_all_time_cs) <- make.names(colnames(flux_all_time_cs), unique = TRUE)
+
 flux_all_time_cs <- flux_all_time_cs %>%
   mutate(time = case_when(grepl("BL", sample_id) ~ 0, grepl("6m", sample_id) ~ 6, 
                           grepl("12m", sample_id) ~ 12, TRUE ~ NA_real_)) %>%
@@ -580,14 +582,16 @@ nrow(df_time_0)
 nrow(df_time_6)
   
 # Identify numeric columns in both data frames
-numeric_cols_0 <- df_time_0 %>% select_if(is.numeric)
-numeric_cols_6 <- df_time_6 %>% select_if(is.numeric)
+numeric_cols_0 <- df_time_0 %>% select_if(is.numeric) %>% dplyr::select(-c(age, bmi_prs))
+numeric_cols_6 <- df_time_6 %>% select_if(is.numeric) %>% dplyr::select(-c(age, bmi_prs))
 
 # Calculate the change (difference between time 6 and time 0 for numeric columns)
 change_cols <- numeric_cols_6 - numeric_cols_0
 
 # Select non-numeric columns
-non_numeric_cols <- df_time_6 %>% select_if(~ !is.numeric(.))
+non_numeric_cols <- df_time_6 %>%
+  dplyr::select( which(!sapply(., is.numeric)),  # non-numeric columns
+    age, bmi_prs)
 
 # Combine the numeric changes with non-numeric columns
 change_df <- bind_cols(non_numeric_cols, change_cols)
@@ -638,14 +642,15 @@ nrow(df_time_6)
 nrow(df_time_12)
 
 # Identify numeric columns in both data frames
-numeric_cols_6 <- df_time_6 %>% select_if(is.numeric)
-numeric_cols_12 <- df_time_12 %>% select_if(is.numeric)
+numeric_cols_6 <- df_time_6 %>% select_if(is.numeric) %>% dplyr::select(-c(age, bmi_prs))
+numeric_cols_12 <- df_time_12 %>% select_if(is.numeric) %>% dplyr::select(-c(age, bmi_prs))
 
 # Calculate the change (difference between time 6 and time 0 for numeric columns)
 change_cols <- numeric_cols_12 - numeric_cols_6
 
 # Select non-numeric columns
-non_numeric_cols <- df_time_12 %>% select_if(~ !is.numeric(.))
+non_numeric_cols <- df_time_12 %>% dplyr::select( which(!sapply(., is.numeric)),  # non-numeric columns
+                                                  age, bmi_prs)
 
 # Combine the numeric changes with non-numeric columns
 change_df <- bind_cols(non_numeric_cols, change_cols)
@@ -669,7 +674,7 @@ setdiff(colnames(cs_transformed), colnames(tax0_6m))
 setdiff(colnames(tax0_6m), colnames(cs_transformed))
 tax0_6m_slim <- tax0_6m[, intersect(colnames(tax0_6m), colnames(cs_transformed))]
 
-# Make Pathway change 0-6 #
+# Make Pathway change 6-12 #
 load('~/projects/research/Stanislawski/comps/mutli-omic-predictions/data/taxa_change/Change Data/pathway_6_12_pldist_CLR.RData')
 path_0_6 <- quant.clr %>% as.data.frame() %>% rownames_to_column("subject_id")
 length(unique(path_0_6$subject_id))
