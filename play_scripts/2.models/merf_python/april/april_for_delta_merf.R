@@ -9,10 +9,10 @@ library(broom)
 library(knitr)
 
 # Set the input directory
-long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
+delta_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
 
 # Read the data from the CSV file
-long <- read.csv(file.path(long_dir, "long.csv"))
+delta <- read.csv(file.path(delta_dir, "all_delta.csv"))
 
 # Make train and test sets 
 # test sample names
@@ -25,44 +25,44 @@ cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
 
 # Create train and test sets for the current subset
-train_set <- long[long[["subject_id"]] %in% train_names, ]  # Select rows where ID_VAR is in train_names
-test_set <- long[long[["subject_id"]] %in% test_names, ]    # Select rows where ID_VAR is in test_names
+train_set <- delta[delta[["subject_id"]] %in% train_names, ]  # Select rows where ID_VAR is in train_names
+test_set <- delta[delta[["subject_id"]] %in% test_names, ]    # Select rows where ID_VAR is in test_names
 
 test <- test_set %>% dplyr::select(c(subject_id, outcome_BMI_fnl, time))
 
 predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/final_merf_dfs"
 
-basic <- read.csv(file.path(predict_dir, "basic_long.csv")) %>% 
+basic <- read.csv(file.path(predict_dir, "basic_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_basic = y_hat_new)
 
-meta <- read.csv(file.path(predict_dir, "meta_keep_long.csv")) %>% 
+meta <- read.csv(file.path(predict_dir, "meta_keep_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_meta = y_hat_new)
 
-grs <- read.csv(file.path(predict_dir, "only_grs_long.csv")) %>% 
+grs <- read.csv(file.path(predict_dir, "only_grs_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_grs = y_hat_new)
 
-taxa <- read.csv(file.path(predict_dir, "only_taxa_long.csv")) %>% 
+taxa <- read.csv(file.path(predict_dir, "only_taxa_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_taxa = y_hat_new)
 
-pathway <- read.csv(file.path(predict_dir, "only_pathway_long.csv")) %>% 
+pathway <- read.csv(file.path(predict_dir, "only_pathway_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_pathway = y_hat_new)
 
-micom <- read.csv(file.path(predict_dir, "only_micom_long.csv")) %>% 
+micom <- read.csv(file.path(predict_dir, "only_micom_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_micom = y_hat_new)
 
-metabo <- read.csv(file.path(predict_dir, "only_metabo_long.csv")) %>% 
+metabo <- read.csv(file.path(predict_dir, "only_metabo_delta.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_metabo = y_hat_new)
@@ -75,7 +75,7 @@ merged_grs_meta_micom <- merge(merged_grs_meta, micom,
 merged_grs_meta_micom_pathway <- merge(merged_grs_meta_micom, pathway, 
                                        by = c("Model", "Cluster", "Time"))
 merged_grs_meta_micom_pathway_metab <- merge(merged_grs_meta_micom_pathway, metabo, 
-                                       by = c("Model", "Cluster", "Time"))
+                                             by = c("Model", "Cluster", "Time"))
 merged_all <- merge(merged_grs_meta_micom_pathway_metab, taxa, 
                     by = c("Model", "Cluster", "Time"))
 
@@ -94,13 +94,6 @@ for (col in prediction_cols) {
 }
 
 # Select just the R2 columns and Model
-r2_summary <- merged %>%
-  group_by(Model) %>%
-  summarise(across(starts_with("R2_"), mean, na.rm = TRUE)) %>%
-  ungroup()
-print(r2_summary)
-
-
 rm(merged_df, merged_df_small, test_all, merged_grs_meta,
    merged_grs_meta_micom, merged_grs_meta_micom_pathway)
 
@@ -194,6 +187,6 @@ for (df_name in names(dataframes)) {
   html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
   
   # Save the table
-  output_path <- paste0("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/merf_long_anova_table_", df_name, ".html")
+  output_path <- paste0("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/merf_delta_anova_table_", df_name, ".html")
   #writeLines(html_table, output_path)
 }

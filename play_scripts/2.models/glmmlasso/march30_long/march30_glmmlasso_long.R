@@ -22,7 +22,7 @@ long <- read.csv(file.path(long_dir, 'long.csv')) %>%
                  dplyr::select(-c("consent", "record_id", "completer", 
                                   "Peptide_YY", "Ghrelin", "Leptin")) %>%
   dplyr::mutate(time = as.factor(time),
-    subject_id = as.factor(subject_id.x),
+    subject_id = as.factor(subject_id),
     randomized_group = as.factor(randomized_group),
     sex = as.numeric(sex),
     randomized_group = as.numeric(randomized_group),
@@ -47,7 +47,7 @@ ggplot(long, aes(x = range, y = bmi_prs, color = factor(subject_id), group = fac
 # Define the column names based on your lists
 basic <- c('subject_id','BMI', 'range','age', 'sex')
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
-               'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose')
+               'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(long), value = TRUE))
 
 micom_start <- which(names(long) == "Diacetyl")
@@ -58,12 +58,17 @@ path_start <- which(names(long) == "arginine..ornithine.and.proline.interconvers
 path_end <- which(names(long) == "UDP.N.acetyl.D.glucosamine.biosynthesis.I")
 only_pathway <- c('subject_id','BMI', 'range', names(long)[path_start:path_end])
 
+tabo_start <- which(names(long) == "non_HDL_C")
+tabo_end <- which(names(long) == "IDL_TG_pct")
+only_tabo <- c('subject_id','BMI', 'range', names(long)[tabo_start:tabo_end])
+
 # Create data frames based on the columns defined
 basic <- long[, basic, drop = FALSE] %>% unique()
 meta <- long[, meta_keep, drop = FALSE] %>% unique()
 taxa <- long[, only_taxa, drop = FALSE] %>% unique()
 micom <- long[, only_micom, drop = FALSE] %>% unique()
 pathway <- long[, only_pathway, drop = FALSE] %>% unique()
+metabo <- long[, only_tabo, drop = FALSE] %>% unique()
 
 ## Check MICOM correlatioon 
 heatmap(cor(micom[, 4:ncol(micom)]))
@@ -90,7 +95,7 @@ cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
 
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "micom", "pathway", "taxa")
+data_frames <- c("basic", "meta", "micom", "pathway", "taxa", "metabo")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -125,15 +130,15 @@ for (df in data_frames) {
 # Step 5: That prediction in step 4 becomes the "risk score" for that omic
 
 # STEP 1
-#data_frames <- c("micom")
-#df_name <- "micom"
-data_frames <- c("basic", "meta", "taxa", "pathway", "micom")
+#data_frames <- c("metabo")
+#df_name <- "metabo"
+data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo")
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
   numvar <- c() 
-  lambdavec <- seq(from = 10, to = 50, by = 1)
-  lambdy <- 5
+  lambdavec <- seq(from = 10, to = 100, by = 1)
+  #lambdy <- 5
   # Loop through each lambda value to perform Lasso regression
   for (lambdy in lambdavec) {
     predictors <- setdiff(names(train_data), c("BMI", "subject_id", "range"))
@@ -207,10 +212,18 @@ for (df_name in data_frames) {
   # STEP Predict on test data 
   test_data <- test_data[complete.cases(test_data),]  # Filter complete cases
   pred_risk_scores <- predict(best_model, test_data)
+  range_long <- test_data$range
+  sub_ids <- test_data$subject_id
+  actual_bmi <- test_data$BMI
+  pred_df <- data.frame(
+    subject_id = as.character(sub_ids),
+    time = as.numeric(range_long), 
+    actual = as.numeric(actual_bmi),
+    predicted = as.numeric(pred_risk_scores))
   
   # Combine predicted and actual values
-  pred_df <- as.data.frame(cbind(test_data$subject_id, test_data$range, test_data$BMI, pred_risk_scores))
-  colnames(pred_df) <- c("subject_id", "time", "actual", "predicted")
+  #pred_df <- as.data.frame(cbind(test_data$subject_id, test_data$range, test_data$BMI, pred_risk_scores))
+  #colnames(pred_df) <- c("subject_id", "time", "actual", "predicted")
   assign(paste0(df_name, "_pred_df"), pred_df) # Dynamically assign the prediction results
   
   # Calculate R-squared value
@@ -265,6 +278,10 @@ pathway_pred_df[, head(names(pathway_pred_df), 2)] <-
   lapply(pathway_pred_df[, head(names(pathway_pred_df), 2)], as.factor) 
 pathway_pred_df <- pathway_pred_df %>% dplyr::rename(y_new_path_only = predicted)
 
+metabo_pred_df[, head(names(metabo_pred_df), 2)] <- 
+  lapply(metabo_pred_df[, head(names(metabo_pred_df), 2)], as.factor) 
+metabo_pred_df <- metabo_pred_df %>% dplyr::rename(y_new_metabo_only = predicted)
+
 met_basic <- merge(basic_pred_df, meta_pred_df, by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
@@ -280,7 +297,11 @@ met_tax_micom_path <- merge(met_tax_micom, pathway_pred_df,
                             by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-all_omic <- unique(met_tax_micom_path)
+met_tax_micom_path_tabo <- merge(met_tax_micom_path, metabo_pred_df, 
+                            by = c("subject_id", "time")) %>% 
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_omic <- unique(met_tax_micom_path_tabo)
 
 # Center and scale the last 5 columns of the dataframe
 #all_omic[, 3:8] <- scale(all_omic[, 3:8])
@@ -295,18 +316,22 @@ lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta_only + Time + (1|Cluster), da
 lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_path_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_tax_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_metabo_b <- lmer(bmi ~ y_new_basic + y_new_metabo_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_time_b <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic, lmer_meta_b, test = "LRT")
 anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
+anova(lmer_basic, lmer_metabo_b, test = "LRT")
 
 glmmlong_models <- list(
   c("lmer_basic", "lmer_meta_b"),
   c("lmer_basic", "lmer_micom_b"),
   c("lmer_basic", "lmer_tax_b"),
-  c("lmer_basic", "lmer_path_b"))
+  c("lmer_basic", "lmer_path_b"),
+  c("lmer_basic", "lmer_metabo_b"))
+
 library(lme4)  # Make sure the lme4 package is loaded=
 anova_results <- list()
 for (model_pair in glmmlong_models) {
@@ -337,23 +362,26 @@ html_table <- kable(anova_table_clean, format = "html", table.attr = "class='tab
 #writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/lasso_anova_table.html")
 
 # Repeat without time 
-### Single plus omic including time 
+### Single plus omic not including time 
 lmer_basic_noT <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_meta_b_noT <- lmer(bmi ~ y_new_basic + y_new_meta_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom_b_noT <- lmer(bmi ~ y_new_basic + y_new_micom_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b_noT <- lmer(bmi ~ y_new_basic + y_new_path_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b_noT <- lmer(bmi ~ y_new_basic + y_new_tax_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_metabo_b_noT <- lmer(bmi ~ y_new_basic + y_new_metabo_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_time_b_noT <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic_noT, lmer_meta_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_micom_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_tax_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_path_b_noT, test = "LRT")
+anova(lmer_basic_noT, lmer_metabo_b_noT, test = "LRT")
 
 glmmlong_models_noT <- list(
   c("lmer_basic_noT", "lmer_meta_b_noT"),
   c("lmer_basic_noT", "lmer_micom_b_noT"),
   c("lmer_basic_noT", "lmer_tax_b_noT"),
+  c("lmer_basic_noT", "lmer_path_b_noT"),
   c("lmer_basic_noT", "lmer_path_b_noT"))
 library(lme4)  # Make sure the lme4 package is loaded=
 anova_results_noT <- list()
@@ -379,3 +407,7 @@ anova_table_clean <- anova_table %>%
 
 # View the combined table
 print(anova_table_clean)
+html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
+
+# Save the table as an HTML file
+writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/april_glemmlasso_long_anova_table_noT.html")

@@ -29,7 +29,7 @@ all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>%
                        dplyr::select(-c("...1", "consent", "completer", 
                                         "Peptide_YY", "Ghrelin", "Leptin")) %>%
   dplyr::mutate(time = as.factor(time),
-                subject_id = as.factor(subject_id.x),
+                subject_id = as.factor(subject_id),
                 randomized_group = as.factor(randomized_group),
                 sex = as.numeric(sex),
                 race = as.numeric(race)) %>% rename(BMI = outcome_BMI_fnl,
@@ -43,7 +43,7 @@ all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>%
 # Define the column names based on your lists
 basic <- c('subject_id','BMI', 'range', 'sex', 'age') #
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
-               'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose') # 
+               'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x') # 
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(all_deltas), value = TRUE))
 
 micom_start <- which(names(all_deltas) == "Diacetyl")
@@ -54,12 +54,17 @@ path_start <- which(names(all_deltas) == "arginine..ornithine.and.proline.interc
 path_end <- which(names(all_deltas) == "UDP.N.acetyl.D.glucosamine.biosynthesis.I")
 only_pathway <- c('subject_id','BMI', 'range', names(all_deltas)[path_start:path_end])
 
+tabo_start <- which(names(all_deltas) == "non_HDL_C")
+tabo_end <- which(names(all_deltas) == "IDL_TG_pct")
+only_tabo <- c('subject_id','BMI', 'range', names(all_deltas)[tabo_start:tabo_end])
+
 # Create data frames based on the columns defined
 basic <- all_deltas[, basic, drop = FALSE] %>% unique()
 meta <- all_deltas[, meta_keep, drop = FALSE] %>% unique()
 taxa <- all_deltas[, only_taxa, drop = FALSE] %>% unique()
 micom <- all_deltas[, only_micom, drop = FALSE] %>% unique()
 pathway <- all_deltas[, only_pathway, drop = FALSE] %>% unique()
+metabo <- all_deltas[, only_tabo, drop = FALSE] %>% unique()
 
 # Make train and test set
 # Test sample names
@@ -79,7 +84,7 @@ table(subject_id_count$range_count)
 missing_subjects  <- subject_id_count %>% dplyr::filter(range_count != 3)
 
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "micom", "pathway", "taxa")
+data_frames <- c("basic", "meta", "micom", "pathway", "taxa", "metabo")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -103,7 +108,8 @@ heatmap(cor(micom_train[, c(2, 4:ncol(micom_train))]))
 # STEP 1
 #data_frames <- c("micom") # "basic",
 #df_name <- "basic"
-data_frames <- c("basic", "meta", "taxa", "pathway", "micom") #
+data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo") #
+#data_frames <- c("metabo")
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -193,10 +199,18 @@ for (df_name in data_frames) {
   # STEP 3:  Predict on test data 
   test_data <- test_data[complete.cases(test_data),] %>% as.data.frame() # Filter complete cases
   pred_risk_scores <- predict(best_model, test_data)
+  range_long <- test_data$range
+  sub_ids <- test_data$subject_id
+  actual_bmi <- test_data$BMI
+  pred_df <- data.frame(
+    subject_id = as.character(sub_ids),
+    time = as.numeric(range_long), 
+    actual = as.numeric(actual_bmi),
+    predicted = as.numeric(pred_risk_scores))
   
   # Combine predicted and actual values
-  pred_df <- as.data.frame(cbind(test_data$subject_id, test_data$range, test_data$BMI, pred_risk_scores))
-  colnames(pred_df) <- c("subject_id", "time", "actual", paste0(df_name, "_predicted"))
+  #pred_df <- as.data.frame(cbind(test_data$subject_id, test_data$range, test_data$BMI, pred_risk_scores))
+  #colnames(pred_df) <- c("subject_id", "time", "actual", paste0(df_name, "_predicted"))
   assign(paste0(df_name, "_delta_pred_df"), pred_df) # Dynamically assign the prediction results
   
   # Calculate R-squared value
@@ -228,6 +242,12 @@ for (df_name in data_frames) {
 }
 
 ################################################################################
+meta_delta_pred_df <- meta_delta_pred_df %>% rename(meta_predicted = predicted)
+basic_delta_pred_df <- basic_delta_pred_df %>% rename(basic_predicted = predicted)
+taxa_delta_pred_df <- taxa_delta_pred_df %>% rename(taxa_predicted = predicted)
+micom_delta_pred_df <- micom_delta_pred_df %>% rename(micom_predicted = predicted)
+pathway_delta_pred_df <- pathway_delta_pred_df %>% rename(pathway_predicted = predicted)
+metabo_delta_pred_df <- metabo_delta_pred_df %>% rename(metabo_predicted = predicted)
 
 ##### Compare models
 met_tax <- merge(meta_delta_pred_df, taxa_delta_pred_df, 
@@ -242,7 +262,11 @@ met_tax_micom_path <- merge(met_tax_micom, pathway_delta_pred_df,
                             by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-all_omic <- merge(basic_delta_pred_df, met_tax_micom_path, 
+met_tax_micom_path_tab <- merge(met_tax_micom_path, metabo_delta_pred_df, 
+                                by = c("subject_id", "time")) %>%
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+  
+all_omic <- merge(basic_delta_pred_df, met_tax_micom_path_tab, 
                   by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% unique()
 
@@ -256,7 +280,8 @@ mod_dat = all_omic %>% dplyr::rename(bmi = actual,
                               y_new_meta_only = meta_predicted,
                               y_new_micom_only = micom_predicted,
                               y_new_path_only = pathway_predicted,
-                              y_new_tax_only = taxa_predicted)
+                              y_new_tax_only = taxa_predicted,
+                              y_new_metab_only = metabo_predicted)
 
 mod_dat$Time <- as.numeric(mod_dat$Time)
 
@@ -266,27 +291,14 @@ lmer_meta_b <- lmer(bmi ~ y_new_basic_only + y_new_meta_only + (1|Cluster), data
 lmer_micom_b <- lmer(bmi ~ y_new_basic_only + y_new_micom_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b <- lmer(bmi ~ y_new_basic_only + y_new_path_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b <- lmer(bmi ~ y_new_basic_only + y_new_tax_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_metabo_b <- lmer(bmi ~ y_new_basic_only + y_new_metab_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_time_b <- lmer(bmi ~ y_new_basic_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic, lmer_meta_b)
 anova(lmer_basic, lmer_micom_b)
 anova(lmer_basic, lmer_path_b)
 anova(lmer_basic, lmer_tax_b)
-
-# Combined PTEV models sequential 
-sjPlot::tab_model(basic, meta_basic, 
-                  meta_basic_tax, meta_basic_tax_path, 
-                  meta_basic_tax_path_micom,
-                  title = "glmlasso delta sequential lmer models",
-                  string.pred = "Predictors",
-                  string.est = "Estimate",
-                  string.std = "std. Beta",
-                  string.ci = "95% CI",
-                  string.se = "std. Error",
-                  p.style = c("numeric"), 
-                  p.threshold = c(0.05),
-                  #dv.labels = model_titles,
-                  auto.label = FALSE)
+anova(lmer_basic, lmer_metabo_b)
 
 # https://joshuawiley.com/MonashHonoursStatistics/LMM_Comparison.html#nested-models-in-r
 # Basic vs Basic + meta
@@ -298,13 +310,13 @@ anova(lmer_basic, lmer_meta_b, test = "LRT")
 anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
-
-
+anova(lmer_basic, lmer_metabo_b, test = "LRT")
 glmmlass_lmer_models <- list(
   c("lmer_basic", "lmer_meta_b"),
   c("lmer_basic", "lmer_tax_b"),
   c("lmer_basic", "lmer_micom_b"),
-  c("lmer_basic", "lmer_path_b"))
+  c("lmer_basic", "lmer_path_b"),
+  c("lmer_basic", "lmer_metabo_b"))
 
 library(lme4)  # Make sure the lme4 package is loaded
 
@@ -338,169 +350,169 @@ print(anova_table_clean)
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
 
 # Save the table as an HTML file
-#writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/glmmlasso_delta_anova_table.html")
+writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/april_glemmlasso_delta_anova_table.html")
 
 ########################################################################################
-library(nlme)
-all_omic$subject_id <- as.factor(all_omic$subject_id)
-all_omic$time <- as.factor(all_omic$time)
-
-# Make linear models 
-basic_model <- lme(actual ~ basic_predicted + time, 
-                   random = ~1|subject_id, data = all_omic)
-
-# Combined models 
-lm_meta_tax_time <- lme(actual ~ meta_predicted + taxa_predicted + time, 
-                        random = ~1|subject_id, data = all_omic)
-summary(lm_meta_tax_time)
-
-### Checks before models 
-vif(lm(actual ~ meta_predicted + taxa_predicted + micom_predicted + time, data = all_omic))
-summary(all_omic)
-table(all_omic$subject_id)
-cor(all_omic[, c("meta_predicted", "taxa_predicted", "micom_predicted")])
-hist(all_omic$actual)
-anyDuplicated(all_omic)
-
-# Fit a simpler model first
-lm_path <- lme(actual ~ pathway_predicted, random = ~1|subject_id, data = all_omic)
-lm_micom <- lme(actual ~ micom_predicted, random = ~1|subject_id, data = all_omic)
-lm_tax <- lme(actual ~ taxa_predicted, random = ~1|subject_id, data = all_omic)
-lm_meta <- lme(actual ~ meta_predicted, random = ~1|subject_id, data = all_omic)
-lm_basic <- lme(actual ~ basic_predicted, random = ~1|subject_id, data = all_omic)
-
-model_titles <- c("1: Basic",
-                  "2: Meta", 
-                  "3: Taxa", 
-                  "4: Micom", 
-                  "5: Pathway")
-
-# Create the table as a grid object
-sjPlot::tab_model(lm_basic, lm_meta, lm_tax, 
-                  lm_micom, lm_path, 
-                  title = "Comparing single omic glmLASSO models deltas",
-                  string.pred = "Predictors",
-                  string.est = "Estimate",
-                  string.std = "std. Beta",
-                  string.ci = "95% CI",
-                  string.se = "std. Error",
-                  p.style = c("numeric"), 
-                  p.threshold = c(0.05),
-                  dv.labels = model_titles,
-                  auto.label = FALSE)
-### Combined 
-lm_basic <- lme(actual ~ basic_predicted, 
-                random = ~1|subject_id, data = all_omic)
-lm_meta_basic <- lme(actual ~ basic_predicted + meta_predicted, 
-                     random = ~1|subject_id, data = all_omic)
-lm_basic_tax <- lme(actual ~ basic_predicted + taxa_predicted, 
-                    random = ~1|subject_id, data = all_omic)
-lm_basic_micom <- lme(actual ~ basic_predicted + micom_predicted, 
-                      random = ~1|subject_id, data = all_omic)
-lm_basic_path <- lme(actual ~ basic_predicted + pathway_predicted, 
-                     random = ~1|subject_id, data = all_omic)
-
-# Define model titles for clarity
-model_titles <- c("Model 0: Basic" ,
-                  "Model 1: Basic + Meta", 
-                  "Model 2: Basic + Taxa", 
-                  "Model 3: Basic + Micom", 
-                  "Model 4: Basic + Pathway")
-
-sjPlot::tab_model(lm_basic, lm_meta_basic, lm_basic_tax, 
-                  lm_basic_micom, lm_basic_path, 
-                  title = "Comparing combined omic delta models",
-                  string.pred = "Predictors",
-                  string.est = "Estimates",
-                  string.std = "std. Beta",
-                  string.ci = "95% CI",
-                  string.se = "std. Error",
-                  p.style = c("numeric"), 
-                  p.threshold = c(0.05),
-                  dv.labels = model_titles,
-                  auto.label = FALSE)
+# library(nlme)
+# all_omic$subject_id <- as.factor(all_omic$subject_id)
+# all_omic$time <- as.factor(all_omic$time)
+# 
+# # Make linear models 
+# basic_model <- lme(actual ~ basic_predicted + time, 
+#                    random = ~1|subject_id, data = all_omic)
+# 
+# # Combined models 
+# lm_meta_tax_time <- lme(actual ~ meta_predicted + taxa_predicted + time, 
+#                         random = ~1|subject_id, data = all_omic)
+# summary(lm_meta_tax_time)
+# 
+# ### Checks before models 
+# vif(lm(actual ~ meta_predicted + taxa_predicted + micom_predicted + time, data = all_omic))
+# summary(all_omic)
+# table(all_omic$subject_id)
+# cor(all_omic[, c("meta_predicted", "taxa_predicted", "micom_predicted")])
+# hist(all_omic$actual)
+# anyDuplicated(all_omic)
+# 
+# # Fit a simpler model first
+# lm_path <- lme(actual ~ pathway_predicted, random = ~1|subject_id, data = all_omic)
+# lm_micom <- lme(actual ~ micom_predicted, random = ~1|subject_id, data = all_omic)
+# lm_tax <- lme(actual ~ taxa_predicted, random = ~1|subject_id, data = all_omic)
+# lm_meta <- lme(actual ~ meta_predicted, random = ~1|subject_id, data = all_omic)
+# lm_basic <- lme(actual ~ basic_predicted, random = ~1|subject_id, data = all_omic)
+# 
+# model_titles <- c("1: Basic",
+#                   "2: Meta", 
+#                   "3: Taxa", 
+#                   "4: Micom", 
+#                   "5: Pathway")
+# 
+# # Create the table as a grid object
+# sjPlot::tab_model(lm_basic, lm_meta, lm_tax, 
+#                   lm_micom, lm_path, 
+#                   title = "Comparing single omic glmLASSO models deltas",
+#                   string.pred = "Predictors",
+#                   string.est = "Estimate",
+#                   string.std = "std. Beta",
+#                   string.ci = "95% CI",
+#                   string.se = "std. Error",
+#                   p.style = c("numeric"), 
+#                   p.threshold = c(0.05),
+#                   dv.labels = model_titles,
+#                   auto.label = FALSE)
+# ### Combined 
+# lm_basic <- lme(actual ~ basic_predicted, 
+#                 random = ~1|subject_id, data = all_omic)
+# lm_meta_basic <- lme(actual ~ basic_predicted + meta_predicted, 
+#                      random = ~1|subject_id, data = all_omic)
+# lm_basic_tax <- lme(actual ~ basic_predicted + taxa_predicted, 
+#                     random = ~1|subject_id, data = all_omic)
+# lm_basic_micom <- lme(actual ~ basic_predicted + micom_predicted, 
+#                       random = ~1|subject_id, data = all_omic)
+# lm_basic_path <- lme(actual ~ basic_predicted + pathway_predicted, 
+#                      random = ~1|subject_id, data = all_omic)
+# 
+# # Define model titles for clarity
+# model_titles <- c("Model 0: Basic" ,
+#                   "Model 1: Basic + Meta", 
+#                   "Model 2: Basic + Taxa", 
+#                   "Model 3: Basic + Micom", 
+#                   "Model 4: Basic + Pathway")
+# 
+# sjPlot::tab_model(lm_basic, lm_meta_basic, lm_basic_tax, 
+#                   lm_basic_micom, lm_basic_path, 
+#                   title = "Comparing combined omic delta models",
+#                   string.pred = "Predictors",
+#                   string.est = "Estimates",
+#                   string.std = "std. Beta",
+#                   string.ci = "95% CI",
+#                   string.se = "std. Error",
+#                   p.style = c("numeric"), 
+#                   p.threshold = c(0.05),
+#                   dv.labels = model_titles,
+#                   auto.label = FALSE)
 
 # Save the plot
 #output_file <- file.path(out_dir, "delta_combined_omics_models_feb20.png")
 #ggsave(output_file, plot_model, width = 10, height = 6)
 
-### Check Correlations
-cor_matrix <- cor((all_omic)[3:7], 
-                  use = "pairwise.complete.obs", method = "pearson")
-melted_cor_matrix <- melt(cor_matrix, na.rm = TRUE)
-ggplot(melted_cor_matrix, 
-       aes(Var1, Var2, fill = value)) +
-  geom_tile() +
-  scale_fill_gradient2(low = "blue", 
-                       high = "red") +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, size = 3),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 3)) + 
-  labs(title = "Correlations btwn HIGH corr pathway2", fill = "Correlation")
-
-# Run the ANOVA tests
-anova_basic_meta <- anova(lm_basic, lm_meta_basic)
-anova_basic_tax <- anova(lm_basic, lm_basic_tax)
-anova_basic_micom <- anova(lm_basic, lm_basic_micom)
-anova_basic_path <- anova(lm_basic, lm_basic_path)
-anova_basic_all <- anova(lm_basic, lm_basic_all_omic)
-
-meta_r <- rsq.lmm(lm_meta,adj=TRUE)
-basic_r <- rsq.lmm(lm_basic,adj=TRUE)
-meta_basic_r <- rsq.lmm(lm_meta_basic,adj=TRUE)
-tax_basic_r <- rsq.lmm(lm_basic_tax,adj=TRUE)
-micom_basic_r <- rsq.lmm(lm_basic_micom,adj=TRUE)
-path_basic_r <- rsq.lmm(lm_basic_path,adj=TRUE)
-all_r <- rsq.lmm(lm_basic_all_omic,adj=TRUE)
-
-### Plot r-squared 
-# Create a data frame with model names and their corresponding R-squared values
-r_squared_data <- data.frame(
-  Model = rep(c("lm_basic", "lm_basic_meta", "lm_basic_tax", 
-                "lm_basic_micom", "lm_basic_path", "basic_all_omic"), each = 3),
-  Type = rep(c("Model_Total", "Fixed_Effects", "Random_Effects"), times = 6),
-  R_squared = c(path_basic_r$model, path_basic_r$fixed, path_basic_r$random,
-                meta_basic_r$model, meta_basic_r$fixed, meta_basic_r$random,
-                tax_basic_r$model, tax_basic_r$fixed, tax_basic_r$random,
-                micom_basic_r$model, micom_basic_r$fixed, micom_basic_r$random,
-                basic_r$model, basic_r$fixed, basic_r$random,
-                all_r$model, all_r$fixed, all_r$random))
-
-# Plot the data using ggplot2
-r2_plot <- ggplot(r_squared_data, aes(x = Model, y = R_squared, fill = Type)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  theme_minimal() +
-  labs(x = "Model", y = "R Squared", 
-       title = "R Squared for Different Models (glmlasso delta)") +
-  scale_fill_manual(values = c("lightblue", "lightgreen", "lightcoral")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylim(0, 0.6)
-
-output_file <- file.path(out_dir, "glm_delta_r2_models_feb20.png")
-ggsave(output_file, r2_plot, width = 10, height = 6)
-
-### PLOT ANOVA RESULTS
-anova_results <- data.frame(
-  Model_Comparison = c("basic vs meta + basic", "basic vs basic + tax", 
-                       "basic vs basic + micom", "basic vs basic + path",
-                       "basic vs basic + all omic"),
-  L_Ratio = c(anova_basic_meta$L.Ratio[2], anova_basic_tax$L.Ratio[2], 
-              anova_basic_micom$L.Ratio[2], anova_basic_path$L.Ratio[2],
-              anova_basic_all$L.Ratio[2]),
-  p_value = c(anova_basic_meta$`p-value`[2], anova_basic_tax$`p-value`[2], 
-              anova_basic_micom$`p-value`[2], anova_basic_path$`p-value`[2],
-              anova_basic_all$`p-value`[2]))
-
-# Plot ANOVA
-anova_plot <- ggplot(anova_results, aes(x = Model_Comparison, y = L_Ratio)) +
-  geom_bar(stat = "identity", fill = "skyblue") +  # Create bars
-  geom_text(aes(label = round(p_value, 3)), vjust = -0.5) +  # Add p_value above the bars
-  theme_minimal() +  # Clean theme
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  
-  labs(x = "Model Comparison", y = "L Ratio", 
-       title = "L Ratio for Each Model Comparison (glmlasso delta models)") +
-  ylim(0, 7)
-
-output_file <- file.path(out_dir, "glm_delta_anova_models_feb20.png")
-ggsave(output_file, anova_plot, width = 10, height = 6)
+# ### Check Correlations
+# cor_matrix <- cor((all_omic)[3:7], 
+#                   use = "pairwise.complete.obs", method = "pearson")
+# melted_cor_matrix <- melt(cor_matrix, na.rm = TRUE)
+# ggplot(melted_cor_matrix, 
+#        aes(Var1, Var2, fill = value)) +
+#   geom_tile() +
+#   scale_fill_gradient2(low = "blue", 
+#                        high = "red") +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_text(angle = 90, hjust = 1, size = 3),
+#     axis.text.y = element_text(angle = 0, hjust = 1, size = 3)) + 
+#   labs(title = "Correlations btwn HIGH corr pathway2", fill = "Correlation")
+# 
+# # Run the ANOVA tests
+# anova_basic_meta <- anova(lm_basic, lm_meta_basic)
+# anova_basic_tax <- anova(lm_basic, lm_basic_tax)
+# anova_basic_micom <- anova(lm_basic, lm_basic_micom)
+# anova_basic_path <- anova(lm_basic, lm_basic_path)
+# anova_basic_all <- anova(lm_basic, lm_basic_all_omic)
+# 
+# meta_r <- rsq.lmm(lm_meta,adj=TRUE)
+# basic_r <- rsq.lmm(lm_basic,adj=TRUE)
+# meta_basic_r <- rsq.lmm(lm_meta_basic,adj=TRUE)
+# tax_basic_r <- rsq.lmm(lm_basic_tax,adj=TRUE)
+# micom_basic_r <- rsq.lmm(lm_basic_micom,adj=TRUE)
+# path_basic_r <- rsq.lmm(lm_basic_path,adj=TRUE)
+# all_r <- rsq.lmm(lm_basic_all_omic,adj=TRUE)
+# 
+# ### Plot r-squared 
+# # Create a data frame with model names and their corresponding R-squared values
+# r_squared_data <- data.frame(
+#   Model = rep(c("lm_basic", "lm_basic_meta", "lm_basic_tax", 
+#                 "lm_basic_micom", "lm_basic_path", "basic_all_omic"), each = 3),
+#   Type = rep(c("Model_Total", "Fixed_Effects", "Random_Effects"), times = 6),
+#   R_squared = c(path_basic_r$model, path_basic_r$fixed, path_basic_r$random,
+#                 meta_basic_r$model, meta_basic_r$fixed, meta_basic_r$random,
+#                 tax_basic_r$model, tax_basic_r$fixed, tax_basic_r$random,
+#                 micom_basic_r$model, micom_basic_r$fixed, micom_basic_r$random,
+#                 basic_r$model, basic_r$fixed, basic_r$random,
+#                 all_r$model, all_r$fixed, all_r$random))
+# 
+# # Plot the data using ggplot2
+# r2_plot <- ggplot(r_squared_data, aes(x = Model, y = R_squared, fill = Type)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   theme_minimal() +
+#   labs(x = "Model", y = "R Squared", 
+#        title = "R Squared for Different Models (glmlasso delta)") +
+#   scale_fill_manual(values = c("lightblue", "lightgreen", "lightcoral")) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   ylim(0, 0.6)
+# 
+# output_file <- file.path(out_dir, "glm_delta_r2_models_feb20.png")
+# ggsave(output_file, r2_plot, width = 10, height = 6)
+# 
+# ### PLOT ANOVA RESULTS
+# anova_results <- data.frame(
+#   Model_Comparison = c("basic vs meta + basic", "basic vs basic + tax", 
+#                        "basic vs basic + micom", "basic vs basic + path",
+#                        "basic vs basic + all omic"),
+#   L_Ratio = c(anova_basic_meta$L.Ratio[2], anova_basic_tax$L.Ratio[2], 
+#               anova_basic_micom$L.Ratio[2], anova_basic_path$L.Ratio[2],
+#               anova_basic_all$L.Ratio[2]),
+#   p_value = c(anova_basic_meta$`p-value`[2], anova_basic_tax$`p-value`[2], 
+#               anova_basic_micom$`p-value`[2], anova_basic_path$`p-value`[2],
+#               anova_basic_all$`p-value`[2]))
+# 
+# # Plot ANOVA
+# anova_plot <- ggplot(anova_results, aes(x = Model_Comparison, y = L_Ratio)) +
+#   geom_bar(stat = "identity", fill = "skyblue") +  # Create bars
+#   geom_text(aes(label = round(p_value, 3)), vjust = -0.5) +  # Add p_value above the bars
+#   theme_minimal() +  # Clean theme
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  
+#   labs(x = "Model Comparison", y = "L Ratio", 
+#        title = "L Ratio for Each Model Comparison (glmlasso delta models)") +
+#   ylim(0, 7)
+# 
+# output_file <- file.path(out_dir, "glm_delta_anova_models_feb20.png")
+# ggsave(output_file, anova_plot, width = 10, height = 6)

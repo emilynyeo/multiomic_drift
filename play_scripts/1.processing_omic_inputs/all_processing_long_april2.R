@@ -257,6 +257,8 @@ print_taxa_summary <- function(before, after, step) {
 
 # Process each omic seperately #################################################
 
+# Metabolomics data 
+
 # Meta data
 
 # GRS data 
@@ -267,7 +269,57 @@ print_taxa_summary <- function(before, after, step) {
 
 # Micom data 
 
-# Metabolomics data 
+########### METABOLOMICS #######################################################
+tabo <- read_csv("data/metabolomics/UTF-8SendSafely_NGH19889 results_20250401T080522Z/19889 COinterv-01-Apr-2025-Results.csv")
+colnames(tabo)
+head(tabo[1:30])
+# Remove 2-21 cols which are empty & keep only 0,6,12m rows
+tabo <- tabo[, c(1, 23:ncol(tabo))] %>% 
+  filter(!grepl("\\.3m$", `Sample ID`),
+         !grepl("\\.18m$", `Sample ID`)) %>% 
+  rename(SampleID = `Sample ID`)
+tabo$Glycerol <- as.numeric(tabo$Glycerol)
+
+# heatmap
+vis_miss(tabo[50:100])
+vis_miss(tabo[150:190])
+cor_mat <- cor(tabo[2:ncol(tabo)], use = "pairwise.complete.obs")
+heatmap(cor_mat)
+
+# Extract highly correlaeted pairs
+high_corr <- which(abs(cor_mat) > 0.99 & abs(cor_mat) < 1, arr.ind = TRUE) %>% 
+             as.data.frame() %>% rownames_to_column("cor_vars")
+# keep <- high_corr %>% dplyr::filter(!grepl("\\.(1|2|3|4)$", cor_vars))
+
+tabo2 <- tabo %>% dplyr::select(colnames(tabo)[!grepl("^(L_|XL_|S_|M_|XS_|XXL_)", colnames(tabo))])
+heatmap(cor(tabo2[2:ncol(tabo2)], use = "pairwise.complete.obs"))
+
+vis_miss(tabo2)
+my_plt_density(tabo2, 2:ncol(tabo2), c(0.01, 5), "Metabolomics Conc. Raw")
+check_normality_and_skewness(tabo2, 2:ncol(tabo2))
+
+# center scale and remove var corr of meta 
+preProcValues <- preProcess(tabo2, 
+                            method = c("scale", "center", "nzv", "corr"), # Same for metabolomics 
+                            thresh = 0.95, # % variance
+                            na.remove = TRUE, verbose = TRUE, 
+                            freqCut = 95/5, # ratio of most common val to 2nd most common val.
+                            uniqueCut = 10, # % distinct vals / total no. samples
+                            cutoff = 0.99) # correlation cut off 
+preProcValues
+tab_cs <- predict(preProcValues, tabo2) 
+cor_mat_2 <- cor(tab_cs[2:ncol(tab_cs)], use = "pairwise.complete.obs")
+heatmap(cor_mat_2)
+
+library(tidyr)
+
+tab_cs <- tab_cs %>%
+  separate(SampleID, into = c("record_id", "time"), sep = "\\.")
+
+tab_cs <- tab_cs %>%
+  mutate(time = case_when(grepl("BL", time) ~ 0, grepl("6m", time) ~ 6, 
+                          grepl("12m", time) ~ 12, TRUE ~ NA_real_)) %>%
+  filter(!grepl("\\.3m$", time))
 
 ########### META ###############################################################
 
@@ -310,7 +362,7 @@ vis_miss(a2_extra)
 
 # center scale and remove var corr of meta 
 preProcValues <- preProcess(a2_extra, 
-                            method = c("scale", "center", "nzv", "corr"), 
+                            method = c("scale", "center", "nzv", "corr"), # Same for metabolomics 
                             thresh = 0.95, # % variance
                             na.remove = TRUE, verbose = TRUE, 
                             freqCut = 95/5, # ratio of most common val to 2nd most common val.
@@ -444,7 +496,7 @@ path_all_time_cs <- path_all_time_cs %>%
 ### MICOM ####################################################################################################
 load("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/WD_Cplex/products_all.RData")
 flux <- products.all %>% 
-  filter(diet == "Western", timepoint2 %in% c("BL", "6m", "12m")) %>% 
+  dplyr::filter(diet == "Western", timepoint2 %in% c("BL", "6m", "12m")) %>% 
   dplyr::select(sample_id, description, flux) %>% 
   pivot_wider(names_from = description, values_from = flux, values_fill = list(flux = 0))
 any(flux < 0, na.rm = TRUE)
@@ -505,49 +557,60 @@ lg_met <- bind_rows(meta_cs_0, meta_cs_6, meta_cs_12) %>% unique()
 vis_miss(lg_met)
 colnames(lg_met)
 
+# Merge Metabolomics
+setdiff(lg_met$record_id, tab_cs$record_id)
+setdiff(tab_cs$record_id, lg_met$record_id)
+lg_met_met <- merge(lg_met, tab_cs, by = c("record_id", "time"), all.x = TRUE)
+
 # Merge other long data
 tx_pth <- merge(cs_transformed, path_all_time_cs, by.x = "subject_id", by.y = "SampleID")
 tx_pth_micom <- merge(tx_pth, flux_all_time_cs, by.x = "subject_id", by.y = "sample_id") %>% 
-  dplyr::select(-c("all_samples.x", "all_samples.y", "time.y"))
+  dplyr::select(-c("all_samples.x", "all_samples.y", "subject_id", "time.y"))
 
-long <- merge(lg_met, tx_pth_micom, 
+long <- merge(lg_met_met, tx_pth_micom, 
               by.x = c("record_id", "time"), by.y = c("all_samples", "time.x"),
-              all = TRUE) %>% arrange(time)
+              all = TRUE) %>% arrange(time) %>% unique()
+
 vis_miss(long)
 vis_miss(long[1:30])
 md.pattern(long[, c(1:30, (ncol(long)-9):ncol(long))], rotate.names = TRUE)
-gg_miss_upset(long[, c(1:30, (ncol(long)-9):ncol(long))])
-gg_miss_upset(long[, c(1:4)])
-
-setdiff(long$subject_id.x, long$subject_id.y)
-setdiff(long$subject_id.y, long$subject_id.x)
 
 ### PROCESS LONG DATA FRAME 
 
 # Summarize 'outcome_BMI_fnl' by 'time' column
-dfSummary(long[1:10], by = "time", varnumbers = FALSE)
 long$time <- as.factor(long$time)
 table(long$time)
 # Drop put subject_id's
 missing_6_12m_bmi <- long %>% 
           dplyr::filter(time != 0, is.na(outcome_BMI_fnl)) %>% 
-          dplyr::select(subject_id.x) %>% count() 
-count(unique(missing_6_12m_bmi$subject_id.x)) # 45 
+          dplyr::select(subject_id) %>% count() 
+count(unique(missing_6_12m_bmi$subject_id)) # 45 
 
 # This DF will be used for the long models :
 long_for_models <- long %>% dplyr::filter(!is.na(outcome_BMI_fnl)) %>% 
                             dplyr::filter(rowSums(is.na(.)) / ncol(.) <= 0.8)
-length(unique(long_for_models$subject_id.x))
-table(table(long_for_models$subject_id.x))
+length(unique(long_for_models$subject_id))
+table(table(long_for_models$subject_id)) #  LBL-047 is repeated? 
 
-long_imputed <- cbind(long_for_models[, !sapply(long_for_models, is.numeric)], 
-                      missForest(long_for_models[, sapply(long_for_models, is.numeric)])$ximp) %>% 
+# remove LBL-047
+print(names(which(table(long_for_models$subject_id) == 5)))
+long_for_models2 <- long_for_models[!grepl("LBL-047", long_for_models$subject_id), ] 
+print(names(which(table(long_for_models2$subject_id) == 5)))
+table(table(long_for_models2$subject_id))
+
+# impute. test
+long_imputed <- cbind(long_for_models2[, !sapply(long_for_models2, is.numeric)], 
+                      missForest(long_for_models2[, sapply(long_for_models2, is.numeric)])$ximp) %>% 
   unique()
-table(table(long_imputed$subject_id.x))
+table(table(long_imputed$subject_id))
+vis_miss(long_imputed) # This DF will be for longitudinal aims 
+
 
 # This DF will be used for the DELTA making 
-long_no_drops_0_6m <- long %>% 
-             dplyr::filter(!(time = 6 & is.na(outcome_BMI_fnl))) %>% arrange(time)
+print(names(which(table(long$subject_id) == 5)))
+long2 <- long[!grepl("LBL-047", long$subject_id), ]
+long_no_drops_0_6m <- long2 %>% 
+  dplyr::filter(!(time = 6 & is.na(outcome_BMI_fnl))) %>% arrange(time)
 dim(long) - dim(long_no_drops_0_6m)
 vis_miss(long_no_drops_0_6m)
 long_min_na_0_6m <- long_no_drops_0_6m %>%
@@ -557,8 +620,7 @@ vis_miss(long_min_na_0_6m)
 vis_miss(long_min_na_0_6m[1:35])
 table(table(long_min_na_0_6m$subject_id.x))
 
-# This DF will be for longitudinal aims 
-long_no_drops_0_12m <- long %>% 
+long_no_drops_0_12m <- long2 %>% 
   dplyr::filter(!(time != 0 & is.na(outcome_BMI_fnl))) %>% arrange(time)
 dim(long) - dim(long_no_drops_0_12m)
 vis_miss(long_no_drops_0_6m)
@@ -569,6 +631,7 @@ vis_miss(long_min_na_0_12m[1:35])
 table(table(long_min_na_0_12m$subject_id.x))
 
 # Take out black box line and impute the rest 
+print(names(which(table(long_min_na_0_12m$subject_id) == 5)))
 
 ###### MAKE DELTAS #############################################################
 # Filter the data into two data frames based on 'time' column (0 and 6)
@@ -576,8 +639,8 @@ df_time_6 <- long_min_na_0_6m %>% filter(time == 6)
 df_time_0 <- long_min_na_0_6m %>% filter(time == 0) 
 
 # Subset df_time_0 and df_time_6 to only include matching subject_id.x values
-df_time_0 <- df_time_0 %>% filter(subject_id.x %in% df_time_6$subject_id.x)
-df_time_6 <- df_time_6 %>% filter(subject_id.x %in% df_time_0$subject_id.x)
+df_time_0 <- df_time_0 %>% filter(subject_id %in% df_time_6$subject_id)
+df_time_6 <- df_time_6 %>% filter(subject_id %in% df_time_0$subject_id)
 nrow(df_time_0)
 nrow(df_time_6)
   
@@ -598,7 +661,7 @@ change_df <- bind_cols(non_numeric_cols, change_cols)
 
 # View the change dataframe
 head(change_df)
-change_notx_pth <- change_df %>% dplyr::select(-c(24:271)) 
+change_notx_pth <- change_df %>% dplyr::select(-c(101:348)) # remove taxa and patway data
 change_notx_pth_0_6_imputed <- cbind(change_notx_pth[, !sapply(change_notx_pth, is.numeric)], 
                                      missForest(change_notx_pth[, sapply(change_notx_pth, is.numeric)])$ximp) %>% 
   unique()
@@ -623,10 +686,10 @@ path_0_6_slim <- path_0_6[, c("subject_id", intersect(colnames(path_0_6)[-1], co
 
 # Merge taxa and meta data
 met_tax_0_6 <- merge(change_notx_pth_0_6_imputed, tax0_6m_slim, 
-                     by.x = "subject_id.x", by.y = "subject_id")
+                     by.x = "subject_id", by.y = "subject_id")
 # And pathway data 
 change_all_0_6 <- merge(met_tax_0_6, path_0_6_slim, 
-                        by.x = "subject_id.x", by.y = "subject_id")
+                        by.x = "subject_id", by.y = "subject_id")
 
 vis_miss(change_all_0_6)
 
@@ -636,8 +699,8 @@ df_time_12 <- long_min_na_0_12m %>% filter(time == 12)
 df_time_6 <- long_min_na_0_12m %>% filter(time == 6) 
 
 # Subset df_time_6 and df_time_6 to only include matching subject_id.x values
-df_time_6 <- df_time_6 %>% filter(subject_id.x %in% df_time_12$subject_id.x)
-df_time_12 <- df_time_12 %>% filter(subject_id.x %in% df_time_6$subject_id.x)
+df_time_6 <- df_time_6 %>% filter(subject_id %in% df_time_12$subject_id)
+df_time_12 <- df_time_12 %>% filter(subject_id %in% df_time_6$subject_id)
 nrow(df_time_6)
 nrow(df_time_12)
 
@@ -657,7 +720,7 @@ change_df <- bind_cols(non_numeric_cols, change_cols)
 
 # View the change dataframe
 head(change_df)
-change_notx_pth <- change_df %>% dplyr::select(-c(24:271)) 
+change_notx_pth <- change_df %>% dplyr::select(-c(101:348)) 
 change_notx_pth_0_6_imputed <- cbind(change_notx_pth[, !sapply(change_notx_pth, is.numeric)], 
                                      missForest(change_notx_pth[, sapply(change_notx_pth, is.numeric)])$ximp) %>% 
   unique()
@@ -682,10 +745,10 @@ path_0_6_slim <- path_0_6[, c("subject_id", intersect(colnames(path_0_6)[-1], co
 
 # Merge taxa and meta data
 met_tax_0_6 <- merge(change_notx_pth_0_6_imputed, tax0_6m_slim, 
-                     by.x = "subject_id.x", by.y = "subject_id")
+                     by.x = "subject_id", by.y = "subject_id")
 # And pathway data 
 change_all_6_12 <- merge(met_tax_0_6, path_0_6_slim, 
-                        by.x = "subject_id.x", by.y = "subject_id")
+                        by.x = "subject_id", by.y = "subject_id")
 
 vis_miss(change_all_6_12)
 
