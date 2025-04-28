@@ -97,6 +97,8 @@ for (col in prediction_cols) {
 rm(merged_df, merged_df_small, test_all, merged_grs_meta,
    merged_grs_meta_micom, merged_grs_meta_micom_pathway)
 
+write.csv(merged, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/april_delta_predictions_df.csv')
+
 ### Filter by model
 df_mse <- merged %>%
   dplyr::filter(Model == "MSE Model")
@@ -188,5 +190,5 @@ for (df_name in names(dataframes)) {
   
   # Save the table
   output_path <- paste0("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/merf_delta_anova_table_", df_name, ".html")
-  #writeLines(html_table, output_path)
+  writeLines(html_table, output_path)
 }

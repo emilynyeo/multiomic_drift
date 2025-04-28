@@ -23,6 +23,7 @@ r2_general <-function(preds,actual){
 }
 
 out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/"
+outdir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/"
 #data_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/zachs_rerun/drift_fs/csv/all_omic_processed_data/deltas/"
 data_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
 all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>% 
@@ -178,11 +179,16 @@ for (df_name in data_frames) {
     dplyr::filter(Feature != "(Intercept)") %>%
     mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
            Feature = str_replace_all(Feature, "[._]", " ")) %>%
-    arrange(desc(abs_estimate)) %>%
-    head(10)
+    arrange(desc(abs_estimate)) 
+  
+  write.csv(top_features, file = paste0(outdir, paste0(df_name, "_gl_delta_top_features.csv")), row.names = FALSE)
+  
+  plot_feat <- top_features %>%
+    dplyr::filter(!str_detect(tolower(Feature), "time")) %>%  # Remove rows with "time" in Feature
+    slice_head(n = 10) 
   
   # Plot top features
-  features <- ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
+  features <- ggplot(plot_feat, aes(x = reorder(Feature, Estimate), y = Estimate)) +
     geom_bar(stat = "identity", fill = "#1C4C98") +
     coord_flip() + theme_bw() +
     ggtitle(paste("Top Features & Coefficients from", df_name)) +
@@ -282,6 +288,8 @@ mod_dat = all_omic %>% dplyr::rename(bmi = actual,
                               y_new_path_only = pathway_predicted,
                               y_new_tax_only = taxa_predicted,
                               y_new_metab_only = metabo_predicted)
+
+write.csv(mod_dat, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/april_delta_predictions_df.csv')
 
 mod_dat$Time <- as.numeric(mod_dat$Time)
 

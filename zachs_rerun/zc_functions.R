@@ -680,6 +680,7 @@ create_plots <- function(data_list, max_r2, titles) {
   Reduce(`/`, plots)
 }
 
+
 ### Updated function to create and save plots
 create_feature_plot <- function(features, title, save_path) {
   # Prepare data for plotting, excluding the `Model` column from pivoting
@@ -1096,4 +1097,44 @@ best_rf_predictions <- function(rf_model, data, outcome_col, test_data) {
   
   # Return the prediction data frame
   return(pred_df)
+}
+
+
+get_top_n_features <- function(feature_importance, model_importance_column, n) {
+  # Sort the dataframe by the importance column in descending order
+  sorted_features <- feature_importance %>%
+    arrange(desc(!!sym(model_importance_column)))  # Dynamically reference the importance column
+  
+  # Select the top N features
+  top_features <- head(sorted_features, n)
+  
+  return(top_features)
+}
+
+
+get_top_n_features_all_models <- function(feature_importance, n = 20) {
+  # Identify columns ending with '_Importance'
+  importance_columns <- names(feature_importance)[grepl("_Importance$", names(feature_importance))]
+  
+  # Initialize a list to store results for each model
+  top_features_list <- list()
+  
+  # Loop through each importance column and get top N features
+  for (column in importance_columns) {
+    model_name <- gsub("_Importance", "", column)  # Extract model name
+    top_features_list[[model_name]] <- get_top_n_features(feature_importance, column, n)
+  }
+  return(top_features_list)
+}
+
+
+extract_metrics <- function(dataset) {
+  if (is.null(dataset$metrics)) {
+    stop("Metrics not found in the dataset.")
+  }
+  metrics <- dataset$metrics %>%
+    dplyr::filter(DataType == "Test") %>%
+    dplyr::select(Model, R2)
+  max_r2 <- max(metrics$R2, na.rm = TRUE)
+  list(metrics = metrics, max_r2 = max_r2)
 }

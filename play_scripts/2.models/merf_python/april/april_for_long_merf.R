@@ -85,6 +85,7 @@ merged <- merge(merged_all, test,
                 by.y = c("subject_id", "time")) %>% 
   dplyr::rename(bmi = outcome_BMI_fnl)
 
+write.csv(merged, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/april_long_predictions_df.csv')
 # For each prediction column, compute R-squared and store as new column
 prediction_cols <- grep("^y_new", names(merged), value = TRUE)
 for (col in prediction_cols) {
@@ -195,5 +196,5 @@ for (df_name in names(dataframes)) {
   
   # Save the table
   output_path <- paste0("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/merf_long_anova_table_", df_name, ".html")
-  #writeLines(html_table, output_path)
+  writeLines(html_table, output_path)
 }

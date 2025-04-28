@@ -277,7 +277,7 @@ head(tabo[1:30])
 tabo <- tabo[, c(1, 23:ncol(tabo))] %>% 
   filter(!grepl("\\.3m$", `Sample ID`),
          !grepl("\\.18m$", `Sample ID`)) %>% 
-  rename(SampleID = `Sample ID`)
+  dplyr::rename(SampleID = `Sample ID`)
 tabo$Glycerol <- as.numeric(tabo$Glycerol)
 
 # heatmap
@@ -759,10 +759,54 @@ all_delta <- rbind(change_all_0_6, change_all_6_12)
 # SAVE FILES ###############################################################################
 
 # long 
-write.csv(long_imputed, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long.csv')
+#write.csv(long_imputed, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long.csv')
 
 # deltas
-write.csv(change_all_0_6, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_0_6.csv')
-write.csv(change_all_6_12, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_6_12.csv')
-write.csv(all_delta, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta.csv')
+#write.csv(change_all_0_6, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_0_6.csv')
+#write.csv(change_all_6_12, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_6_12.csv')
+#write.csv(all_delta, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta.csv')
+
+# Make t_plus1 files fpr long data ###############################################################################
+
+long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
+
+long <- read.csv(file.path(long_dir, 'long.csv')) %>% 
+  dplyr::select(-c("consent", "record_id", "completer", 
+                   "Peptide_YY", "Ghrelin", "Leptin")) %>%
+  dplyr::mutate(time = as.factor(time),
+                subject_id = as.factor(subject_id),
+                randomized_group = as.factor(randomized_group),
+                sex = as.numeric(sex),
+                randomized_group = as.numeric(randomized_group),
+                cohort_number = as.numeric(cohort_number),
+                race = as.numeric(race)) %>% dplyr::rename(BMI = outcome_BMI_fnl,
+                                                    range = time,
+                                                    homo_ir = HOMA_IR,
+                                                    insulin = Insulin_endo,
+                                                    LDL = LDL_Calculated,
+                                                    HDL = HDL_Total_Direct_lipid,
+                                                    HbA1c = Hemoglobin_A1C) 
+
+# Split into A and B 
+A_df <- long %>%
+  dplyr::select(subject_id, range, BMI) %>%
+  dplyr::mutate(range = dplyr::recode(as.numeric(as.character(range)), 
+                                      `0` = 0, `6` = 1, `12` = 2)) %>% 
+  dplyr::filter(!range == 0)
+
+B_df <- long %>%
+  dplyr::mutate(range = dplyr::recode(as.numeric(as.character(range)), 
+                                      `0` = 1, `6` = 2, `12` = 3)) %>% 
+  dplyr::filter(!range == 3)
+
+long_t_plus <- merge(A_df, B_df, by = c("subject_id", "range")) # -4 
+
+
+# Make t_plus1 files fpr delta data ###############################################################################
+
+
+
+
+
+
 

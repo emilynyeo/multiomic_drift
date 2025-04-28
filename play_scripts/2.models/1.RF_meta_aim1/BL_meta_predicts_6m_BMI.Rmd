@@ -21,10 +21,12 @@ pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
 
 ```{r}
 # Combined omic file
-KO_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_dfs/5.combined"
-test <- read.csv(paste(KO_dir, "test_merged_all_omics_raw_meta.csv", sep = "/")) 
-train <- read.csv(paste(KO_dir, "training_merged_all_omics_raw_meta.csv", sep = "/"))
+# KO_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_dfs/5.combined"
+# test <- read.csv(paste(KO_dir, "test_merged_all_omics_raw_meta.csv", sep = "/")) 
+# train <- read.csv(paste(KO_dir, "training_merged_all_omics_raw_meta.csv", sep = "/"))
 ```
+
+
 
 ```{r}
 test <- test %>%

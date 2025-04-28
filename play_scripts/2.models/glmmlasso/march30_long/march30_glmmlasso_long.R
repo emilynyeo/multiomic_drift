@@ -13,7 +13,7 @@ library(kneedle)
 
 #out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20_long/"
 out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/"
-
+outdir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/"
 #long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_dfs/5.combined/"
 #long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/"
 long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
@@ -191,11 +191,16 @@ for (df_name in data_frames) {
     dplyr::filter(Feature != "(Intercept)") %>%
     mutate(Feature = str_to_title(Feature),  # Capitalize the first letter of each word
            Feature = str_replace_all(Feature, "[._]", " ")) %>%
-    arrange(desc(abs_estimate)) %>%
-    head(10)
+    arrange(desc(abs_estimate)) 
+  
+  write.csv(top_features, file = paste0(outdir, paste0(df_name, "_gl_long_top_features.csv")), row.names = FALSE)
+  
+  plot_feat <- top_features %>%
+    dplyr::filter(!str_detect(tolower(Feature), "time")) %>%  # Remove rows with "time" in Feature
+    slice_head(n = 10)  
   
   # Plot top features
-  features <- ggplot(top_features, aes(x = reorder(Feature, Estimate), y = Estimate)) +
+  features <- ggplot(plot_feat, aes(x = reorder(Feature, Estimate), y = Estimate)) +
     geom_bar(stat = "identity", fill = "#1C4C98") +
     coord_flip() + theme_bw() +
     ggtitle(paste("Top Features & Coefficients from", df_name)) +
@@ -309,6 +314,7 @@ head(all_omic)
 
 ########################################################################################
 mod_dat = all_omic %>% rename(bmi = actual, Time = time, Cluster = subject_id)
+write.csv(mod_dat, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/april_long_predictions_df.csv')
 
 ### Single plus omic including time 
 lmer_basic <- lmer(bmi ~ y_new_basic + Time + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -382,7 +388,7 @@ glmmlong_models_noT <- list(
   c("lmer_basic_noT", "lmer_micom_b_noT"),
   c("lmer_basic_noT", "lmer_tax_b_noT"),
   c("lmer_basic_noT", "lmer_path_b_noT"),
-  c("lmer_basic_noT", "lmer_path_b_noT"))
+  c("lmer_basic_noT", "lmer_metabo_b_noT"))
 library(lme4)  # Make sure the lme4 package is loaded=
 anova_results_noT <- list()
 for (model_pair in glmmlong_models_noT) {
