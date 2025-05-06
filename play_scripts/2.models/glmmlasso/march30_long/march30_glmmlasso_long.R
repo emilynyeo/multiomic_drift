@@ -18,7 +18,7 @@ outdir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predicti
 #long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/"
 long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
 
-long <- read.csv(file.path(long_dir, 'long.csv')) %>% 
+long <- read.csv(file.path(long_dir, 'long_april29.csv')) %>% 
                  dplyr::select(-c("consent", "record_id", "completer", 
                                   "Peptide_YY", "Ghrelin", "Leptin")) %>%
   dplyr::mutate(time = as.factor(time),
@@ -62,6 +62,14 @@ tabo_start <- which(names(long) == "non_HDL_C")
 tabo_end <- which(names(long) == "IDL_TG_pct")
 only_tabo <- c('subject_id','BMI', 'range', names(long)[tabo_start:tabo_end])
 
+all_col <- c('subject_id','BMI', 'range',
+             'randomized_group', 'sex', 'race', 
+             'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x',
+             grep("^g__", names(long), value = TRUE),
+             names(long)[micom_start:micom_end],
+             names(long)[path_start:path_end],
+             names(long)[tabo_start:tabo_end])
+
 # Create data frames based on the columns defined
 basic <- long[, basic, drop = FALSE] %>% unique()
 meta <- long[, meta_keep, drop = FALSE] %>% unique()
@@ -69,10 +77,19 @@ taxa <- long[, only_taxa, drop = FALSE] %>% unique()
 micom <- long[, only_micom, drop = FALSE] %>% unique()
 pathway <- long[, only_pathway, drop = FALSE] %>% unique()
 metabo <- long[, only_tabo, drop = FALSE] %>% unique()
+all <- long[, all_col, drop = FALSE] %>% unique()
 
 ## Check MICOM correlatioon 
 heatmap(cor(micom[, 4:ncol(micom)]))
-##
+heatmap(cor(all[, 4:ncol(all)]))
+
+## Check all correlation
+preProcValues_train <- preProcess(all[, c(2, 4:ncol(all))], 
+                                  method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                                  numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                                  uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues_train
+all <- predict(preProcValues_train, all)
 
 subject_id_count <- meta %>%
   dplyr::filter(range %in% c("0","6", "12")) %>%
@@ -95,7 +112,7 @@ cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
 
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "micom", "pathway", "taxa", "metabo")
+data_frames <- c("basic", "meta", "micom", "pathway", "taxa", "metabo", "all")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -107,21 +124,21 @@ for (df in data_frames) {
   assign(paste0(df, "_test"), test_set)
 }
 
-# CHECK MIOOM CORRELATIONS
-#preProcValues_train <- preProcess(micom_train[, c(2, 4:ncol(micom_train))], 
-#                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
-#                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
-#                            uniqueCut = 10, cutoff = 0.90, na.remove = TRUE)
-#preProcValues_train
-#micom_train <- predict(preProcValues_train, micom_train)
-#heatmap(cor(micom_train[, c(2, 4:ncol(micom_train))]))
+# CHECK CORRELATIONS
+preProcValues_train <- preProcess(all_train[, c(2, 4:ncol(all_train))], 
+                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues_train
+all_train <- predict(preProcValues_train, all_train)
+heatmap(cor(all_train[, c(2, 4:ncol(all_train))]))
 
-#preProcValues_test <- preProcess(micom_test[, c(2, 4:ncol(micom_test))], 
-#                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
-#                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
-#                            uniqueCut = 10, cutoff = 0.90, na.remove = TRUE)
-#preProcValues_test
-#micom_test <- predict(preProcValues_test, micom_test)
+preProcValues_test <- preProcess(all_test[, c(2, 4:ncol(all_test))], 
+                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues_test
+all_test <- predict(preProcValues_test, all_test)
 #### Test CV LASSO
 
 # Step 1: run glmmlasso through a grid of lambdas for the best one
@@ -130,7 +147,7 @@ for (df in data_frames) {
 # Step 5: That prediction in step 4 becomes the "risk score" for that omic
 
 # STEP 1
-#data_frames <- c("metabo")
+#data_frames <- c("all")
 #df_name <- "metabo"
 data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo")
 for (df_name in data_frames) {
@@ -193,7 +210,7 @@ for (df_name in data_frames) {
            Feature = str_replace_all(Feature, "[._]", " ")) %>%
     arrange(desc(abs_estimate)) 
   
-  write.csv(top_features, file = paste0(outdir, paste0(df_name, "_gl_long_top_features.csv")), row.names = FALSE)
+  write.csv(top_features, file = paste0(outdir, paste0(df_name, "_gl_long_top_features_april29.csv")), row.names = FALSE)
   
   plot_feat <- top_features %>%
     dplyr::filter(!str_detect(tolower(Feature), "time")) %>%  # Remove rows with "time" in Feature
@@ -211,7 +228,7 @@ for (df_name in data_frames) {
   features 
   
   # Save the plot using ggsave
-  ggsave(filename = paste0(out_dir, paste0(df_name, "_top_features_april7.png")),
+  ggsave(filename = paste0(out_dir, paste0(df_name, "_top_features_april29.png")),
          plot = features, width = 8, height = 6, units = "in", dpi = 300)
   
   # STEP Predict on test data 
@@ -254,10 +271,12 @@ for (df_name in data_frames) {
   print(paste(df_name, "R-squared:", round(r_squared, 3)))
   
   # Save predictions to a CSV file
-  file_path <- file.path(out_dir, paste0(df_name, "_predictions_april7.csv"))
+  file_path <- file.path(out_dir, paste0(df_name, "_predictions_april29.csv"))
   write.csv(pred_df, file_path, row.names = FALSE)
 }
 
+# Participants with very odd predictions:
+#AHE-055, 	TFA-016
 
 ################################################################################
 
@@ -287,6 +306,10 @@ metabo_pred_df[, head(names(metabo_pred_df), 2)] <-
   lapply(metabo_pred_df[, head(names(metabo_pred_df), 2)], as.factor) 
 metabo_pred_df <- metabo_pred_df %>% dplyr::rename(y_new_metabo_only = predicted)
 
+all_pred_df[, head(names(all_pred_df), 2)] <- 
+  lapply(all_pred_df[, head(names(all_pred_df), 2)], as.factor) 
+all_pred_df <- all_pred_df %>% dplyr::rename(y_new_all_only = predicted)
+
 met_basic <- merge(basic_pred_df, meta_pred_df, by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
@@ -306,7 +329,11 @@ met_tax_micom_path_tabo <- merge(met_tax_micom_path, metabo_pred_df,
                             by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-all_omic <- unique(met_tax_micom_path_tabo)
+
+all_omic <- merge(met_tax_micom_path_tabo, all_pred_df, 
+                                 by = c("subject_id", "time")) %>% 
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% 
+  unique()
 
 # Center and scale the last 5 columns of the dataframe
 #all_omic[, 3:8] <- scale(all_omic[, 3:8])
@@ -314,7 +341,7 @@ head(all_omic)
 
 ########################################################################################
 mod_dat = all_omic %>% rename(bmi = actual, Time = time, Cluster = subject_id)
-write.csv(mod_dat, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/april_long_predictions_df.csv')
+write.csv(mod_dat, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/april_long_predictions_df_april29.csv')
 
 ### Single plus omic including time 
 lmer_basic <- lmer(bmi ~ y_new_basic + Time + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -323,20 +350,22 @@ lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom_only + Time+ (1|Cluster), d
 lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_path_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_tax_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_metabo_b <- lmer(bmi ~ y_new_basic + y_new_metabo_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
-lmer_time_b <- lmer(bmi ~ y_new_basic + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic, lmer_meta_b, test = "LRT")
 anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
 anova(lmer_basic, lmer_metabo_b, test = "LRT")
+anova(lmer_basic, lmer_all_b, test = "LRT")
 
 glmmlong_models <- list(
   c("lmer_basic", "lmer_meta_b"),
   c("lmer_basic", "lmer_micom_b"),
   c("lmer_basic", "lmer_tax_b"),
   c("lmer_basic", "lmer_path_b"),
-  c("lmer_basic", "lmer_metabo_b"))
+  c("lmer_basic", "lmer_metabo_b"),
+  c("lmer_basic", "lmer_all_b"))
 
 library(lme4)  # Make sure the lme4 package is loaded=
 anova_results <- list()
@@ -365,7 +394,7 @@ print(anova_table_clean)
 # Create an HTML table from the cleaned anova table
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
 # Save the table as an HTML file
-#writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/lasso_anova_table.html")
+writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/lasso_anova_table_april29.html")
 
 # Repeat without time 
 ### Single plus omic not including time 
@@ -375,20 +404,22 @@ lmer_micom_b_noT <- lmer(bmi ~ y_new_basic + y_new_micom_only + (1|Cluster), dat
 lmer_path_b_noT <- lmer(bmi ~ y_new_basic + y_new_path_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b_noT <- lmer(bmi ~ y_new_basic + y_new_tax_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_metabo_b_noT <- lmer(bmi ~ y_new_basic + y_new_metabo_only + (1|Cluster), data = mod_dat, REML = FALSE)
-lmer_time_b_noT <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_all_b_noT <- lmer(bmi ~ y_new_basic + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic_noT, lmer_meta_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_micom_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_tax_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_path_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_metabo_b_noT, test = "LRT")
+anova(lmer_basic_noT, lmer_all_b_noT, test = "LRT")
 
 glmmlong_models_noT <- list(
   c("lmer_basic_noT", "lmer_meta_b_noT"),
   c("lmer_basic_noT", "lmer_micom_b_noT"),
   c("lmer_basic_noT", "lmer_tax_b_noT"),
   c("lmer_basic_noT", "lmer_path_b_noT"),
-  c("lmer_basic_noT", "lmer_metabo_b_noT"))
+  c("lmer_basic_noT", "lmer_metabo_b_noT"),
+  c("lmer_basic_noT", "lmer_all_b_noT"))
 library(lme4)  # Make sure the lme4 package is loaded=
 anova_results_noT <- list()
 for (model_pair in glmmlong_models_noT) {
@@ -416,4 +447,4 @@ print(anova_table_clean)
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
 
 # Save the table as an HTML file
-writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/april_glemmlasso_long_anova_table_noT.html")
+writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/april_glemmlasso_long_anova_table_noT_april29.html")

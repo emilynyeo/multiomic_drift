@@ -12,7 +12,7 @@ library(knitr)
 long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
 
 # Read the data from the CSV file
-long <- read.csv(file.path(long_dir, "long.csv"))
+long <- read.csv(file.path(long_dir, "long_april29.csv"))
 
 # Make train and test sets 
 # test sample names
@@ -32,40 +32,45 @@ test <- test_set %>% dplyr::select(c(subject_id, outcome_BMI_fnl, time))
 
 predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/final_merf_dfs"
 
-basic <- read.csv(file.path(predict_dir, "basic_long.csv")) %>% 
+basic <- read.csv(file.path(predict_dir, "basic_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_basic = y_hat_new)
 
-meta <- read.csv(file.path(predict_dir, "meta_keep_long.csv")) %>% 
+meta <- read.csv(file.path(predict_dir, "meta_keep_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_meta = y_hat_new)
 
-grs <- read.csv(file.path(predict_dir, "only_grs_long.csv")) %>% 
+grs <- read.csv(file.path(predict_dir, "only_grs_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_grs = y_hat_new)
 
-taxa <- read.csv(file.path(predict_dir, "only_taxa_long.csv")) %>% 
+taxa <- read.csv(file.path(predict_dir, "only_taxa_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_taxa = y_hat_new)
 
-pathway <- read.csv(file.path(predict_dir, "only_pathway_long.csv")) %>% 
+pathway <- read.csv(file.path(predict_dir, "only_pathway_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_pathway = y_hat_new)
 
-micom <- read.csv(file.path(predict_dir, "only_micom_long.csv")) %>% 
+micom <- read.csv(file.path(predict_dir, "only_micom_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_micom = y_hat_new)
 
-metabo <- read.csv(file.path(predict_dir, "only_metabo_long.csv")) %>% 
+metabo <- read.csv(file.path(predict_dir, "only_metabo_long_april29.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_metabo = y_hat_new)
+
+all <- read.csv(file.path(predict_dir, "only_all_long_april29.csv")) %>% 
+  dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
+  distinct() %>% 
+  dplyr::rename(y_new_all = y_hat_new)
 
 # Merge the first two data frames (grs and meta)
 merged_basic_meta <- merge(basic, meta, by = c("Model", "Cluster", "Time"))
@@ -76,7 +81,10 @@ merged_grs_meta_micom_pathway <- merge(merged_grs_meta_micom, pathway,
                                        by = c("Model", "Cluster", "Time"))
 merged_grs_meta_micom_pathway_metab <- merge(merged_grs_meta_micom_pathway, metabo, 
                                        by = c("Model", "Cluster", "Time"))
-merged_all <- merge(merged_grs_meta_micom_pathway_metab, taxa, 
+grs_meta_micom_pathway_metab_all <- merge(merged_grs_meta_micom_pathway_metab, all, 
+                                             by = c("Model", "Cluster", "Time"))
+
+merged_all <- merge(grs_meta_micom_pathway_metab_all, taxa, 
                     by = c("Model", "Cluster", "Time"))
 
 # Merge merged_all with test by matching 'Cluster' with 'all_samples' and 'Time' with 'time'
@@ -85,7 +93,7 @@ merged <- merge(merged_all, test,
                 by.y = c("subject_id", "time")) %>% 
   dplyr::rename(bmi = outcome_BMI_fnl)
 
-write.csv(merged, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/april_long_predictions_df.csv')
+write.csv(merged, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/april_long_predictions_df_april29.csv')
 # For each prediction column, compute R-squared and store as new column
 prediction_cols <- grep("^y_new", names(merged), value = TRUE)
 for (col in prediction_cols) {
@@ -139,6 +147,7 @@ for (df_name in names(dataframes)) {
   lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_metabo_b <- lmer(bmi ~ y_new_basic + y_new_metabo + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all + (1|Cluster), data = mod_dat, REML = FALSE)
   
   # Optional: ANOVA tests
   anova(lmer_basic, lmer_meta_b)
@@ -146,6 +155,7 @@ for (df_name in names(dataframes)) {
   anova(lmer_basic, lmer_path_b)
   anova(lmer_basic, lmer_tax_b)
   anova(lmer_basic, lmer_metabo_b)
+  anova(lmer_basic, lmer_all_b)
   
   # Table for model comparisons (optional, adjust to your models)
   sjPlot::tab_model(
@@ -167,7 +177,8 @@ for (df_name in names(dataframes)) {
     c("lmer_basic", "lmer_tax_b"),
     c("lmer_basic", "lmer_micom_b"),
     c("lmer_basic", "lmer_path_b"),
-    c("lmer_basic", "lmer_metabo_b")
+    c("lmer_basic", "lmer_metabo_b"),
+    c("lmer_basic", "lmer_all_b")
   )
   
   anova_results <- list()
@@ -195,6 +206,6 @@ for (df_name in names(dataframes)) {
   html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
   
   # Save the table
-  output_path <- paste0("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/merf_long_anova_table_", df_name, ".html")
+  output_path <- paste0("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/merf_long_anova_table_april_29", df_name, ".html")
   writeLines(html_table, output_path)
 }

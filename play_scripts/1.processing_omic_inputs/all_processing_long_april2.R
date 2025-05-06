@@ -587,20 +587,35 @@ missing_6_12m_bmi <- long %>%
 count(unique(missing_6_12m_bmi$subject_id)) # 45 
 
 # This DF will be used for the long models :
+long_too_missing <- long %>% dplyr::filter(is.na(outcome_BMI_fnl)) %>% 
+                             dplyr::filter(rowSums(is.na(.)) / ncol(.) <= 0.80)
+
 long_for_models <- long %>% dplyr::filter(!is.na(outcome_BMI_fnl)) %>% 
                             dplyr::filter(rowSums(is.na(.)) / ncol(.) <= 0.8)
 length(unique(long_for_models$subject_id))
 table(table(long_for_models$subject_id)) #  LBL-047 is repeated? 
+vis_miss(long_for_models)
 
 # remove LBL-047
 print(names(which(table(long_for_models$subject_id) == 5)))
 long_for_models2 <- long_for_models[!grepl("LBL-047", long_for_models$subject_id), ] 
 print(names(which(table(long_for_models2$subject_id) == 5)))
 table(table(long_for_models2$subject_id))
+vis_miss(long_for_models2)
+
+### Weird peeps: VCA-041, TFA-016, DSC-024
+# The people below just have suss predictions
+long_suss <- long_for_models %>% dplyr::filter(subject_id %in%  c("AHE-055", "VCA-041", "TFA-016", "DSC-024")) # "AHE-055", "TFA-016"
+vis_miss(long_suss)
+long_suss2 <- long_for_models2 %>% dplyr::filter(subject_id %in% c("TFA-016"))
+vis_miss(long_suss2)
+
+# Deciding to remove TFA-016
+long_for_models3 <- long_for_models2[!grepl("TFA-016", long_for_models2$subject_id), ]
 
 # impute. test
-long_imputed <- cbind(long_for_models2[, !sapply(long_for_models2, is.numeric)], 
-                      missForest(long_for_models2[, sapply(long_for_models2, is.numeric)])$ximp) %>% 
+long_imputed <- cbind(long_for_models3[, !sapply(long_for_models3, is.numeric)], 
+                      missForest(long_for_models3[, sapply(long_for_models3, is.numeric)])$ximp) %>% 
   unique()
 table(table(long_imputed$subject_id))
 vis_miss(long_imputed) # This DF will be for longitudinal aims 
@@ -609,7 +624,8 @@ vis_miss(long_imputed) # This DF will be for longitudinal aims
 # This DF will be used for the DELTA making 
 print(names(which(table(long$subject_id) == 5)))
 long2 <- long[!grepl("LBL-047", long$subject_id), ]
-long_no_drops_0_6m <- long2 %>% 
+long3 <- long2[!grepl("TFA-016", long2$subject_id), ]
+long_no_drops_0_6m <- long3 %>% 
   dplyr::filter(!(time = 6 & is.na(outcome_BMI_fnl))) %>% arrange(time)
 dim(long) - dim(long_no_drops_0_6m)
 vis_miss(long_no_drops_0_6m)
@@ -618,9 +634,9 @@ long_min_na_0_6m <- long_no_drops_0_6m %>%
   filter(rowSums(is.na(.)) / ncol(.) <= 0.80) # remove >80% missig data
 vis_miss(long_min_na_0_6m)
 vis_miss(long_min_na_0_6m[1:35])
-table(table(long_min_na_0_6m$subject_id.x))
+table(table(long_min_na_0_6m$subject_id))
 
-long_no_drops_0_12m <- long2 %>% 
+long_no_drops_0_12m <- long3 %>% 
   dplyr::filter(!(time != 0 & is.na(outcome_BMI_fnl))) %>% arrange(time)
 dim(long) - dim(long_no_drops_0_12m)
 vis_miss(long_no_drops_0_6m)
@@ -628,7 +644,7 @@ long_min_na_0_12m <- long_no_drops_0_12m %>%
   filter(rowSums(is.na(.)) / ncol(.) <= 0.80) # remove >80% missig data
 vis_miss(long_min_na_0_12m)
 vis_miss(long_min_na_0_12m[1:35])
-table(table(long_min_na_0_12m$subject_id.x))
+table(table(long_min_na_0_12m$subject_id))
 
 # Take out black box line and impute the rest 
 print(names(which(table(long_min_na_0_12m$subject_id) == 5)))
@@ -759,12 +775,12 @@ all_delta <- rbind(change_all_0_6, change_all_6_12)
 # SAVE FILES ###############################################################################
 
 # long 
-#write.csv(long_imputed, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long.csv')
+write.csv(long_imputed, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long_april29.csv')
 
 # deltas
 #write.csv(change_all_0_6, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_0_6.csv')
 #write.csv(change_all_6_12, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_6_12.csv')
-#write.csv(all_delta, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta.csv')
+write.csv(all_delta, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta_april29.csv')
 
 # Make t_plus1 files fpr long data ###############################################################################
 
