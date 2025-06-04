@@ -17,12 +17,10 @@ library(table1)
 
 
 meta <- read_csv("~/projects/research/Stanislawski/BMI_risk_scores/data/correct_meta_files/ashleys_meta/DRIFT_working_dataset_meta_deltas_filtered_05.21.2024.csv")
-check_status(meta, id_track = "subject_id")
 # Replace spaces with underscores in column names
 colnames(meta) <- gsub(" ", "_", colnames(meta))
 length(unique(meta$subject_id))
 meta <- meta[meta$consent != "no", ]
-check_status(meta, id_track = "subject_id")
 a2_extra <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, consent,
                                      cohort_number, sex, race, completer, age,
                                      # BL #outcome_BMI_fnl_BL
@@ -49,8 +47,6 @@ a2_extra <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, co
          completer = as.factor(completer),
          cohort_number = as.factor(cohort_number))
 
-my_plt_density(a2_extra, 9:39, c(-2, 80), "Meta Count Raw")
-check_normality_and_skewness(a2_extra, 9:39)
 vis_miss(a2_extra)
 age <- a2_extra %>% dplyr::select(c(subject_id, age))
                                   
@@ -557,4 +553,35 @@ test_counts_delta <- test_counts_delta[-1,]
 total_delta <- rbind(subject_counts_delta, train_counts_delta, test_counts_delta) 
 knitr::kable(total_delta)
 
-#sink()
+###### GRS PLOT
+library(geomtextpath)
+library(hrbrthemes)
+
+ggplot(long_imputed, 
+       aes(x = bmi_prs, 
+           y = outcome_BMI_fnl)) +
+  geom_point(aes(color = sex)) +
+  geom_labelsmooth(aes(label = sex, 
+                       color = sex, 
+                       group = sex),
+                   method = "lm", formula = y ~ x,
+                   fill = "white", size = 6, 
+                   linewidth = 1.5, 
+                   boxlinewidth = 0.6) +
+  theme_bw() +
+  guides(color = 'none')
+
+
+ggplot(all_delta, 
+       aes(x = bmi_prs, 
+           y = outcome_BMI_fnl)) +
+  geom_point(aes(color = sex)) +
+  geom_labelsmooth(aes(label = sex, 
+                       color = sex, 
+                       group = sex),
+                   method = "lm", formula = y ~ x,
+                   fill = "white", size = 4, 
+                   linewidth = 1.5, 
+                   boxlinewidth = 0.6) +
+  theme_bw() +
+  guides(color = 'none')

@@ -53,7 +53,7 @@ test <- test_set %>% dplyr::select(c(subject_id, outcome_BMI_fnl, time))
 #predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/final_merf_dfs"
 #predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/new_split"
 predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/long/"
-basic <- read.csv(file.path(predict_dir, "basic_long.csv")) #%>% 
+basic <- read.csv(file.path(predict_dir, "basic_long.csv")) %>% 
   dplyr::select(-starts_with("Top_15_"), -starts_with("R_squared")) %>% 
   distinct() %>% 
   dplyr::rename(y_new_basic = y_hat_new)
@@ -166,6 +166,7 @@ for (df_name in names(dataframes)) {
   # Fit models
   lmer_basic <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_grs_b <- lmer(bmi ~ y_new_basic + y_new_grs + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -174,6 +175,7 @@ for (df_name in names(dataframes)) {
   
   # Optional: ANOVA tests
   anova(lmer_basic, lmer_meta_b)
+  anova(lmer_basic, lmer_grs_b)
   anova(lmer_basic, lmer_micom_b)
   anova(lmer_basic, lmer_path_b)
   anova(lmer_basic, lmer_tax_b)
@@ -182,7 +184,7 @@ for (df_name in names(dataframes)) {
   
   # Table for model comparisons (optional, adjust to your models)
   sjPlot::tab_model(
-    lmer_basic, lmer_meta_b, lmer_tax_b, lmer_path_b, lmer_micom_b,
+    lmer_basic, lmer_meta_b, lmer_grs_b, lmer_tax_b, lmer_path_b, lmer_micom_b,
     title = paste("glmlasso delta sequential lmer models -", df_name),
     string.pred = "Predictors",
     string.est = "Estimate",
@@ -197,6 +199,7 @@ for (df_name in names(dataframes)) {
   # Define model pairs
   glmmlass_lmer_models <- list(
     c("lmer_basic", "lmer_meta_b"),
+    c("lmer_basic", "lmer_grs_b"),
     c("lmer_basic", "lmer_tax_b"),
     c("lmer_basic", "lmer_micom_b"),
     c("lmer_basic", "lmer_path_b"),

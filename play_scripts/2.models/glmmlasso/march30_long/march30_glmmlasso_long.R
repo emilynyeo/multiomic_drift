@@ -50,6 +50,7 @@ ggplot(long, aes(x = range, y = bmi_prs, color = factor(subject_id), group = fac
 basic <- c('subject_id','BMI', 'range','age', 'sex', 'randomized_group')
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
+only_grs <- c('subject_id', 'BMI', 'range',  'bmi_prs')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(long), value = TRUE))
 
 micom_start <- which(names(long) == "Diacetyl")
@@ -75,6 +76,7 @@ all_col <- c('subject_id','BMI', 'range',
 # Create data frames based on the columns defined
 basic <- long[, basic, drop = FALSE] %>% unique()
 meta <- long[, meta_keep, drop = FALSE] %>% unique()
+grs <- long[, only_grs, drop = FALSE] %>% unique()
 taxa <- long[, only_taxa, drop = FALSE] %>% unique()
 micom <- long[, only_micom, drop = FALSE] %>% unique()
 pathway <- long[, only_pathway, drop = FALSE] %>% unique()
@@ -118,7 +120,7 @@ cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
 
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "micom", "pathway", "taxa", "metabo", "all")
+data_frames <- c("basic", "meta", "grs","micom", "pathway", "taxa", "metabo", "all")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -153,9 +155,9 @@ for (df in data_frames) {
 # Step 5: That prediction in step 4 becomes the "risk score" for that omic
 
 # STEP 1
-#data_frames <- c("all")
+#data_frames <- c("grs")
 #df_name <- "metabo"
-data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo", "all")
+data_frames <- c("basic", "meta", "grs", "taxa", "pathway", "micom", "metabo", "all")
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -216,7 +218,10 @@ for (df_name in data_frames) {
            Feature = str_replace_all(Feature, "[._]", " ")) %>%
     arrange(desc(abs_estimate)) 
   
-  write.csv(top_features, file = paste0(out_dir, paste0(df_name, "_gl_long_top_features.csv")), row.names = FALSE)
+  write.csv(top_features, 
+            file = paste0(out_dir, 
+                          paste0(df_name, "_gl_long_top_features.csv")), 
+            row.names = FALSE)
   
   plot_feat <- top_features %>%
     dplyr::filter(!str_detect(tolower(Feature), "time")) %>%  # Remove rows with "time" in Feature
@@ -320,6 +325,10 @@ metabo_pred_df[, head(names(metabo_pred_df), 2)] <-
   lapply(metabo_pred_df[, head(names(metabo_pred_df), 2)], as.factor) 
 metabo_pred_df <- metabo_pred_df %>% dplyr::rename(y_new_metabo_only = predicted)
 
+grs_pred_df[, head(names(grs_pred_df), 2)] <- 
+  lapply(grs_pred_df[, head(names(grs_pred_df), 2)], as.factor) 
+grs_pred_df <- grs_pred_df %>% dplyr::rename(y_new_grs_only = predicted)
+
 all_pred_df[, head(names(all_pred_df), 2)] <- 
   lapply(all_pred_df[, head(names(all_pred_df), 2)], as.factor) 
 all_pred_df <- all_pred_df %>% dplyr::rename(y_new_all_only = predicted)
@@ -343,9 +352,12 @@ met_tax_micom_path_tabo <- merge(met_tax_micom_path, metabo_pred_df,
                             by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
+all_but_all <- merge(met_tax_micom_path_tabo, grs_pred_df, 
+                  by = c("subject_id", "time")) %>% 
+  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-all_omic <- merge(met_tax_micom_path_tabo, all_pred_df, 
-                                 by = c("subject_id", "time")) %>% 
+all_omic <- merge(all_but_all, all_pred_df, 
+                  by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% 
   unique()
 
@@ -355,11 +367,12 @@ head(all_omic)
 
 ########################################################################################
 mod_dat = all_omic %>% rename(bmi = actual, Time = time, Cluster = subject_id)
-write.csv(mod_dat, file = paste0(out_dir, "april_long_predictions_df.csv"))
+write.csv(mod_dat, file = paste0(out_dir, "june_lasso_long_predictions_df.csv"))
 
 ### Single plus omic including time 
 lmer_basic <- lmer(bmi ~ y_new_basic + Time + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta_only + Time + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_grs_b <- lmer(bmi ~ y_new_basic + y_new_grs_only + Time + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_path_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_tax_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
@@ -367,6 +380,7 @@ lmer_metabo_b <- lmer(bmi ~ y_new_basic + y_new_metabo_only + Time+ (1|Cluster),
 lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic, lmer_meta_b, test = "LRT")
+anova(lmer_basic, lmer_grs_b, test = "LRT")
 anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
@@ -375,6 +389,7 @@ anova(lmer_basic, lmer_all_b, test = "LRT")
 
 glmmlong_models <- list(
   c("lmer_basic", "lmer_meta_b"),
+  c("lmer_basic", "lmer_grs_b"),
   c("lmer_basic", "lmer_micom_b"),
   c("lmer_basic", "lmer_tax_b"),
   c("lmer_basic", "lmer_path_b"),
@@ -408,12 +423,13 @@ print(anova_table_clean)
 # Create an HTML table from the cleaned anova table
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
 # Save the table as an HTML file
-writeLines(html_table, paste0(out_dir, "lasso_anova_table.html"))
+writeLines(html_table, paste0(out_dir, "lasso_long_anova_table_time.html"))
 
 # Repeat without time 
 ### Single plus omic not including time 
 lmer_basic_noT <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_meta_b_noT <- lmer(bmi ~ y_new_basic + y_new_meta_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_grs_b_noT <- lmer(bmi ~ y_new_basic + y_new_grs_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom_b_noT <- lmer(bmi ~ y_new_basic + y_new_micom_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b_noT <- lmer(bmi ~ y_new_basic + y_new_path_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b_noT <- lmer(bmi ~ y_new_basic + y_new_tax_only + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -421,6 +437,7 @@ lmer_metabo_b_noT <- lmer(bmi ~ y_new_basic + y_new_metabo_only + (1|Cluster), d
 lmer_all_b_noT <- lmer(bmi ~ y_new_basic + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic_noT, lmer_meta_b_noT, test = "LRT")
+anova(lmer_basic_noT, lmer_grs_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_micom_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_tax_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_path_b_noT, test = "LRT")
@@ -429,6 +446,7 @@ anova(lmer_basic_noT, lmer_all_b_noT, test = "LRT")
 
 glmmlong_models_noT <- list(
   c("lmer_basic_noT", "lmer_meta_b_noT"),
+  c("lmer_basic_noT", "lmer_grs_b_noT"),
   c("lmer_basic_noT", "lmer_micom_b_noT"),
   c("lmer_basic_noT", "lmer_tax_b_noT"),
   c("lmer_basic_noT", "lmer_path_b_noT"),
@@ -463,4 +481,4 @@ html_table <- kable(anova_table_clean,
                     table.attr = "class='table table-striped'")
 
 # Save the table as an HTML file
-writeLines(html_table, paste0(out_dir, "april_glmmlasso_long_anova_table_noT.html"))
+writeLines(html_table, paste0(out_dir, "glmmlasso_long_anova_table_noT.html"))

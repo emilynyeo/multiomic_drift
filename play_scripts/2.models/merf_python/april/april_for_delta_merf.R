@@ -157,6 +157,7 @@ for (df_name in names(dataframes)) {
   # Fit models
   lmer_basic <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_grs_b <- lmer(bmi ~ y_new_basic + y_new_grs + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -165,6 +166,7 @@ for (df_name in names(dataframes)) {
   
   # Optional: ANOVA tests
   anova(lmer_basic, lmer_meta_b)
+  anova(lmer_basic, lmer_grs_b)
   anova(lmer_basic, lmer_micom_b)
   anova(lmer_basic, lmer_path_b)
   anova(lmer_basic, lmer_tax_b)
@@ -173,7 +175,7 @@ for (df_name in names(dataframes)) {
   
   # Table for model comparisons (optional, adjust to your models)
   sjPlot::tab_model(
-    lmer_basic, lmer_meta_b, lmer_tax_b, lmer_path_b, lmer_micom_b,
+    lmer_basic, lmer_meta_b, lmer_grs_b, lmer_tax_b, lmer_path_b, lmer_micom_b,
     title = paste("glmlasso delta sequential lmer models -", df_name),
     string.pred = "Predictors",
     string.est = "Estimate",
@@ -188,6 +190,7 @@ for (df_name in names(dataframes)) {
   # Define model pairs
   glmmlass_lmer_models <- list(
     c("lmer_basic", "lmer_meta_b"),
+    c("lmer_basic", "lmer_grs_b"),
     c("lmer_basic", "lmer_tax_b"),
     c("lmer_basic", "lmer_micom_b"),
     c("lmer_basic", "lmer_path_b"),

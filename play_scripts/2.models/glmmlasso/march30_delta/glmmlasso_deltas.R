@@ -46,6 +46,7 @@ all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>%
 basic <- c('subject_id','BMI', 'range', 'sex', 'age', 'randomized_group') #
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x') # 
+only_grs <- c('subject_id','BMI', 'range','bmi_prs')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(all_deltas), value = TRUE))
 
 micom_start <- which(names(all_deltas) == "Diacetyl")
@@ -71,6 +72,7 @@ all_col <- c('subject_id','BMI', 'range',
 # Create data frames based on the columns defined
 basic <- all_deltas[, basic, drop = FALSE] %>% unique()
 meta <- all_deltas[, meta_keep, drop = FALSE] %>% unique()
+grs <- all_deltas[, only_grs, drop = FALSE] %>% unique()
 taxa <- all_deltas[, only_taxa, drop = FALSE] %>% unique()
 micom <- all_deltas[, only_micom, drop = FALSE] %>% unique()
 pathway <- all_deltas[, only_pathway, drop = FALSE] %>% unique()
@@ -109,7 +111,7 @@ all <- predict(preProcValues, all)
 heatmap(cor(all[, c(2, 5:ncol(all))]))
 
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "micom", "pathway", "taxa", "metabo", "all")
+data_frames <- c("basic", "meta", "grs", "micom", "pathway", "taxa", "metabo", "all")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -141,7 +143,7 @@ heatmap(cor(all[, c(2, 5:ncol(all_train))]))
 
 # STEP 1
 #data_frames <- c("all") # "basic",
-data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo", "all") #
+data_frames <- c("basic", "meta", "grs", "taxa", "pathway", "micom", "metabo", "all") #
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -286,6 +288,7 @@ hist(cor_values,
 ################################################################################
 meta_delta_pred_df <- meta_delta_pred_df %>% rename(meta_predicted = predicted)
 basic_delta_pred_df <- basic_delta_pred_df %>% rename(basic_predicted = predicted)
+grs_delta_pred_df <- grs_delta_pred_df %>% rename(grs_predicted = predicted)
 taxa_delta_pred_df <- taxa_delta_pred_df %>% rename(taxa_predicted = predicted)
 micom_delta_pred_df <- micom_delta_pred_df %>% rename(micom_predicted = predicted)
 pathway_delta_pred_df <- pathway_delta_pred_df %>% rename(pathway_predicted = predicted)
@@ -313,7 +316,11 @@ met_tax_micom_path_tab_all <- merge(met_tax_micom_path_tab, all_delta_pred_df,
                   by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% unique()
 
-all_omic <- merge(basic_delta_pred_df, met_tax_micom_path_tab_all, 
+all_but_b <- merge(met_tax_micom_path_tab_all, grs_delta_pred_df,
+                   by = c("subject_id", "time")) %>% 
+             dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_omic <- merge(basic_delta_pred_df, all_but_b, 
                   by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% unique()
 
@@ -325,6 +332,7 @@ mod_dat = all_omic %>% dplyr::rename(bmi = actual,
                               Cluster = subject_id,
                               y_new_basic_only = basic_predicted, 
                               y_new_meta_only = meta_predicted,
+                              y_new_grs_only = grs_predicted,
                               y_new_micom_only = micom_predicted,
                               y_new_path_only = pathway_predicted,
                               y_new_tax_only = taxa_predicted,
@@ -338,6 +346,7 @@ mod_dat$Time <- as.numeric(mod_dat$Time)
 ### Single basic model plus each omic 
 lmer_basic <- lmer(bmi ~ y_new_basic_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_meta_b <- lmer(bmi ~ y_new_basic_only + y_new_meta_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_grs_b <- lmer(bmi ~ y_new_basic_only + y_new_grs_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom_b <- lmer(bmi ~ y_new_basic_only + y_new_micom_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b <- lmer(bmi ~ y_new_basic_only + y_new_path_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b <- lmer(bmi ~ y_new_basic_only + y_new_tax_only + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -345,6 +354,7 @@ lmer_metabo_b <- lmer(bmi ~ y_new_basic_only + y_new_metab_only + (1|Cluster), d
 lmer_all_b <- lmer(bmi ~ y_new_basic_only + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic, lmer_meta_b)
+anova(lmer_basic, lmer_grs_b)
 anova(lmer_basic, lmer_micom_b)
 anova(lmer_basic, lmer_path_b)
 anova(lmer_basic, lmer_tax_b)
@@ -358,6 +368,7 @@ nobs(lmer_meta_b)
 logLik(lmer_basic)
 logLik(lmer_meta_b)
 anova(lmer_basic, lmer_meta_b, test = "LRT")
+anova(lmer_basic, lmer_grs_b, test = "LRT")
 anova(lmer_basic, lmer_micom_b, test = "LRT")
 anova(lmer_basic, lmer_tax_b, test = "LRT")
 anova(lmer_basic, lmer_path_b, test = "LRT")
@@ -365,6 +376,7 @@ anova(lmer_basic, lmer_metabo_b, test = "LRT")
 anova(lmer_basic, lmer_all_b, test = "LRT")
 glmmlass_lmer_models <- list(
   c("lmer_basic", "lmer_meta_b"),
+  c("lmer_basic", "lmer_grs_b"),
   c("lmer_basic", "lmer_tax_b"),
   c("lmer_basic", "lmer_micom_b"),
   c("lmer_basic", "lmer_path_b"),
@@ -403,7 +415,7 @@ print(anova_table_clean)
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
 
 # Save the table as an HTML file
-writeLines(html_table, paste0("april_glemmlasso_delta_anova_table.html"))
+writeLines(html_table, paste0("glmmlasso_delta_anova_table_noT.html"))
 
 ########################################################################################
 # library(nlme)
