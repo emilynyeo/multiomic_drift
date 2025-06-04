@@ -5,15 +5,16 @@ library(pacman)
 p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn, 
        caret, caretEnsemble, glmnet, xgboost, ggplot2, glmmLasso, corrplot,
        readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest,  
-       reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM)
+       reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM, kableExtra)
 #remotes::install_github("thepira/cv.glmmLasso")
 library(cv.glmmLasso)
 library(kneedle)
 '%ni%' <- Negate('%in%')
 
 #out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20_long/"
-out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/"
-outdir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/"
+out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/new_split_may/"
+out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/"
+
 #long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/merf_dfs/5.combined/"
 #long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/march_20/"
 long_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/"
@@ -40,12 +41,13 @@ ggplot(long, aes(x = range, y = bmi_prs, color = factor(subject_id), group = fac
   geom_point() +  # Scatter plot
   geom_line() +   # Add lines between points of the same subject_id
   labs(title = "BMI PRS by Range and Subject ID", 
-       x = "Time", y = "BMI PRS") + 
+       x = "Time", 
+       y = "BMI PRS") + 
   theme(legend.position = "none") +  # Remove the legend
   scale_color_manual(values = rainbow(length(unique(long$subject_id)))) 
 
 # Define the column names based on your lists
-basic <- c('subject_id','BMI', 'range','age', 'sex')
+basic <- c('subject_id','BMI', 'range','age', 'sex', 'randomized_group')
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(long), value = TRUE))
@@ -103,10 +105,14 @@ missing_subjects
 
 # Make train and test set
 # Test sample names
-test_names <- c("ABR-079", "AGA-071", "AHE-055", "ALI-121", "ALO-163", "AMA-031", "ASO-013", "AWI-167", "BMO-164", "CWA-183", "DSC-024", "EBE-130", "EHI-177", "EJO-092", "GFU-188", "HGI-010", "JCA-109", "JGO-100", "KBU-085", "KCE-034", "KHE-170", "LDO-148", "LST-186", "LZD-142", "MAR-119", "MCA-088", "MJA-153", "MWE-112", "NPO-149", "RAE-114", "SBO-020", "SEG-080", "SKA-195", "SLO-178", "SSH-028", "TDU-086","TFA-016", "VCA-041")
+#test_names <- c("ABR-079", "AGA-071", "AHE-055", "ALI-121", "ALO-163", "AMA-031", "ASO-013", "AWI-167", "BMO-164", "CWA-183", "DSC-024", "EBE-130", "EHI-177", "EJO-092", "GFU-188", "HGI-010", "JCA-109", "JGO-100", "KBU-085", "KCE-034", "KHE-170", "LDO-148", "LST-186", "LZD-142", "MAR-119", "MCA-088", "MJA-153", "MWE-112", "NPO-149", "RAE-114", "SBO-020", "SEG-080", "SKA-195", "SLO-178", "SSH-028", "TDU-086","TFA-016", "VCA-041")
 
+test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052", "AHE-055", "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193")
+  
 # Train sample names
-train_names <- c("AAL-144", "ACO-053", "ADA-105", "AKE-009", "AKI-011", "AKO-139", "AMC-155", "AME-128", "AME-157", "ATA-129", "AWA-052", "AWA-083", "BAN-193", "BHO-014", "BIN-201", "BKN-104", "BMI-156", "BSA-174", "CAM-057", "CCO-189", "CED-026", "CEL-073", "CGA-134", "CIS-077", "CKR-078", "CLE-049", "COW-066", "CRO-108", "CWA-161", "EBE-051", "EKA-135", "EKR-045", "ELA-159", "EPO-182", "EVO-184", "FWI-098", "GHA-035", "HDE-154", "IBE-120", "JDI-140", "JER-110", "JFU-027", "JJO-093", "JKN-127", "JPO-022", "JUG-116", "JUT-032", "JVE-126", "KAN-138", "KBR-162", "KEL-185", "KEL-199", "KGI-029", "KHU-196", "KPA-042", "KRI-072", "KVA-038", "KWA-122", "KWA-141", "LBL-047", "LBU-015", "LEL-147", "LFI-003", "LJA-101", "LMC-111", "LPF-198", "LVA-017", "MBA-187", "MCW-065", "MDI-107", "MES-068", "MFB-118", "MGA-076", "MHO-117", "MKE-192", "MMA-036", "MRT-179", "MSH-091", "MST-039", "MWE-143", "MWO-133", "MWY-152", "NAR-099", "NBI-048", "NBI-069", "NCO-171", "NDI-067", "NEL-094", "NKA-090", "NMO-151", "NTA-021", "PBE-123", "QNG-166", "RAF-125", "RAM-050", "RHP-023", "RLA-132", "ROL-006", "SAB-160", "SCA-043", "SCR-061", "SDA-150", "SGA-062", "SKA-087", "SRO-194", "TBU-115", "TFA-172", "TRO-113", "TSH-146", "TSL-056", "WPE-005", "YOR-103", "YSU-097", "ZVU-096")
+#rain_names <- c("AAL-144", "ACO-053", "ADA-105", "AKE-009", "AKI-011", "AKO-139", "AMC-155", "AME-128", "AME-157", "ATA-129", "AWA-052", "AWA-083", "BAN-193", "BHO-014", "BIN-201", "BKN-104", "BMI-156", "BSA-174", "CAM-057", "CCO-189", "CED-026", "CEL-073", "CGA-134", "CIS-077", "CKR-078", "CLE-049", "COW-066", "CRO-108", "CWA-161", "EBE-051", "EKA-135", "EKR-045", "ELA-159", "EPO-182", "EVO-184", "FWI-098", "GHA-035", "HDE-154", "IBE-120", "JDI-140", "JER-110", "JFU-027", "JJO-093", "JKN-127", "JPO-022", "JUG-116", "JUT-032", "JVE-126", "KAN-138", "KBR-162", "KEL-185", "KEL-199", "KGI-029", "KHU-196", "KPA-042", "KRI-072", "KVA-038", "KWA-122", "KWA-141", "LBL-047", "LBU-015", "LEL-147", "LFI-003", "LJA-101", "LMC-111", "LPF-198", "LVA-017", "MBA-187", "MCW-065", "MDI-107", "MES-068", "MFB-118", "MGA-076", "MHO-117", "MKE-192", "MMA-036", "MRT-179", "MSH-091", "MST-039", "MWE-143", "MWO-133", "MWY-152", "NAR-099", "NBI-048", "NBI-069", "NCO-171", "NDI-067", "NEL-094", "NKA-090", "NMO-151", "NTA-021", "PBE-123", "QNG-166", "RAF-125", "RAM-050", "RHP-023", "RLA-132", "ROL-006", "SAB-160", "SCA-043", "SCR-061", "SDA-150", "SGA-062", "SKA-087", "SRO-194", "TBU-115", "TFA-172", "TRO-113", "TSH-146", "TSL-056", "WPE-005", "YOR-103", "YSU-097", "ZVU-096")
+
+train_names <- c("SDA-150", "LBU-015", "CIS-077", "ATA-129", "KHU-196", "MWY-152", "AGA-071", "AME-157", "CWA-183", "RHP-023", "MST-025", "SSH-028", "JUG-116", "EJO-092", "VCA-041", "NMO-151", "BHO-014", "KBU-085", "SBO-020", "MWO-133", "KRI-072", "AAL-144", "ALO-163", "AKI-011", "MHO-117", "TSH-146", "RAE-114", "FWI-098", "MAR-119", "JGO-100", "CAM-057", "YOR-103", "HGI-010", "KAN-138", "SGA-062", "CKR-078", "MWE-112", "ROL-006", "MMA-036", "DSC-024", "LDO-148", "MCA-088", "CPU-075", "AKO-139", "LFI-003", "KWA-141", "GFU-188", "BMO-164", "JPO-022", "EVO-184", "LPF-198", "TBU-115", "SRO-194", "KEL-199", "JFU-027", "SKA-195", "IBE-120", "TSL-056", "NDI-067", "AWA-083", "CWA-161", "TDU-086", "JCA-109", "CBO-004", "NAR-099", "MES-068", "AMA-031", "SLO-178", "SCA-043", "AWI-167",  "KBR-162", "TFA-172", "BIN-201", "NBI-048", "KHE-170", "CSH-012", "BMI-156", "MWE-143", "EKA-135", "WPE-005", "AKE-009", "YSU-097", "MCW-065", "EBE-051", "ZVU-096", "JJO-093", "KVA-038", "ACO-053", "RLA-132", "MBA-176", "CED-026", "JDI-140", "CCO-189", "EKR-045", "MJA-153", "CLE-049", "LMC-111", "SKA-087", "JUT-032", "MKE-192", "JVE-126", "KCE-034", "KEL-185", "MRT-179", "JKN-127", "LEL-147", "BKN-104", "AME-128", "MSH-091", "MGA-076", "LVA-017", "EPO-182")
 
 cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
@@ -125,20 +131,20 @@ for (df in data_frames) {
 }
 
 # CHECK CORRELATIONS
-preProcValues_train <- preProcess(all_train[, c(2, 4:ncol(all_train))], 
-                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
-                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
-preProcValues_train
-all_train <- predict(preProcValues_train, all_train)
-heatmap(cor(all_train[, c(2, 4:ncol(all_train))]))
+#preProcValues_train <- preProcess(all_train[, c(2, 4:ncol(all_train))], 
+#                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+#                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+#                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+#preProcValues_train
+#all_train <- predict(preProcValues_train, all_train)
+#heatmap(cor(all_train[, c(2, 4:ncol(all_train))]))
 
-preProcValues_test <- preProcess(all_test[, c(2, 4:ncol(all_test))], 
-                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
-                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
-                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
-preProcValues_test
-all_test <- predict(preProcValues_test, all_test)
+#preProcValues_test <- preProcess(all_test[, c(2, 4:ncol(all_test))], 
+#                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+#                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+#                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+#preProcValues_test
+#all_test <- predict(preProcValues_test, all_test)
 #### Test CV LASSO
 
 # Step 1: run glmmlasso through a grid of lambdas for the best one
@@ -149,7 +155,7 @@ all_test <- predict(preProcValues_test, all_test)
 # STEP 1
 #data_frames <- c("all")
 #df_name <- "metabo"
-data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo")
+data_frames <- c("basic", "meta", "taxa", "pathway", "micom", "metabo", "all")
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -210,25 +216,30 @@ for (df_name in data_frames) {
            Feature = str_replace_all(Feature, "[._]", " ")) %>%
     arrange(desc(abs_estimate)) 
   
-  write.csv(top_features, file = paste0(outdir, paste0(df_name, "_gl_long_top_features_april29.csv")), row.names = FALSE)
+  write.csv(top_features, file = paste0(out_dir, paste0(df_name, "_gl_long_top_features.csv")), row.names = FALSE)
   
   plot_feat <- top_features %>%
     dplyr::filter(!str_detect(tolower(Feature), "time")) %>%  # Remove rows with "time" in Feature
     slice_head(n = 10)  
   
   # Plot top features
-  features <- ggplot(plot_feat, aes(x = reorder(Feature, Estimate), y = Estimate)) +
-    geom_bar(stat = "identity", fill = "#1C4C98") +
-    coord_flip() + theme_bw() +
+  features <- ggplot(plot_feat, 
+                     aes(x = reorder(Feature, Estimate), 
+                         y = Estimate)) +
+    geom_bar(stat = "identity", 
+             fill = "#1C4C98") +
+    coord_flip() + 
+    theme_bw() +
     ggtitle(paste("Top Features & Coefficients from", df_name)) +
-    xlab("Feature") + ylab("Coefficient Estimate") +
+    xlab("Feature") + 
+    ylab("Coefficient Estimate") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
           axis.text.y = element_text(size = 12))
   
   features 
   
   # Save the plot using ggsave
-  ggsave(filename = paste0(out_dir, paste0(df_name, "_top_features_april29.png")),
+  ggsave(filename = paste0(out_dir, paste0(df_name, "_top_features.png")),
          plot = features, width = 8, height = 6, units = "in", dpi = 300)
   
   # STEP Predict on test data 
@@ -251,7 +262,10 @@ for (df_name in data_frames) {
   # Calculate R-squared value
   actual <- test_data$BMI
   predicted <- pred_risk_scores
-  pred_plot <- plot(predicted, actual, xlab = paste0(df_name, " Predicted BMI"), ylab = "Actual BMI",
+  pred_plot <- plot(predicted, 
+                    actual, 
+                    xlab = paste0(df_name, 
+                                  " Predicted BMI"), ylab = "Actual BMI",
        pch = 21, col = "blue", bg = "lightblue") +
   abline(lm(actual ~ predicted), col = "red", lwd = 2)
   
@@ -271,7 +285,7 @@ for (df_name in data_frames) {
   print(paste(df_name, "R-squared:", round(r_squared, 3)))
   
   # Save predictions to a CSV file
-  file_path <- file.path(out_dir, paste0(df_name, "_predictions_april29.csv"))
+  file_path <- file.path(out_dir, paste0(df_name, "_predictions.csv"))
   write.csv(pred_df, file_path, row.names = FALSE)
 }
 
@@ -341,7 +355,7 @@ head(all_omic)
 
 ########################################################################################
 mod_dat = all_omic %>% rename(bmi = actual, Time = time, Cluster = subject_id)
-write.csv(mod_dat, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/april_long_predictions_df_april29.csv')
+write.csv(mod_dat, file = paste0(out_dir, "april_long_predictions_df.csv"))
 
 ### Single plus omic including time 
 lmer_basic <- lmer(bmi ~ y_new_basic + Time + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -394,7 +408,7 @@ print(anova_table_clean)
 # Create an HTML table from the cleaned anova table
 html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
 # Save the table as an HTML file
-writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/feb20/lasso_anova_table_april29.html")
+writeLines(html_table, paste0(out_dir, "lasso_anova_table.html"))
 
 # Repeat without time 
 ### Single plus omic not including time 
@@ -444,7 +458,9 @@ anova_table_clean <- anova_table %>%
 
 # View the combined table
 print(anova_table_clean)
-html_table <- kable(anova_table_clean, format = "html", table.attr = "class='table table-striped'")
+html_table <- kable(anova_table_clean, 
+                    format = "html", 
+                    table.attr = "class='table table-striped'")
 
 # Save the table as an HTML file
-writeLines(html_table, "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_delta/april_glemmlasso_long_anova_table_noT_april29.html")
+writeLines(html_table, paste0(out_dir, "april_glmmlasso_long_anova_table_noT.html"))

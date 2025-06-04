@@ -167,14 +167,10 @@ for (omic_name in names(omic_dfs)) {
   for (model_pair in glmmlass_lmer_models) {
     model_1 <- get(model_pair[1])
     model_2 <- get(model_pair[2])
-    if (inherits(model_1, "lmerMod") && inherits(model_2, "lmerMod")) {
-      anova_result <- anova(model_1, model_2)  # This works with lmerMod objects
-      tidied_result <- tidy(anova_result)  # Tidy the ANOVA result using broom::tidy()
-      tidied_result$model_comparison <- paste(model_pair[1], "vs", model_pair[2])
-      anova_results[[length(anova_results) + 1]] <- tidied_result
-    } else {
-      message("One of the models in the pair is not a valid lmerMod object.")
-    }
+    anova_out <- anova(model_1, model_2)  # This works with lmerMod objects
+    #tidied_result <- tidy(anova_result)  # Tidy the ANOVA result using broom::tidy()
+    anova_out$model_comparison <- paste(model_pair[1], "vs", model_pair[2])
+    anova_results[[length(anova_results) + 1]] <- anova_out
   }
   # Combine all results into one dataframe
   anova_table <- do.call(rbind, anova_results)
@@ -186,16 +182,6 @@ for (omic_name in names(omic_dfs)) {
   # Extract model names for reference
   anova_table_clean$model_1 <- gsub(" vs .*", "", anova_table_clean$model_comparison)
   anova_table_clean$model_2 <- gsub(".* vs ", "", anova_table_clean$model_comparison)
-  
-  # Add R2c values
-  anova_table_with_r2m <- anova_table_clean %>%
-    left_join(r2_df %>% rename(R2m_model_1 = R2m), by = c("model_1" = "Model")) %>%
-    left_join(r2_df %>% rename(R2m_model_2 = R2m), by = c("model_2" = "Model")) %>%
-    dplyr::select(model_comparison, statistic, p.value, R2m_model_1, R2m_model_2)
-  
-  # Store the enriched table
-  all_anova_tables[[omic_name]] <- anova_table_with_r2m
-  print(anova_table_with_r2m)
   
   # Annotate significance and select relevant columns only
     anova_labels <- anova_table_clean %>%
@@ -213,11 +199,36 @@ for (omic_name in names(omic_dfs)) {
         p.value < 0.01  ~ "**",
         p.value < 0.05  ~ "*",
         TRUE            ~ "")) %>%
-    dplyr::select(Compared_Model, p.value, Significance)
+    dplyr::select(Compared_Model, df, AIC, statistic, p.value, Significance)
   
   r2_annotated <- r2_df %>%
     left_join(anova_labels, by = c("Model" = "Compared_Model"))
   
+  for_table <- r2_annotated %>% dplyr::select(-c(R2c)) %>% 
+               rename("R²*" = R2m, 
+                      "P-Value" = p.value,
+                      "Chisq Statistic" = statistic, 
+                      "Df" = df)
+  
+  for_table %>% gt() %>%
+    tab_header(title = "Model Comparison (ANOVA)") %>%
+    fmt_number(columns = where(is.numeric), decimals = 2) %>%
+    fmt_number(columns = "Df", decimals = 0) %>% 
+    sub_missing(missing_text = "-") %>%
+    cols_width(1 ~ pct(20),`R²*` ~ pct(15), Df ~ pct(8),
+      `Chisq Statistic` ~ pct(15), Significance ~ pct(15),
+      `P-Value` ~ pct(15), AIC ~ pct(11), Significance ~ pct(11)) %>%
+    cols_align(align = "center",
+      columns = everything()) %>% 
+    cols_align("left", columns = Model) %>%
+    tab_options(table.width = pct(60),
+                table.align = "center") %>%
+    opt_table_font(font = list(
+        google_font("Arial"),   # fallback to system font if unavailable
+        default_fonts())) %>%
+    tab_style(style = cell_text(weight = "bold"),
+      locations = cells_column_labels())
+    
   model_order <- r2_annotated %>%
     dplyr::filter(Model != "Basic") %>%
     arrange(R2m) %>%
@@ -276,12 +287,12 @@ print(combined_linear_plot)
 
 
 ######## PLOT feature importances for MERF ######################################
-ft_dfs <- list(basic_lg = basic, meta_lg = meta, 
+merf_dfs_long <- list(basic_lg = basic, meta_lg = meta, 
                taxa_lg = taxa, micom_lg = micom, 
                pathway_lg = pathway, metabo_lg = metabo, 
                all_lg = all)
 
-ft_dfs_delta <- list(basic_delta = basic_md, meta_delta = meta_md, 
+merf_dfs_delta <- list(basic_delta = basic_md, meta_delta = meta_md, 
                      taxa_delta = taxa_md, micom_delta = micom_md, 
                      pathway_delta = pathway_md, metabo_delta = metabo_md, 
                      all_delta = all_md)
@@ -295,23 +306,32 @@ ft_colors_delta <- c(meta_delta = "#960018", taxa_delta = "#8B3A3A",
                      micom_delta = "#996759", pathway_delta = "#D8A39D", 
                      metabo_delta  = "#C76374", all_delta = "#C13427", 
                      basic_delta = "#582F2B")
-all_ft_dfs <- list(
-  lg = list(data = ft_dfs, colors = ft_colors, label = "long"),
-  delta = list(data = ft_dfs_delta, colors = ft_colors_delta, label = "delta"))
 
-plots <- list()
+# Combined feature sets
+all_ft_dfs <- list(merf_lg = list(data = merf_dfs_long, colors = ft_colors, 
+                             label = "long", model_label = "MERF",
+                             x_ax_label = "Feature Importance"),
+                   merf_delta = list(data = merf_dfs_delta, colors = ft_colors_delta, 
+                                label = "delta", model_label = "MERF",
+                                x_ax_label = "Feature Importance"))
 
+merf_plots <- list()
 for (type in names(all_ft_dfs)) {
   ft_set <- all_ft_dfs[[type]]$data
   color_map <- all_ft_dfs[[type]]$colors
-  label <- all_ft_dfs[[type]]$label  # "long" or "delta"
+  label <- all_ft_dfs[[type]]$label
+  model_label <- all_ft_dfs[[type]]$model_label  # "MERF" or "GlmmLasso"
+  x_ax_label <- all_ft_dfs[[type]]$x_ax_label
+  
+  output_dir <- file.path("omic_out_dir", paste0("ft_imp_", model_label, "_", label))
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   
   for (ft_name in names(ft_set)) {
     omic <- ft_set[[ft_name]]
     
     omic_parsed <- omic %>%
-      dplyr::mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
-      dplyr::mutate(parsed = map(Top_15_Feature_Importances, fromJSON))
+      mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
+      mutate(parsed = map(Top_15_Feature_Importances, fromJSON))
     
     omic_long <- omic_parsed %>%
       unnest(parsed) %>%
@@ -326,157 +346,134 @@ for (type in names(all_ft_dfs)) {
     
     plot <- ggplot(avg_importance, aes(x = Feature, y = avg_importance)) +
       geom_col(fill = color_map[[ft_name]], width = 0.7) +
-      labs(title = paste("Avg. MERF Ft. Importance -", toupper(ft_name)),
-           x = "Feature", y = "Average Importance") +
+      labs(title = paste(model_label, toupper(ft_name)),
+        x = "Top 10 Model Features", 
+        y = paste("Average ", x_ax_label)) +
       theme_minimal(base_size = 14) +
-      theme(
-        legend.position = "none",
+      theme(legend.position = "none",
         plot.margin = ggplot2::margin(t = 1, r = 1, b = 1, l = 3, unit = "cm"),
         plot.title = element_text(hjust = 0.2, face = "bold", size = 16),
-        axis.text.y = element_text(face = "bold", hjust = 1, size = 14),
-        axis.text.x = element_text(face = "bold", size = 14),
-        axis.title.x = element_text(margin = ggplot2::margin(1, 0, 0, 0, unit = "cm"), size = 16),
-        axis.title.y = element_text(margin = ggplot2::margin(0, 1, 0, 0, unit = "cm"), size = 16),
+        axis.text.y = element_text(face = "bold", hjust = 1, size = 13),
+        axis.text.x = element_text(face = "bold", size = 13),
+        axis.title.x = element_text(margin = ggplot2::margin(0.5, 0, 0, 0, unit = "cm"), size = 14),
+        axis.title.y = element_text(margin = ggplot2::margin(0, 0.5, 0, 0, unit = "cm"), size = 14),
         panel.background = element_rect(fill = "white", color = NA),
-        plot.background = element_rect(fill = "white", color = NA)
-      ) +
-      scale_y_continuous(limits = c(-0.4, 0.7), expand = expansion(mult = c(0, 0.3))) +
+        plot.background = element_rect(fill = "white", color = NA)) +
+      scale_y_continuous(limits = c(-0.1, 0.6), expand = expansion(mult = c(0, 0.05))) +
+      #scale_x_continuous(limits = c(-0.1, 0.6)) +
       coord_flip(clip = "off")
     
-    plot_name <- paste0(ft_name, "_", label)
-    plots[[plot_name]] <- plot
-    
-    # Optional: Save the plot
-    # ggsave(filename = file.path("omic_out_dir", paste0("ft_imp_merf_", label, "/merf_avg_importance_", ft_name, ".png")),
-    #        plot = plot, width = 9, height = 5, dpi = 300)
+    # Save to named R object
+    #object_name <- paste0(ft_set, "_", ft_name, "_", label, "_plot")
+    object_name <- paste0("plot_", type, "_", ft_name, "_", label)
+    assign(object_name, plot, envir = .GlobalEnv)
+    merf_plots[[object_name]] <- plot
+    png_name <- file.path(output_dir, paste0("feature_importance_", ft_name, "_", label, ".png"))
+    #ggsave(filename = png_name, plot = plot, width = 9, height = 5, dpi = 300)
   }
 }
 
-######## OLD: 
+merf_long_plots <- merf_plots[c(2, 3, 4, 5, 6, 7)]
+combined_merf_long_plot <- wrap_plots(merf_long_plots, ncol = 2, nrow = 3) +
+  plot_annotation(title = "MERF longitudinal BMI Prediction Features",
+    theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
+  theme(plot.margin = ggplot2::margin(8, 8, 8, 8, unit = "pt"))
 
-ft_dfs <- list(basic_lg = basic, meta_lg = meta, taxa_lg = taxa, 
-          micom_lg = micom, pathway_lg = pathway, 
-          metabo_lg = metabo, all_lg = all)
+merf_delta_plots <- merf_plots[c(9, 13, 14)]
+combined_merf_delta_plot <- wrap_plots(merf_delta_plots, nrow = 3) +
+  plot_annotation(title = "MERF BMI Change Prediction Features",
+                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
+  theme(plot.margin = ggplot2::margin(8, 40, 8, 40, unit = "pt"))
 
-ft_dfs_delta <- list(basic_delta = basic_md, meta_delta = meta_md, taxa_delta = taxa_md, 
-               micom_delta = micom_md, pathway_delta = pathway_md, 
-               metabo_delta = metabo_md, all_delta = all_md)
+print(combined_merf_long_plot)
+print(combined_merf_delta_plot)
 
-ft_colors <- c(meta_lg = "#960018", taxa_lg = "#8B3A3A", micom_lg = "#996759",     
-  pathway_lg = "#D8A39D", metabo_lg  = "#C76374", all_lg = "#C13427", basic_lg = "#582F2B")
+### GLMMLASSO Top features plotting 
 
-ft_colors_delta <- c(meta_delta = "#960018", taxa_delta = "#8B3A3A", micom_delta = "#996759",     
-               pathway_delta = "#D8A39D", metabo_delta  = "#C76374", 
-               all_delta = "#C13427", basic_delta = "#582F2B")
+lass_dfs_long <- list(basic_lg = gl_ftimp_long_basic, meta_lg = gl_ftimp_long_meta, 
+                      taxa_lg = gl_ftimp_long_taxa, micom_lg = gl_ftimp_long_micom, 
+                      pathway_lg = gl_ftimp_long_pathway, metabo_lg = gl_ftimp_long_metabo, 
+                      all_lg = gl_ftimp_long_all)
 
-# store plots if you want to print/save them later
-plots <- list()
-for (ft_name in names(ft_dfs)) {
-  omic <- ft_dfs[[ft_name]]
-  
-  omic_parsed <- omic %>%
-    dplyr::mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
-    dplyr::mutate(parsed = map(Top_15_Feature_Importances, fromJSON))
-  
-  omic_long <- omic_parsed %>%
-    unnest(parsed) %>%
-    dplyr::select(-Top_15_Feature_Importances) %>% filter(Feature != "time") 
-  
-  avg_importance <- omic_long %>%
-    dplyr::group_by(Feature) %>%
-    summarise(avg_importance = mean(Importance, na.rm = TRUE), .groups = "drop") %>%
-    dplyr::mutate(Feature = reorder(Feature, avg_importance)) %>%
-    head(10)
-  
-  merf_long_ft_imp <- ggplot(avg_importance, aes(x = Feature, y = avg_importance)) +
-    geom_col(fill = ft_colors[[ft_name]], width = 0.7) +
-    labs(title = paste("Avg. MERF Ft. Importance -", toupper(ft_name)),
-      x = "Feature",
-      y = "Average Importance") +
-    theme_minimal(base_size = 14) +
-    theme(legend.position = "none",
-      plot.margin = ggplot2::margin(t = 1, r = 1, b = 1, l = 3, unit = "cm"),  # More left margin
-      plot.title = element_text(hjust = 0.2, face = "bold", size = 16),
-      axis.text.y = element_text(face = "bold", hjust = 1, size = 14),
-      axis.text.x = element_text(face = "bold", size = 14),
-      axis.title.x = element_text(margin = ggplot2::margin(1, 0, 0, 0, unit = "cm"), size = 16),
-      axis.title.y = element_text(margin = ggplot2::margin(0, 1, 0, 0, unit = "cm"), size = 16),
-      panel.background = element_rect(fill = "white", color = NA),
-      plot.background = element_rect(fill = "white", color = NA)) +
-    scale_y_continuous(limits = c(-0.4, 0.7), 
-                       expand = expansion(mult = c(0, 0.3))) +  # adds space to the right
-    coord_flip(clip = "off") 
-
-  plots[[ft_name]] <- merf_long_ft_imp # store or print
-  
-  #ggsave(filename = file.path(omic_out_dir, paste0("ft_imp_merf_long/merf_avg_importance_april29_", ft_name, ".png")),
-  #ggsave(filename = file.path(omic_out_dir, paste0("ft_imp_merf_delta/merf_avg_importance_april29_", ft_name, ".png")),     
-  #        plot = merf_long_ft_imp, width = 9, height = 5, dpi = 300)
-}
-
-
-### GLMMLASSO Top features plotting loops ### you have to chose long or delta below
-
-lg_lass_ft_imp <- list(basic_lg = gl_ftimp_long_basic, meta_lg = gl_ftimp_long_meta, 
-                       taxa_lg = gl_ftimp_long_taxa, micom_lg = gl_ftimp_long_micom, 
-                       pathway_lg = gl_ftimp_long_pathway, 
-                       metabo_lg = gl_ftimp_long_metabo, all_lg = gl_ftimp_long_all)
-
-imap_dfr(lg_lass_ft_imp, ~ 
-           summarise(.x, min = min(Estimate, na.rm = TRUE), max = max(Estimate, na.rm = TRUE)) %>%
-           mutate(name = .y)) %>% bind_rows() %>% dplyr::select(name, min, max)
-
-delta_lass_ft_imp <- list(basic_delta = gl_ftimp_delta_basic, meta_delta = gl_ftimp_delta_meta, 
+lass_dfs_delta <- list(basic_delta = gl_ftimp_delta_basic, meta_delta = gl_ftimp_delta_meta, 
                        taxa_delta = gl_ftimp_delta_taxa, micom_delta = gl_ftimp_delta_micom, 
-                       pathway_delta = gl_ftimp_delta_pathway, 
-                       metabo_delta = gl_ftimp_delta_metabo, all_delta = gl_ftimp_delta_all)
+                       pathway_delta = gl_ftimp_delta_pathway, metabo_delta = gl_ftimp_delta_metabo, 
+                       all_delta = gl_ftimp_delta_all)
 
-imap_dfr(delta_lass_ft_imp, ~ 
+# Combined feature sets
+all_lass_ft_dfs <- list(lass_lg = list(data = lass_dfs_long, colors = ft_colors, 
+                                  label = "long", model_label = "GlmmLasso",
+                                  x_ax_label = "Feature Co-efficient"),
+                   lass_delta = list(data = lass_dfs_delta, colors = ft_colors_delta, 
+                                     label = "delta", model_label = "GlmmLasso",
+                                     x_ax_label = "Feature Co-efficient"))
+imap_dfr(lass_dfs_long, ~ 
            summarise(.x, min = min(Estimate, na.rm = TRUE), max = max(Estimate, na.rm = TRUE)) %>%
            mutate(name = .y)) %>% bind_rows() %>% dplyr::select(name, min, max)
 
-ft_colors <- c(meta_lg = "#960018", taxa_lg = "#8B3A3A", micom_lg = "#996759",     
-               pathway_lg = "#D8A39D", metabo_lg  = "#C76374", all_lg = "#C13427",
-               basic_lg = "#582F2B")
-
-ft_colors <- c(meta_delta = "#960018", taxa_delta = "#8B3A3A", micom_delta = "#996759",     
-               pathway_delta = "#D8A39D", metabo_delta  = "#C76374", all_delta = "#C13427",
-               basic_delta = "#582F2B")
+imap_dfr(lass_dfs_delta, ~ 
+           summarise(.x, min = min(Estimate, na.rm = TRUE), max = max(Estimate, na.rm = TRUE)) %>%
+           mutate(name = .y)) %>% bind_rows() %>% dplyr::select(name, min, max)
 
 lass_plots <- list()
-for (ft_name in names(lg_lass_ft_imp)) {
-  top_features <- lg_lass_ft_imp[[ft_name]]
-  ymin <- -1.0
-  ymax <- 2.0
-  plot_feat <- top_features %>%
-    dplyr::filter(!str_detect(tolower(Feature), "time")) %>%
-    slice_head(n = 10) %>%
-    mutate(Estimate_capped = pmin(pmax(Estimate, ymin), ymax))  # Truncate values
+for (type in names(all_lass_ft_dfs)) {
+  ft_set <- all_lass_ft_dfs[[type]]$data
+  color_map <- all_lass_ft_dfs[[type]]$colors
+  label <- all_lass_ft_dfs[[type]]$label
+  model_label <- all_lass_ft_dfs[[type]]$model_label  # "MERF" or "GlmmLasso"
+  x_ax_label <- all_lass_ft_dfs[[type]]$x_ax_label
   
-  features <- ggplot(plot_feat, aes(x = reorder(Feature, Estimate_capped), y = Estimate_capped)) +
-    geom_col(fill = ft_colors[[ft_name]], width = 0.8) +
-    ggtitle(paste("Top Features & Coefficients from glmmLasso Models", ft_name)) +
-    xlab("Feature") + ylab("Coefficient Estimate") +
-    theme_minimal(base_size = 14) +
-    theme(
-      legend.position = "none",
-      plot.margin = ggplot2::margin(t = 1, r = 1, b = 1, l = 3, unit = "cm"),
-      plot.title = element_text(hjust = 0.2, face = "bold", size = 16),
-      axis.text.y = element_text(face = "bold", hjust = 1, size = 14),
-      axis.text.x = element_text(face = "bold", size = 14),
-      axis.title.x = element_text(margin = ggplot2::margin(1, 0, 0, 0, unit = "cm"), size = 16),
-      axis.title.y = element_text(margin = ggplot2::margin(0, 1, 0, 0, unit = "cm"), size = 16),
-      panel.background = element_rect(fill = "white", color = NA),
-      plot.background = element_rect(fill = "white", color = NA)
-    ) +
-    scale_y_continuous(limits = c(ymin, ymax), expand = expansion(mult = c(0, 0.3))) +
-    coord_flip(clip = "off")
-  
-  lass_plots[[ft_name]] <- features # store or print
-  
-  #ggsave(filename = file.path(omic_out_dir, paste0("ft_imp_glmmlasso/glm_avg_imp_delta_april29_", ft_name, ".png")),
-  #       plot = features, width = 9, height = 5, dpi = 300)
+  for (ft_name in names(ft_set)) {
+    top_features <- ft_set[[ft_name]]
+    ymin <- -1.0
+    ymax <- 1.5
+    plot_feat <- top_features %>%
+      dplyr::filter(!str_detect(tolower(Feature), "time")) %>%
+      slice_head(n = 10) %>%
+      mutate(Estimate_capped = pmin(pmax(Estimate, ymin), ymax))  # Truncate values
+    
+    features <- ggplot(plot_feat, aes(x = reorder(Feature, Estimate_capped), y = Estimate_capped)) +
+      geom_col(fill = color_map[[ft_name]], width = 0.7) +
+      ggtitle(paste("Top Features & Coefficients from glmmLasso Models", ft_name)) +
+      labs(title = paste(model_label, toupper(ft_name)),
+           x = "Top 10 Model Features", 
+           y = paste("Average ", x_ax_label)) +
+      theme_minimal(base_size = 14) +
+      theme(legend.position = "none",
+            plot.margin = ggplot2::margin(t = 1, r = 1, b = 1, l = 3, unit = "cm"),
+            plot.title = element_text(hjust = 0.2, face = "bold", size = 16),
+            axis.text.y = element_text(face = "bold", hjust = 1, size = 13),
+            axis.text.x = element_text(face = "bold", size = 13),
+            axis.title.x = element_text(margin = ggplot2::margin(0.5, 0, 0, 0, unit = "cm"), size = 14),
+            axis.title.y = element_text(margin = ggplot2::margin(0, 0.5, 0, 0, unit = "cm"), size = 14),
+            panel.background = element_rect(fill = "white", color = NA),
+            plot.background = element_rect(fill = "white", color = NA)) +
+      scale_y_continuous(limits = c(ymin, ymax), 
+                         expand = expansion(mult = c(0, 0.1))) +
+      coord_flip(clip = "off")
+    
+    object_name <- paste0("plot_", type, "_", ft_name, "_", label)
+    assign(object_name, features, envir = .GlobalEnv)
+    lass_plots[[ft_name]] <- features # store or print
+    png_name <- file.path(output_dir, paste0("feature_importance_", ft_name, "_", label, ".png"))
+    #ggsave(filename = png_name, plot = plot, width = 9, height = 5, dpi = 300)
+  }
 }
+
+lass_long_plots <- lass_plots[c(2, 5, 6, 7)]
+combined_lass_long_plot <- wrap_plots(lass_long_plots, ncol = 2) +
+  plot_annotation(title = "GlmmLasso longitudinal BMI Prediction Features",
+                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
+  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
+
+lass_delta_plots <- lass_plots[c(9, 13, 14)]
+combined_lass_delta_plot <- wrap_plots(lass_delta_plots, nrow = 3) +
+  plot_annotation(title = "GlmmLasso BMI Change Prediction Features",
+                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
+  theme(plot.margin = ggplot2::margin(20, 40, 20, 40, unit = "pt"))
+
+print(combined_lass_long_plot)
+print(combined_lass_delta_plot)
 
 ### HEATMAPS OF SCORES #########################################################
 
@@ -522,8 +519,8 @@ var_levels <- levels(factor(corr_long$Var1))
 actual_idx <- which(var_levels == "Actual BMI Score")
 ggplot(corr_long, aes(x = Var2, y = Var1, fill = value)) +
   geom_tile(color = "white") +
-  scale_fill_gradient2(low = "#043362", high = "#C96374", mid = "white", 
-                       midpoint = 0.25, limit = c(-0.5, 1), name = "Correlation") +
+  scale_fill_gradient2(low = "white", high = "#E96374", 
+                       limit = c(-0.5, 1), name = "Correlation") +
   theme_minimal(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
     axis.text.y = element_text(size = 14),
@@ -602,135 +599,18 @@ cor_long_df <- list(
                         "Metabolomics Score" = "y_new_metabo",
                         "All Omic Score" = "y_new_all"))
 
-ggplot(cor_long_df, aes(x = Var1, y = Var2, fill = value)) +
+final_heat <- ggplot(cor_long_df, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile() +
   facet_grid(method ~ type) +
-  scale_fill_gradient2(low = "#a3c6d4", high = "#C96374", mid = "white", midpoint = 0.5,
-                       limit = c(0, 1), name = "Correlation") +
+  scale_fill_gradient2(low = "#09236c", high = "#C96374", mid = "white", midpoint = 0.0,
+                       limit = c(-0.2, 1), name = "Correlation") +
   theme_minimal(base_size = 16) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
         axis.text.y = element_text(size = 15), 
         strip.text = element_text(face = "bold", size = 16)) +
   labs(title = "Correlation Heatmaps: Long vs Delta", x = "", y = "")
 
-##### VENN DIAGRAM FOR GLMLASSO ##### ##### ##### ##### ##### ##### ##### ##### 
-omic_types <- c("basic", "meta", "taxa", "micom", "pathway", "metabo", "all")
-venn_plots <- list()  # To store plots
-
-for (omic in omic_types) {
-  long_df <- lg_lass_ft_imp[[paste0(omic, "_lg")]]
-  delta_df <- delta_lass_ft_imp[[paste0(omic, "_delta")]]
-  
-  top_long <- long_df %>%
-    arrange(desc(abs_estimate)) %>%
-    slice_head(n = 20) %>%
-    pull(Feature)
-  
-  top_delta <- delta_df %>%
-    arrange(desc(abs_estimate)) %>%
-    slice_head(n = 20) %>%
-    pull(Feature)
-  
-  # Generate venn plot grob
-  venn_grob <- venn.diagram(
-    x = list(Longitudinal = unique(top_long), Delta = unique(top_delta)),
-    filename = NULL,
-    fill = c("#a3c6d4", "#C96374"),
-    alpha = 0.6,
-    cex = 1.5,
-    cat.cex = 1.4,
-    cat.fontface = "bold",
-    print.mode = "percent",
-    main = paste("Top 20 Feature Overlap -", toupper(omic)),
-    main.cex = 2)
-  
-  # Store grob in list
-  venn_plots[[omic]] <- venn_grob
-  #png(file.path(omic_out_dir, paste0("venn_glmmLasso_", omic, ".png")), width = 800, height = 600)
-  grid.draw(venn_grob)
-  dev.off()
-}
-
-grid.newpage()
-grid.draw(venn_plots$basic)
-grid.draw(venn_plots$meta)
-grid.draw(venn_plots$taxa)  # or $basic, $meta, etc.
-grid.draw(venn_plots$meta)
-grid.draw(venn_plots$micom)
-grid.draw(venn_plots$metabo)
-grid.draw(venn_plots$all)
-# Create Venn grobs for each pair
-grid.arrange(
-  venn_plots$basic,
-  venn_plots$meta,
-  venn_plots$taxa,
-  venn_plots$micom,
-  venn_plots$metabo,
-  venn_plots$all,
-  ncol = 2  # or adjust as needed
-)
-
-#### VENN DIAGRAMM for MERF ################################################
-
-pair_keys <- c("basic", "micom", "taxa", "meta", "metabo", "all", "pathway")
-
-# Create a function to extract top 20 features by average importance
-get_top_features <- function(df) {
-  df %>%
-    mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
-    mutate(parsed = map(Top_15_Feature_Importances, fromJSON)) %>%
-    unnest(parsed) %>%
-    filter(Feature != "time") %>%
-    group_by(Feature) %>%
-    summarise(avg_importance = mean(Importance, na.rm = TRUE), .groups = "drop") %>%
-    arrange(desc(avg_importance)) %>%
-    slice_head(n = 20) %>%
-    pull(Feature)
-}
-
-# Store overlapping features
-overlap_results <- list()
-for (key in pair_keys) {
-  df_long <- ft_dfs[[paste0(key, "_lg")]]
-  df_delta <- ft_dfs_delta[[paste0(key, "_delta")]]
-  if (!is.null(df_long) && !is.null(df_delta)) {
-    top_lg <- get_top_features(df_long)
-    top_delta <- get_top_features(df_delta)
-    overlap <- intersect(top_lg, top_delta)
-    overlap_results[[key]] <- list(
-      long = top_lg,
-      delta = top_delta,
-      overlap = overlap)
-    cat("Pair:", key, "\n")
-    cat("Overlap (", length(overlap), " features):\n", paste(overlap, collapse = ", "), "\n\n")
-  }
-}
-
-grid.newpage()
-# Loop over all key pairs
-for (key in pair_keys) {
-  overlap <- overlap_results[[key]]
-  if (is.null(overlap)) next
-  file_path <- file.path(venn_dir, paste0("venn_", key, ".png")) # save path
-  png(filename = file_path, width = 800, height = 800, res = 150) # Open PNG 
-  
-  # Draw Venn
-  grid.newpage()
-  draw.pairwise.venn(
-    area1 = length(overlap$long),
-    area2 = length(overlap$delta),
-    cross.area = length(overlap$overlap),
-    category = c(paste0(key, "_lg"), paste0(key, "_delta")),
-    fill = c("#D8A39D", ""),
-    cat.cex = 1.2,
-    cex = 1.5)
-  
-  grid.text(paste("MERF models Top 20 Feature Overlap -", toupper(key)),  # custom title
-            y = unit(0.95, "npc"),
-            gp = gpar(fontsize = 16, fontface = "bold"))
-  dev.off()
-}
-
+final_heat
 
 #"#a9746e" , "#d7837f", "#5d2a3b", "#f1c27d" , "#a0522d", "#f4cccc", "#872657"
 
@@ -763,12 +643,12 @@ for (i in seq_along(omic_types)) {
   color <- venn_colors[i %% length(venn_colors) + 1]  # rotate if more omics than colors
   
   # Extract top 20 from GLMM
-  top_glmm_lg <- lg_lass_ft_imp[[paste0(omic, "_lg")]] %>%
+  top_glmm_lg <- get(paste0("gl_ftimp_long_", omic)) %>%
     arrange(desc(abs_estimate)) %>%
     slice_head(n = 20) %>%
     pull(Feature)
   
-  top_glmm_delta <- delta_lass_ft_imp[[paste0(omic, "_delta")]] %>%
+  top_glmm_delta <- get(paste0("gl_ftimp_delta_", omic)) %>%
     arrange(desc(abs_estimate)) %>%
     slice_head(n = 20) %>%
     pull(Feature)
@@ -807,16 +687,18 @@ for (i in seq_along(omic_types)) {
   dev.off()
 }
 
-grid.arrange(
-  venn_plots_4_$basic,
-  venn_plots_4_$meta,
-  venn_plots_4_$taxa,
-  venn_plots_4_$micom,
-  venn_plots_4_$metabo,
-  venn_plots_4_$all,
-  ncol = 2  # or adjust as needed
-)
 
+# R2 anova plots
+print(combined_plot)
+print(combined_linear_plot)
+# Co-efficients
+print(combined_merf_long_plot)
+print(combined_merf_delta_plot)
+print(combined_lass_long_plot)
+print(combined_lass_delta_plot)
+# Heat map
+final_heat
+# Venn Diagram Overlap 
 grid.arrange(
   grobTree(venn_plots_4_$basic),
   grobTree(venn_plots_4_$meta),
