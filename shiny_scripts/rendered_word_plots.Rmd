@@ -36,6 +36,115 @@ q_squared <- function(actual, predicted) {
   1 - (ss_res / ss_tot)
 }
 
+geom_top_rounded_rect <- function(mapping = NULL, data = NULL,
+                                       stat = "identity", position = "identity",
+                                       radius = grid::unit(6, "pt"),
+                                       ...,
+                                       na.rm = FALSE,
+                                       show.legend = NA,
+                                       inherit.aes = TRUE) {
+  layer(
+    data = data,
+    mapping = mapping,
+    stat = stat,
+    geom = GeomTopRoundedRect,
+    position = position,
+    show.legend = show.legend,
+    inherit.aes = inherit.aes,
+    params = list(
+      radius = radius,
+      na.rm = na.rm,
+      ...
+    )
+  )
+}
+
+GeomTopRoundedRect <- ggplot2::ggproto(
+  "GeomTopRoundedRect", ggplot2::Geom,
+
+  default_aes = ggplot2::aes(
+    colour = NA, fill = "grey35", size = 0.5, linetype = 1, alpha = NA
+  ),
+
+  required_aes = c("xmin", "xmax", "ymin", "ymax"),
+
+  draw_panel = function(self, data, panel_params, coord,
+                        radius = grid::unit(6, "pt")) {
+
+    coords <- coord$transform(data, panel_params)
+
+    grobs <- lapply(1:length(coords$xmin), function(i) {
+        
+      gridGeometry::polyclipGrob(
+        grid::roundrectGrob(
+          coords$xmin[i], coords$ymax[i],
+          width = (coords$xmax[i] - coords$xmin[i]),
+          height = (coords$ymax[i] - coords$ymin[i]),
+          r = radius,
+          default.units = "native",
+          just = c("left", "top")
+        ),
+        grid::rectGrob(
+          coords$xmin[i], coords$ymax[i] - (coords$ymax[i] - coords$ymin[i]) / 2,
+          width = (coords$xmax[i] - coords$xmin[i]),
+          height = (coords$ymax[i] - coords$ymin[i]) / 2,
+          default.units = "native",
+          just = c("left", "top")
+        ),
+        op = "union",
+        gp = grid::gpar(
+          col = coords$colour[i],
+          fill = alpha(coords$fill[i], coords$alpha[i]),
+          lwd = coords$size[i] * .pt,
+          lty = coords$linetype[i],
+          lineend = "butt"
+        )
+      )
+    })
+
+    grobs <- do.call(grid::gList, grobs)
+    ggplot2:::ggname("geom_top_rounded_rect", grid::grobTree(children = grobs))
+  },
+  draw_key = ggplot2::draw_key_polygon)
+
+geom_top_rounded_col <- function(mapping = NULL, data = NULL,
+                          position = ggplot2::position_stack(reverse = TRUE),
+                          radius = grid::unit(3, "pt"), ..., width = NULL,
+                          na.rm = FALSE, show.legend = NA, inherit.aes = TRUE) {
+  layer(
+    data = data, mapping = mapping, stat = "identity",
+    geom = GeomTopRoundedCol, position = position, show.legend = show.legend,
+    inherit.aes = inherit.aes, params = list(
+      width = width, radius = radius, na.rm = na.rm, ...
+    )
+  )
+}
+
+GeomTopRoundedCol <- ggproto(
+  "GeomTopRoundedCol", GeomTopRoundedRect,
+  required_aes = c("x", "y"),
+
+  setup_params = function(data, params) {
+    params$flipped_aes <- has_flipped_aes(data, params)
+    params
+  },
+  non_missing_aes = c("xmin", "xmax", "ymin", "ymax"),
+  setup_data = function(data, params) {
+    data$width <- data$width %||%
+      params$width %||% (resolution(data$x, FALSE) * 0.9)
+    transform(data,
+              ymin = pmin(y, 0), ymax = pmax(y, 0),
+              xmin = x - width / 2, xmax = x + width / 2, width = NULL
+    )
+  },
+  draw_panel = function(self, data, panel_params, coord, width = NULL, radius = grid::unit(3, "pt")) {
+    ggproto_parent(GeomTopRoundedRect, self)$draw_panel(data, panel_params, coord, radius = radius)
+  }
+)
+
+```
+
+```{r include=FALSE}
 # ANOVA & Feat Imp Comparisons 
 omic_out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/paper_render/basic_plus_diet/"
 venn_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/venn/"
@@ -199,7 +308,7 @@ gl_ftimp_long_metabo <- gl_ftimp_long_metabo %>%
 
 # Merf features 
 ```{r}
-omic_parsed <- all %>%
+omic_parsed <- pathway %>%
       mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
       mutate(parsed = map(Top_15_Feature_Importances, fromJSON))
     
@@ -211,8 +320,9 @@ omic_long <- omic_parsed %>%
 avg_importance <- omic_long %>%
       group_by(Feature) %>%
       summarise(avg_importance = mean(Importance, na.rm = TRUE), .groups = "drop") %>%
-      mutate(Feature = reorder(Feature, avg_importance)) %>%
-      head(15)
+      #plyr::mutate(Feature = reorder(Feature, avg_importance)) %>%
+      slice_max(order_by = avg_importance, n = 10, with_ties = FALSE) %>%
+      head(20)
 
 avg_importance
 ```
@@ -224,35 +334,6 @@ library(purrr)
 library(dplyr)
 
 # Define a renaming dictionary
-feature_rename_metabo <- c(
-  "GlycA" = "Glycoprotein acetyls",
-  "DHA_pct" = "DHA (% of FAs)",
-  "Gly" = "Glycine",
-  "Ala" = "Alanine",
-  "Glucose.y" = "Glucose",
-  "Gln" = "Glutamine-IR",
-  "HDL_CE" = "Chol. esters in HDL",
-  "DHA_pct" = "DHA (% of FAs)",
-  "IDL_CE_pct" = "",
-  "PUFA_pct" = "PUFA (%)",
-  "HDL_size" = "HDL-size",
-  "VLDL_TG" = "TGs in VLDL")
-
-feature_rename_metabo_lg <- c(
-  "GlycA" = "Glycoprotein acetyls",
-  "DHA_pct" = "DHA (% of FAs)",
-  "Gly" = "Glycine",
-  "Ala" = "Alanine",
-  "Glucose.y" = "Glucose",
-  "Gln" = "Glutamine-IR",
-  "HDL_CE" = "Chol. esters in HDL",
-  "DHA_pct" = "DHA (% of FAs)",
-  "IDL_CE_pct" = "",
-  "PUFA_pct" = "PUFA (%)",
-  "HDL_size" = "HDL-size",
-  "VLDL_TG" = "TGs in VLDL",
-  "Acetoacetate.x" = "Acetoacetate")
-
 feature_rename_meta <- c(
   "Triglyceride_lipid" = "TG",
   "HDL_Total_Direct_lipid" = "HDL",
@@ -264,6 +345,21 @@ feature_rename_meta <- c(
   "age" = "Age",
   "sex" = "Sex (Male)",
   "randomized_group" = "IMF Diet Grp.")
+
+feature_rename_metabo <- c(
+  "GlycA" = "Glycoprotein Acetyls",
+  "DHA_pct" = "DHA (% of FAs)",
+  "Gly" = "Glycine",
+  "Ala" = "Alanine",
+  "Glucose.y" = "Glucose",
+  "Gln" = "Glutamine-IR",
+  "HDL_CE" = "Chol. esters in HDL",
+  "DHA_pct" = "DHA (% of FAs)",
+  "IDL_CE_pct" = "Cholesteryl Esters (% of IDL Lipids)",
+  "PUFA_pct" = "PUFA (%)",
+  "HDL_size" = "HDL-size",
+  "VLDL_TG" = "TGs in VLDL",
+  "LA" = "Linoleic Acid (% of FAs)")
 
 feature_rename_taxa <- c(
   "g__Anaerobutyricum" = "G Anaerobutyricum",
@@ -280,9 +376,7 @@ feature_rename_taxa <- c(
   "g__Frisingicoccus" = "G Frisingicoccus",
   "g__Haemophilus_D_735815" = "G Haemophilus D 735815",
   "g__Holdemanella" = "G Holdemanella",
-  "g__Lawsonibacter" = "G Lawsonibacter")
-
-feature_rename_taxa_lg <- c(
+  "g__Lawsonibacter" = "G Lawsonibacter",
   "g__Acetatifactor" = "G Acetatifactor",
   "g__Agathobacter_164117" = "G Agathobacter 164117",
   "g__Agathobaculum" = "G Agathobaculum",
@@ -297,21 +391,21 @@ feature_rename_taxa_lg <- c(
   "g__Coprococcus_A_187866" = "G Coprococcus A 187866",
   "g__Copromonas" = "G Copromonas",
   "g__Eggerthella" = "G Eggerthella",
-  "g__Eisenbergiella" = "G Eisenbergiella")
+  "g__Eisenbergiella" = "G Eisenbergiella",
+  "g__Streptococcus" = "G Streptococcus",
+  "g__UBA1417" = "g__UBA1417",
+  "g__Intestinibacter" = "G Intestinibacter",
+  "g__Ruminiclostridium_E" = "G Ruminiclostridium E",
+  "g__Ruminococcus_D" = "G Ruminococcus D", 
+  "g___1" = "G 1",
+  "g__Porcincola" = "G Porcincola",
+  "g__Ruminococcus_C_58660" = "G Ruminococcus C58660",
+  "g__Longicatena" = "G Longicatena",
+  "g__Ruminococcus_D" = "G Ruminococcus D",
+  "g__Marvinbryantia" = "G Marvinbryantia"
+  )
 
 feature_rename_pathway <- c(
-  "D.glucarate.degradation.I" = "D-glucarate degr. ",
-  "L.lysine.biosynthesis.II" = "L-lysine biosyn. II",
-  "L.lysine.fermentation.to.acetate.and.butanoate" = "Lys ferm. to acetate/butanoate",
-  "L.rhamnose.degradation.I" = "L-rhamnose degr. I",
-  "TCA.cycle.VI..obligate.autotrophs. " = "TCA VI (autotrophs)",
-  "aromatic.biogenic.amine.degradation..bacteria." = "Aromatic amine degr. (bacteria)",
-  "glucose.and.glucose.1.phosphate.degradation" = "Glucose/G1P degr.",
-  "incomplete.reductive.TCA.cycle" = "Incomplete reductive TCA",
-  "isoprene.biosynthesis.II..engineered." = "Isoprene biosynth. II (eng.)",
-  "isopropanol.biosynthesis" = "Isopropanol biosyn.")
-
-feature_rename_pathway_lg <- c(
   "D.glucarate.degradation.I" = "D-glucarate degr. ",
   "L.lysine.biosynthesis.II" = "L-lysine biosyn. II",
   "L.lysine.fermentation.to.acetate.and.butanoate" = "Lys ferm. to acetate/butanoate",
@@ -334,11 +428,45 @@ feature_rename_pathway_lg <- c(
   "heme.biosynthesis.II..anaerobic." = "heme biosyn.II anaerobic",
   "lactose.and.galactose.degradation.I" = "lactose/galactose degr.I",
   "pyrimidine.deoxyribonucleotides.de.novo.biosynthesis.II" = "Pyr dNTP biosyn.II",
-  "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway")
+  "hexitol.fermentation.to.lactate..formate..ethanol.and.acetate" = "Hexitol Fermentation",
+  "X4.deoxy.L.threo.hex.4.enopyranuronate.degradation" = "deoxy enopyranuronate degr.",
+  "TCA.cycle.VI..obligate.autotrophs." = "TCA VI obligate autotrophs",
+  "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway",
+  "superpathway.of.sulfur.oxidation..Acidianus.ambivalens." = "Acidianus Ambivalens (Sulfur Oxi.)",
+  "peptidoglycan.biosynthesis.V...beta..lactam.resistance." = "Peptidoglycan Biosyn.V",
+  "superpathway.of.2.3.butanediol.biosynthesis" = "2,3 Butanediol Biosynthesis Pathways",
+  "superpathway.of..R.R..butanediol.biosynthesis" = "R,R Butanediol Biosynthesis Pathway",
+  "NAD.salvage.pathway.II" = "NAD Salvage Pathway II",
+  "inosine.5..phosphate.biosynthesis.III" = "Inosine-5-phosphate Biosyn.III",
+  "fatty.acid.salvage" = "Fatty Acid Salvage",
+  "ketogluconate.metabolism" = "Ketogluconate Metabolism",
+  "superpathway.of.sulfolactate.degradation" = "Sulfolactate Degradation Pathways", 
+  "superpathway.of.UDP.N.acetylglucosamine.derived.O.antigen.building.blocks.biosynthesis" = "UDPN Acetylglucosamine-O-antigen Biosyn.",
+  "mono.trans..poly.cis.decaprenyl.phosphate.biosynthesis" = "Mono-trans-poly-cis-decaprenyl-phosphate Biosyn.",
+  "thiazole.biosynthesis.II..Bacillus." = "Thiazole Biosyn.II Bacillus.",
+  "L.histidine.degradation.II" = "L-histidine Degradation II",
+  "superpathway.of.L.phenylalanine.biosynthesis" = "L-phenylalanine Biosyn. Pathways",
+  "superpathway.of.hexitol.degradation..bacteria." = "Bacterial Hexitol Degradation Pathways",
+  "UDP.2.3.diacetamido.2.3.dideoxy..alpha..D.mannuronate.biosynthesis" = "UDP-DDDA-ManA biosyn.",
+  "X1.4.dihydroxy.6.naphthoate.biosynthesis.I " = "1,4 dihydroxy naphthoate biosyn.I",
+  "X1.4.dihydroxy.6.naphthoate.biosynthesis.II" = "1,4 dihydroxy naphthoate biosyn.II",
+  "allantoin.degradation.to.glyoxylate.III" = "Allantoin → Glyoxylate III",
+  "arginine..ornithine.and.proline.interconversion" = "Arg–Orn–Pro interconversion",
+  "glycolysis.V..Pyrococcus." = "Glycolysis V Pyro.",
+  "heme.biosynthesis.II..anaerobic." = "heme biosyn.II anaerobic",
+  "lactose.and.galactose.degradation.I" = "lactose/galactose degr.I",
+  "pyrimidine.deoxyribonucleotides.de.novo.biosynthesis.II" = "Pyr dNTP biosyn.II",
+  "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway",
+  "superpathway.of.histidine..purine..and.pyrimidine.biosynthesis" = "His. Purine & Pyrimidine Biosyn.",
+  "superpathway.of.pyridoxal.5..phosphate.biosynthesis.and.salvage" = "Pyridoxal-5-phosphate Biosyn. & Salvage",
+  "purine.nucleotides.degradation.II..aerobic." = "Aerobic Purine Degradation II aerobic.",
+  "superpathway.of.L.methionine.biosynthesis..by.sulfhydrylation." = "Sulfhydrylation -> L-methionine Biosyn.",
+  "myo.inositol.degradation.I" = "Myo-inositol Degradation I"
+  )
 
 feature_rename_all <- c(
   "Dephospho.CoA" = "Dephospho-CoA",
-  "GlycA" = "Glycoprotein acetyls",
+  "GlycA" = "Glycoprotein Acetyls",
   "DHA_pct" = "DHA (% of FAs)",
   "Gly" = "Glycine",
   "Ala" = "Alanine",
@@ -356,7 +484,17 @@ feature_rename_all <- c(
   "MUFA_pct" = "MUFA (% of FAs)",
   "LA" = "Linoleic acid", 
   "Omega_6" = "Omega6 FA",
-  "TCA.cycle.VI..obligate.autotrophs." = "TCA VI (autotrophs)")
+  "TCA.cycle.VI..obligate.autotrophs." = "TCA VI (autotrophs)",
+  "superpathway.of.sulfur.oxidation..Acidianus.ambivalens." = "Acidianus Ambivalens (Sulfur Oxi.)",
+  "NAD.salvage.pathway.II" = "NAD Salvage Pathway II", 
+  "g__Acetatifactor" = "G Acetatifactor",
+  "indole.3.acetate" = "Indole-3-acetate")
+
+feature_rename_meta_lg <- feature_rename_meta
+feature_rename_metabo_lg <- feature_rename_metabo
+feature_rename_pathway_lg <- feature_rename_pathway
+feature_rename_taxa_lg <- feature_rename_taxa
+feature_rename_all_lg <- feature_rename_all
 ```
 
 
@@ -429,6 +567,16 @@ all_md <- all_md %>%
 
 # ANOVA tables for not basic plus 
 
+```{r}
+lmer_basic <- lmer(bmi ~ y_new_basic + (1|Cluster), data = gl_lasso_long, REML = FALSE)
+lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = gl_lasso_long, REML = FALSE)
+lmer_grs_b <- lmer(bmi ~ y_new_basic + y_new_grs + (1|Cluster), data = gl_lasso_long, REML = FALSE)
+
+AIC(lmer_basic)
+AIC(lmer_grs_b)
+```
+
+
 ```{r echo=FALSE, fig.height=5, fig.width=7, out.width="100%", fig.width = 6, fig.asp = 1, warning=FALSE}
 ### PREDICTED vs ACTUAL BMI 
 omic_dfs <- list(
@@ -438,10 +586,10 @@ omic_dfs <- list(
   gl_lasso_delta = gl_lasso_delta)
 
 omic_name_labels <- c(
-  "merf_long"      = "Merf Long",
-  "gl_lasso_long"  = "GlmmLasso Long",
-  "merf_delta"     = "Merf Delta",
-  "gl_lasso_delta" = "GlmmLasso Delta")
+  "merf_long"      = "MERF Longitudinal BMI",
+  "gl_lasso_long"  = "GlmmLasso Longitudinal BMI",
+  "merf_delta"     = "MERF BMI Changes (Deltas)",
+  "gl_lasso_delta" = "GlmmLasso BMI Changes (Deltas)")
 
 for (omic_name in names(omic_dfs)) {
   omic <- omic_dfs[[omic_name]]
@@ -559,20 +707,22 @@ for (omic_name in names(omic_dfs)) {
   r2_annotated <- r2_df %>%
     left_join(anova_labels, by = c("Model" = "Compared_Model"))
   
+  basic_aic <- AIC(lmer_basic)
+  
+  r2_annotated <- r2_annotated %>%
+                  dplyr::mutate(AIC = ifelse(Model == "Basic", 
+                                             round(basic_aic, 3), AIC))
+  
   for_table <- r2_annotated %>% dplyr::select(-c(R2c)) %>% 
                rename("R²*" = R2m, 
                       "P-Value" = `Pr(>Chisq)`)
-                      #"Chisq Statistic" = Chisq)
   
   final_anova_table_initial <- for_table %>% gt() %>%
     tab_header(title = "Model Comparison (ANOVA)") %>%
     fmt_number(columns = where(is.numeric), decimals = 2) %>%
-    #fmt_number(columns = "Df", decimals = 0) %>% 
     sub_missing(missing_text = "-") %>%
     cols_width(1 ~ pct(20),
                `R²*` ~ pct(15), 
-              # Df ~ pct(8),
-              #`Chisq Statistic` ~ pct(15), 
               Significance ~ pct(15),
               `P-Value` ~ pct(15), 
               AIC ~ pct(11), 
@@ -606,7 +756,6 @@ for (omic_name in names(omic_dfs)) {
                     "Basic + Metabo", "Basic + All")
 
   r2_annotated %>%
-    #filter(Model != "Basic") %>%
     dplyr::mutate(Model = factor(Model, levels = custom_order)) %>%
     arrange(Model)
   
@@ -622,10 +771,21 @@ for (omic_name in names(omic_dfs)) {
     "Basic + All"
   ))
   
-  sig_plot <- ggplot(r2_annotated, 
+  basic_aic <- AIC(lmer_basic)
+  
+  r2_annotated <- r2_annotated %>%
+                  dplyr::mutate(AIC = ifelse(Model == "Basic", 
+                                             round(basic_aic, 3), AIC))
+  
+  # Extract R2m value for the "Basic" model
+  basic_r2 <- r2_annotated$R2m[r2_annotated$Model == "Basic"]
+
+  # Add horizontal dashed line to the plot
+  sig_plot <- ggplot(r2_annotated,
                      aes(x = Model, y = R2m, fill = Model)) +
     geom_col(width = 0.7) +
     geom_text(aes(y = R2m + 0.03, label = Significance), size = 8) +
+    #geom_hline(yintercept = basic_r2, linetype = "dashed", color = "black") +  # <<-- New line added
     scale_y_continuous(limits = c(0, 0.58),
                        expand = expansion(mult = c(0, 0.1))) +
     scale_fill_manual(values = c(
@@ -634,25 +794,27 @@ for (omic_name in names(omic_dfs)) {
       "Basic + Micom"    = "#996759",
       "Basic + Pathway"  = "#D8A39D",
       "Basic + Taxa"     = "#8B3A3A",
-      "Basic + GRS"   = "#E18476",
+      "Basic + GRS"      = "#E18476",
       "Basic + Clinical" = "#fecdc7",
-      "Basic"            = "#582F2B")) +
+      "Basic"            = "#A9A9A9")) +
     labs(title = glue("R² {omic_name_labels[[omic_name]]}"),
-      x = "Model Comparisons",
-      y = expression(R^2*" = fixed effect variance")) +
+         x = "Basic vs. Added Omic Scores",
+         #x = expression(R^2*" : Omic vs. Basic"),
+         y = expression(R^2*" = Fixed Effect Variance")) +
     theme_minimal(base_size = 14) +
     theme(legend.position = "none",
           plot.margin = ggplot2::margin(t = 2, r = 2, b = 2, l = 2, unit = "cm"),
-      axis.text.y = element_text(face = "bold", hjust = 1, size = 14),
-      axis.text.x = element_text(face = "bold", size = 14, hjust = 1, angle = 45),
-      axis.title.x = element_text(margin = ggplot2::margin(0.5,0,0,0, unit = "cm"), size = 14),
-      axis.title.y = element_text(margin = ggplot2::margin(0,0.8,0,0, unit = "cm"), size = 14))
-  #sig_plot
+          axis.text.y = element_text(face = "bold", hjust = 1, size = 14),
+          axis.text.x = element_text(face = "bold", size = 14, hjust = 1, angle = 45),
+          axis.title.x = element_text(margin = ggplot2::margin(0.5,0,0,0, unit = "cm"), size = 14),
+          axis.title.y = element_text(margin = ggplot2::margin(0,0.8,0,0, unit = "cm"), size = 14))
+  sig_plot
   assign(paste0(omic_name, "_sig_plot"), sig_plot)
   # Save the sig plot
   #ggsave(file.path(omic_out_dir, paste0(omic_name, "_sig_plot_april29.png")), plot = sig_plot,  width = 10, height = 8)
 }
 ```
+
 
 # Combined ANOVA table initial
 ```{r echo=FALSE, fig.width = 5, fig.asp = 1, out.width="70%"}
@@ -691,8 +853,6 @@ final_anova_table_initial <- combined_anova_df %>%
     sub_missing(missing_text = "-") %>%
     cols_width(1 ~ pct(16),
                `R²*` ~ pct(12), 
-               #Df ~ pct(12),
-               #`Chisq Statistic` ~ pct(12), 
                Significance ~ pct(12),
                `P-Value` ~ pct(12), 
                AIC ~ pct(12), 
@@ -720,7 +880,7 @@ gtsave(final_anova_table_initial,
 
 ```
 
-
+## Different ANOVA table for basic initial
 
 ```{r}
 library(dplyr)
@@ -742,7 +902,7 @@ table_data <- combined_anova_df %>%
   arrange(Model_Type) %>%
   dplyr::mutate(across(where(is.numeric), ~ round(.x, 3))) %>%
   dplyr::select(-Model_Type)
-
+  
 # Step 2: Split by model type
 tables <- split(table_data, combined_anova_df$Model_Type)
 
@@ -775,6 +935,38 @@ ggsave(paste0(omic_out_dir, "anova_initial_combined_with_grs.png"), final_plot,
 ```
 
 
+## Another ANOVA initial combination 
+```{r}
+# Create a new Word document
+doc <- read_docx()
+
+# Loop over each table
+for (name in names(tables)) {
+  table_data <- tables[[name]]
+  
+  # Create a formatted flextable
+  ft <- flextable(table_data) %>%
+    autofit() %>%
+    theme_vanilla() %>%
+    set_caption(caption = name) %>%
+    fontsize(size = 10, part = "all") %>%
+    align(align = "center", part = "all") %>%
+    border_remove() %>%
+    border_outer(border = fp_border(color = "black", width = 1)) %>%
+    border_inner(border = fp_border(color = "gray", width = 0.5))
+
+  # Add a title paragraph
+  doc <- doc %>%
+    body_add_par(name, style = "heading 2") %>%
+    body_add_flextable(ft) %>%
+    body_add_par("", style = "Normal")  # Add spacing between tables
+}
+
+# Save the Word file
+print(doc, target = paste0(omic_out_dir, "anova_initial_combined.docx"))
+```
+
+
 # Figure x : Combined ANOVA R2 plots for initial
 
 ```{r echo=FALSE, fig.width = 10, fig.asp = 1.05, out.width="95%", warning=FALSE}
@@ -799,6 +991,435 @@ ggsave(
 )
 ```
 
+################################################################################
+
+# DO we see and improvement in the omics upon clinical models
+
+```{r}
+lmer_meta_b <- lmer(bmi ~ y_new_meta + (1|Cluster), data = gl_lasso_long, REML = FALSE)
+lmer_meta_grs <- lmer(bmi ~ y_new_meta + y_new_grs  + (1|Cluster), data = gl_lasso_long, REML = FALSE)
+
+AIC(lmer_meta_b)
+AIC(lmer_meta_grs)
+
+r.squaredGLMM(lmer_meta_b)
+r.squaredGLMM(lmer_meta_grs)
+
+anova(lmer_meta_b, lmer_meta_grs)
+```
+
+
+```{r}
+omic_dfs <- list(
+  merf_long = merf_long,
+  gl_lasso_long = gl_lasso_long,
+  merf_delta = merf_delta, 
+  gl_lasso_delta = gl_lasso_delta)
+
+omic_name_labels <- c(
+  "merf_long"      = "MERF Longitudinal BMI",
+  "gl_lasso_long"  = "GlmmLasso Longitudinal BMI",
+  "merf_delta"     = "MERF BMI Changes (Deltas)",
+  "gl_lasso_delta" = "GlmmLasso BMI Changes (Deltas)")
+
+for (omic_name in names(omic_dfs)) {
+  omic <- omic_dfs[[omic_name]]
+  
+  ### ANOVA 
+  mod_dat <- omic
+  lmer_basic_b <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_basic_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_b <- lmer(bmi ~ y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_grs <- lmer(bmi ~ y_new_meta + y_new_grs  + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_micom <- lmer(bmi ~ y_new_meta + y_new_micom  + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_pathway <- lmer(bmi ~ y_new_meta + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_taxa <- lmer(bmi ~ y_new_meta + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_metabo <- lmer(bmi ~ y_new_meta + y_new_metabo + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_all <- lmer(bmi ~ y_new_meta + y_new_all + (1|Cluster), data = mod_dat, REML = FALSE)
+  
+  # Put your models into a named list
+  models <- list(
+    `Clinical`  = lmer_meta_b,
+    `Clinical + GRS`  = lmer_meta_grs,
+    `Clinical + Micom` = lmer_meta_micom,
+    `Clinical + Pathway` = lmer_meta_pathway,
+    `Clinical + Taxa`    = lmer_meta_taxa,
+    `Clinical + Metabo`  = lmer_meta_metabo,
+    `Clinical + All` = lmer_meta_all)
+  
+  # Extract R2 values for each model
+  r2_df_clin_plus <- do.call(rbind, lapply(names(models), function(name) {
+    r2_vals_clin_plus <- r.squaredGLMM(models[[name]])
+    data.frame(Model = name,
+      R2m = r2_vals_clin_plus[1, "R2m"],
+      R2c = r2_vals_clin_plus[1, "R2c"])
+  }))
+  #print(r2_df)
+  assign(paste0(omic_name, "_r2_df"), r2_df_clin_plus)
+  
+  lmer_models <- list(
+    c("lmer_meta_b", "lmer_meta_b"),
+    c("lmer_meta_b", "lmer_meta_grs"),
+    c("lmer_meta_b", "lmer_meta_taxa"),
+    c("lmer_meta_b", "lmer_meta_micom"),
+    c("lmer_meta_b", "lmer_meta_pathway"),
+    c("lmer_meta_b", "lmer_meta_metabo"),
+    c("lmer_meta_b", "lmer_meta_all"))
+  
+  lmer_models_clin_p <- list()  # empty list to store ANOVA results
+  all_anova_tables_clin_p <- list()
+  for (model_pair in lmer_models) {
+    model_1 <- get(model_pair[1])
+    model_2 <- get(model_pair[2])
+    anova_out_clin_p <- anova(model_1, model_2)  # lmerMod objects
+    # tidied_result <- tidy(anova_result)
+    anova_out_clin_p$model_comparison <- paste(model_pair[1], "vs", model_pair[2])
+    lmer_models_clin_p[[length(lmer_models_clin_p) + 1]] <- anova_out_clin_p
+  }
+  # Combine all results into one dataframe
+  anova_table_clin_p <- do.call(rbind, lmer_models_clin_p)
+  anova_table_clean_clin_p <- anova_table_clin_p %>%
+    dplyr::filter(!is.na(`Chisq`) & !is.na(`Pr(>Chisq)`)) %>%
+    dplyr::mutate(across(where(is.numeric), round, 3)) %>% 
+    dplyr::select(-c("npar")) 
+  rownames(anova_table_clean_clin_p) <- NULL
+
+  # Extract model names for reference
+  anova_table_clean_clin_p$model_1 <- gsub(" vs .*", "", anova_table_clean_clin_p$model_comparison)
+  anova_table_clean_clin_p$model_2 <- gsub(".* vs ", "", anova_table_clean_clin_p$model_comparison)
+  
+  # Annotate significance and select relevant columns only
+  anova_labels_clin_p <- anova_table_clean_clin_p %>%
+  dplyr::mutate(
+    Compared_Model = dplyr::recode(
+       model_comparison,
+       "lmer_meta_b vs lmer_meta_b" = "Clinical",
+       "lmer_meta_b vs lmer_meta_grs" = "Clinical + GRS",
+       "lmer_meta_b vs lmer_meta_taxa" = "Clinical + Taxa",
+       "lmer_meta_b vs lmer_meta_micom" = "Clinical + Micom",
+       "lmer_meta_b vs lmer_meta_pathway" = "Clinical + Pathway",
+       "lmer_meta_b vs lmer_meta_metabo" = "Clinical + Metabo",
+       "lmer_meta_b vs lmer_meta_all" = "Clinical + All"
+    ),
+    Significance = case_when(
+      `Pr(>Chisq)` < 0.001 ~ "***",
+      `Pr(>Chisq)` < 0.01  ~ "**",
+      `Pr(>Chisq)` < 0.05  ~ "*",
+      TRUE            ~ ""
+    ),
+    `Pr(>Chisq)` = case_when(
+      `Pr(>Chisq)` < 0.001 ~ "<0.001",
+      `Pr(>Chisq)` < 0.01  ~ "<0.01",
+      TRUE ~ as.character(`Pr(>Chisq)`)
+    )
+  ) %>%
+  dplyr::select(Compared_Model, AIC, `Pr(>Chisq)`, Significance)
+  
+  # Apply the custom order to your data #START HERE ####
+  custom_order_clin_plus <- c("Clinical", 
+                              "Clinical + GRS",
+                              "Clinical + Pathway", 
+                              "Clinical + Taxa",
+                              "Clinical + Micom", 
+                              "Clinical + Metabo", 
+                              "Clinical + All")
+  
+  r2_annotated_clin_plus <- r2_df_clin_plus %>%
+                            left_join(anova_labels_clin_p, 
+                                      by = c("Model" = "Compared_Model")) %>%
+                            dplyr::mutate(Model = factor(Model, 
+                                 levels = custom_order_clin_plus)) %>%
+                                 arrange(Model)
+  clinical_aic <- AIC(lmer_meta_b)
+  
+  r2_annotated_clin_plus <- r2_annotated_clin_plus %>%
+  dplyr::mutate(AIC = ifelse(Model == "Clinical", round(clinical_aic, 3), AIC))
+  
+  for_table_cp <- r2_annotated_clin_plus %>% 
+               dplyr::select(-c(R2c)) %>% 
+               rename("R²" = R2m, 
+                      "P-Value" = `Pr(>Chisq)`)  %>%
+  mutate(across(c(`P-Value`, Significance), ~replace_na(., "-")))
+  
+  final_anova_table_clin_p <- for_table_cp %>% gt() %>%
+    tab_header(title = "Model Comparison (ANOVA)") %>%
+    fmt_number(columns = where(is.numeric), decimals = 2) %>%
+    sub_missing(missing_text = "-") %>%
+    cols_width(1 ~ pct(20),
+               `R²` ~ pct(15), 
+              Significance ~ pct(15),
+              `P-Value` ~ pct(15), 
+              AIC ~ pct(11), 
+              Significance ~ pct(11)) %>%
+    cols_align(align = "center",
+      columns = everything()) %>% 
+    cols_align("left", columns = Model) %>%
+    tab_options(table.width = pct(60),
+                table.align = "center") %>%
+    opt_table_font(font = list(
+        google_font("Arial"),   # fallback to system font if unavailable
+        default_fonts())) %>%
+  # Style body text
+  tab_style(style = cell_text(size = 14),
+    locations = cells_body()) %>%
+  # Style column labels
+  tab_style(style = cell_text(size = 16, weight = "bold"),
+    locations = cells_column_labels()) %>%
+  # Style title
+  tab_style(style = cell_text(size = 18, weight = "bold"),
+    locations = cells_title())
+  assign(paste0(omic_name, "_anova_table_clin_p"), final_anova_table_clin_p)
+  
+  ## And plot the anova 
+  basic_r2 <- r2_annotated_clin_plus$R2m[r2_annotated_clin_plus$Model == "Clinical"]
+  sig_plot_clin_plus <- ggplot(r2_annotated_clin_plus, 
+                     aes(x = Model, y = R2m, fill = Model)) +
+    geom_col(width = 0.7) +
+    geom_text(aes(y = R2m + 0.036, label = Significance), size = 8) +
+    #geom_hline(yintercept = basic_r2, linetype = "dashed", color = "black") +
+    scale_y_continuous(limits = c(0, 0.72),
+                       expand = expansion(mult = c(0, 0.1))) +
+    scale_fill_manual(values = c(
+      "Clinical + All"      = "#b44241",
+      "Clinical + Metabo"   = "#C76374",
+      "Clinical + Micom"    = "#996759",
+      "Clinical + Pathway"  = "#D8A39D",
+      "Clinical + Taxa"     = "#8B3A3A",
+      "Clinical + GRS"      = "#E18476",
+      "Clinical"            = "#A9A9A9")) +
+    labs(title = glue("R² {omic_name_labels[[omic_name]]}"),
+      x = "Clinical vs. Added Omic Scores",
+      y = expression(R^2*" = Fixed Effect Variance")) +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none",
+          plot.margin = ggplot2::margin(t = 2, r = 2, b = 2, l = 2, unit = "cm"),
+      axis.text.y = element_text(face = "bold", hjust = 1, size = 14),
+      axis.text.x = element_text(face = "bold", size = 14, hjust = 1, angle = 45),
+      axis.title.x = element_text(margin = ggplot2::margin(0.5,0,0,0, unit = "cm"), size = 14),
+      axis.title.y = element_text(margin = ggplot2::margin(0,0.8,0,0, unit = "cm"), size = 14))
+  assign(paste0(omic_name, "_sig_plot_clin_plus"), sig_plot_clin_plus)
+}
+```
+
+
+```{r}
+# Assuming you saved the cleaned data frames *before* turning them into gt tables:
+all_anova_clean_tables_clin_p <- list(
+  merf_long    = merf_long_anova_table_clin_p,
+  gl_lasso_long = gl_lasso_long_anova_table_clin_p,
+  merf_delta    = merf_delta_anova_table_clin_p,
+  gl_lasso_delta = gl_lasso_delta_anova_table_clin_p)
+
+raw_tables_clin_p <- lapply(all_anova_clean_tables_clin_p, 
+                            function(gt_obj) gt_obj[["_data"]])
+
+combined_anova_df_clin_p <- bind_rows(
+  lapply(names(raw_tables_clin_p), function(name) {
+    df <- raw_tables_clin_p[[name]]
+    df$Model_Type <- name
+    df
+    }),
+  .id = "Source"
+)
+
+# Step 1: Prepare and clean data
+combined_anova_df_clin_p <- combined_anova_df_clin_p %>%
+  dplyr::mutate(Model_Type = case_when(
+    Model_Type == "merf_long"      ~ "D. MERF (Longitudinal BMI prediction)",
+    Model_Type == "gl_lasso_long"  ~ "B. GlmmLasso (Longitudinal BMI Prediction)",
+    Model_Type == "merf_delta"     ~ "C. MERF (Change in BMI (Delta) Prediction)",
+    Model_Type == "gl_lasso_delta" ~ "A. GlmmLasso (Change in BMI (Delta) Prediction)",
+    TRUE ~ Model_Type
+  ))
+
+table_data_clin_p <- combined_anova_df_clin_p %>%
+  dplyr::select(-Source) %>%
+  arrange(Model_Type) %>%
+  dplyr::mutate(across(where(is.numeric), ~ round(.x, 3))) %>%
+  dplyr::select(-Model_Type)
+
+# Step 2: Split by model type
+tables_clin_p <- split(table_data_clin_p, combined_anova_df_clin_p$Model_Type)
+
+# Step 3: Create title + table stacked using cowplot
+table_grobs_clin_p <- lapply(names(tables_clin_p), function(name) {
+  
+  # Title as a ggdraw object
+  title_grob_clin_p <- cowplot::ggdraw() +
+    cowplot::draw_label(name, fontface = "bold", size = 12,
+                        hjust = 0.5, vjust = 12,
+                        fontfamily = "Arial") +
+    theme(plot.margin = ggplot2::margin(0, 0, 0, 0))  # space below title
+  # Table as a ggdraw object
+  table_clin_p <- ggtexttable(tables_clin_p[[name]], 
+                       theme = ttheme("classic"), rows = NULL)
+  table_grob_clin_p <- cowplot::ggdraw(table_clin_p)
+  # Combine title and table vertically
+  cowplot::plot_grid(title_grob_clin_p, table_grob_clin_p, 
+                     ncol = 1, 
+                     rel_heights = c(0.08, 1),
+                     align = 'v')
+})
+# Step 4: Arrange all tables into a grid
+final_plot_clin_p <- cowplot::plot_grid(plotlist = table_grobs_clin_p, 
+                                        ncol = 2, rel_widths = c(1, 1))
+
+# Show plot
+print(final_plot_clin_p)
+ggsave(paste0(omic_out_dir, "anova_clinical_combined.png"), final_plot_clin_p, 
+       width = 30, height = 20, dpi = 600, bg = 'white')
+
+# Combined ANOVA table
+final_anova_table_clin_p2 <- combined_anova_df_clin_p %>% 
+  dplyr::select(-c("Source")) %>% 
+  mutate(Model_Type = dplyr::case_when(
+    Model_Type == "merf_long" ~ "MERF (Longitudinal BMI prediction)",
+    Model_Type == "gl_lasso_long" ~ "GlmmLasso (Longitudinal BMI Prediction)",
+    Model_Type == "merf_delta" ~ "MERF (Change in BMI (Delta) Prediction)",
+    Model_Type == "gl_lasso_delta" ~ "GlmmLasso (Change in BMI (Delta) Prediction)",
+    TRUE ~ Model_Type
+  )) %>% 
+  gt(groupname_col = "Model_Type") %>%
+    tab_header(title = "Additive Model Comparison's (ANOVA)") %>%
+    fmt_number(columns = where(is.numeric), decimals = 3) %>%
+    #fmt_number(columns = "Df", decimals = 0) %>% 
+    sub_missing(missing_text = "-") %>%
+    cols_width(1 ~ pct(16),
+               `R²` ~ pct(10), 
+               Significance ~ pct(10),
+               `P-Value` ~ pct(10), 
+               AIC ~ pct(10), 
+               Model_Type ~ pct(12)) %>%
+    cols_align(align = "center",
+      columns = everything()) %>% 
+    cols_align("left", columns = Model) %>%
+    tab_options(table.width = pct(90),
+                table.align = "center") %>%
+    opt_table_font(font = list(
+        google_font("Arial"),   # fallback to system font if unavailable
+        default_fonts())) %>%
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) %>% 
+  tab_style(style = list(
+    cell_fill(color = "lightgray"),
+    cell_text(weight = "bold",
+              size = 12)),
+  locations = cells_row_groups())
+
+final_anova_table_clin_p2
+gtsave(final_anova_table_clin_p, filename = paste0(omic_out_dir, "anova_table_clin_p.png"))
+```
+
+# ANOVA TABLE FOR CLINICAL ANOVA COMBINED 
+```{r}
+library(officer)
+library(flextable)
+library(magrittr)
+
+# Create a new Word document
+doc <- read_docx()
+
+# Loop over each table
+for (name in names(tables_clin_p)) {
+  table_data <- tables_clin_p[[name]]
+  
+  # Create a formatted flextable
+  ft <- flextable(table_data) %>%
+    autofit() %>%
+    theme_vanilla() %>%
+    set_caption(caption = name) %>%
+    fontsize(size = 10, part = "all") %>%
+    align(align = "center", part = "all") %>%
+    border_remove() %>%
+    border_outer(border = fp_border(color = "black", width = 1)) %>%
+    border_inner(border = fp_border(color = "gray", width = 0.5))
+
+  # Add a title paragraph
+  doc <- doc %>%
+    body_add_par(name, style = "heading 2") %>%
+    body_add_flextable(ft) %>%
+    body_add_par("", style = "Normal")  # Add spacing between tables
+}
+
+# Save the Word file
+print(doc, target = paste0(omic_out_dir, "anova_clinical_combined.docx"))
+```
+
+
+## Arrange basic and clin plus anova plots 
+```{r}
+# Combine all plots into 1
+plot_names <- glue("{names(omic_dfs)}_sig_plot")
+sig_plots <- mget(plot_names)
+combined_plot <- wrap_plots(sig_plots, ncol = 2) + 
+  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
+                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
+  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
+print(combined_plot)
+
+output_file <- file.path(omic_out_dir, "ANOVA_Marginal_R2_Comparison_initial_with_grs.png")
+
+# Save the plot
+ggsave(
+  filename = output_file,
+  plot = combined_plot,
+  width = 15,        # in inches (adjust as needed)
+  height = 12,        # in inches (adjust as needed)
+  dpi = 300          # high resolution
+)
+
+plot_names_clin_plus <- glue("{names(omic_dfs)}_sig_plot_clin_plus")
+sig_plots_clin_plus <- mget(plot_names_clin_plus)
+
+combined_sig_plot_clin_plus <- wrap_plots(sig_plots_clin_plus, 
+                                               ncol = 2) + 
+  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
+                  theme = theme(plot.title = element_text(size = 18, 
+                                                          face = "bold"))) &
+                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
+
+print(combined_sig_plot_clin_plus)
+output_file_sig_plot_clin_plus <- file.path(omic_out_dir, 
+                                            "ANOVA_Marginal_R2_Comparison_sig_plot_clin_plus.png")
+
+# Save the plot
+ggsave(
+  filename = output_file_sig_plot_clin_plus,
+  plot = combined_sig_plot_clin_plus,
+  width = 15,        # in inches (adjust as needed)
+  height = 12,        # in inches (adjust as needed)
+  dpi = 300          # high resolution
+)
+
+### together 
+all_sig_plots <- c(sig_plots, sig_plots_clin_plus) # Combine both lists
+
+# Combine into one grid with 4 columns and 2 rows
+combined_all_plots <- wrap_plots(all_sig_plots, ncol = 4) +
+  plot_annotation(
+    title = "Comparison of Marginal R² Across BMI Modeling Scores",
+    tag_levels = 'A',
+    tag_suffix = '.',
+    theme = theme(plot.title = element_text(size = 18, face = "bold"))
+  ) &
+  theme(plot.margin = ggplot2::margin(20, 10, 20, 3, unit = "pt"))
+
+# Print the combined plot
+print(combined_all_plots)
+
+# Save to file
+output_file_combined <- file.path(omic_out_dir, "Combined_ANOVA_Marginal_R2_base_clin.png")
+
+ggsave(
+  filename = output_file_combined,
+  plot = combined_all_plots,
+  width = 20,     # Adjust as needed for your layout
+  height = 10,    # Adjust as needed for your layout
+  dpi = 600
+)
+
+```
+
 # Figure xx : Combined predicted vs actual plots for initial 
 
 ```{r echo=FALSE, fig.asp=0.8, fig.width=10, warning=FALSE, out.width="95%"}
@@ -812,27 +1433,31 @@ ggsave(
 # print(combined_linear_plot)
 ```
 
+
+################## FEATURE IMPORTANCES #########################################
 # Figure xxx : MERF feature importances
 
 ```{r echo=FALSE, fig.width = 6.5, fig.asp = 1.6, out.width="90%"}
-merf_dfs_long <- list(Basic = basic, Meta = meta, 
+merf_dfs_long <- list(Basic = basic, Labs = meta, 
                Taxa = taxa, Micom = micom, 
-               Pathway = pathway, Metabo = metabo, 
+               Pathway = pathway, Metabolomics = metabo, 
                All = all)
 
-merf_dfs_delta <- list(Basic = basic_md, Meta = meta_md, 
+merf_dfs_delta <- list(Basic = basic_md, Labs = meta_md, 
                      Taxa = taxa_md, Micom = micom_md, 
-                     Pathway = pathway_md, Metabo = metabo_md, 
+                     Pathway = pathway_md, Metabolomics = metabo_md, 
                      All = all_md)
 
-ft_colors <- c(Meta = "#960018", Taxa = "#8B3A3A", 
+ft_colors <- c(Labs = "#fecdc7", Taxa = "#8B3A3A", 
                Micom = "#996759", Pathway = "#D8A39D", 
-               Metabo  = "#C76374", All = "#C13427", 
+               Metabolomics  = "#C76374", 
+               All = "#b44241", GRS = "#E18476",
                Basic = "#582F2B")
 
-ft_colors_delta <- c(Meta = "#960018", Taxa = "#8B3A3A", 
+ft_colors_delta <- c(Labs = "#fecdc7", Taxa = "#8B3A3A", 
                      Micom = "#996759", Pathway = "#D8A39D", 
-                     Metabo  = "#C76374", All = "#C13427", 
+                     Metabolomics  = "#C76374", 
+                     All = "#b44241", GRS = "#E18476",
                      Basic = "#582F2B")
 
 # Combined feature sets
@@ -868,86 +1493,100 @@ for (type in names(all_ft_dfs)) {
     omic_long <- omic_parsed %>%
       unnest(parsed) %>%
       dplyr::select(-Top_15_Feature_Importances) %>%
-      filter(Feature != "time")
+      dplyr::filter(Feature != "time") %>% 
+      dplyr::filter(Model == "MSE Model")
     
     avg_importance <- omic_long %>%
       group_by(Feature) %>%
       summarise(avg_importance = mean(Importance, na.rm = TRUE), .groups = "drop") %>%
-      mutate(Feature = reorder(Feature, avg_importance)) %>%
-      head(10)
+      slice_max(order_by = avg_importance, n = 10, with_ties = FALSE) %>%
+      dplyr::filter(avg_importance != 0)
     
-    plot <- ggplot(avg_importance, aes(x = Feature, y = avg_importance)) +
-      geom_col(fill = color_map[[ft_name]], width = 0.5) +
-      labs(title = paste("", toupper(ft_name)),
-        x = "Top 10 Model Features", 
-        y = paste(" ", x_ax_label)) +
-      theme_minimal(base_size = 14) +
-      theme(legend.position = "none",
-        plot.margin = ggplot2::margin(t = 1, r = 1, b = 1, l = 3, unit = "cm"),
-        plot.title = element_text(hjust = 0, face = "bold", size = 16),
-        axis.text.y = element_text(hjust = 1, face = "bold", size = 12),
-        axis.text.x = element_text(face = "bold", size = 12),
-        axis.title.x = element_text(margin = ggplot2::margin(0.5, 0, 0, 0, unit = "cm"), size = 14),
-        axis.title.y = element_text(margin = ggplot2::margin(0, 0.5, 0, 0, unit = "cm"), size = 14),
-        panel.background = element_rect(fill = "white", color = NA),
-        plot.background = element_rect(fill = "white", color = NA)) +
-      scale_y_continuous(limits = c(-0.1, 0.43), expand = expansion(mult = c(0, 0.05))) +
-      #scale_x_continuous(limits = c(-0.1, 0.6)) +
-      coord_flip(clip = "off")
+    avg_imp_name <- paste0("av_imp_", type, "_", ft_name, "_", label)
+    assign(avg_imp_name, avg_importance, envir = .GlobalEnv)
     
+    max_val <- max(avg_importance$avg_importance, na.rm = TRUE)
+    x_limit <- ceiling(max_val / 0.05) * 0.05
+ 
+    #plot <- ggplot(avg_importance, 
+    #   aes(x = avg_importance, 
+    #       y = reorder(Feature, avg_importance))) +
+    #geom_point(size = 6, color = color_map[[ft_name]]) +
+    plot <- ggplot(avg_importance, 
+       aes(x = 0, 
+           y = reorder(Feature, avg_importance))) +
+    geom_segment(aes(xend = avg_importance, 
+                     yend = reorder(Feature, avg_importance)),
+                 lineend = "round", linewidth = 15, 
+                 color = color_map[[ft_name]]) +
+    labs(title = paste("", toupper(ft_name)),
+       x = paste(" ", x_ax_label),
+       y = NULL) +
+    theme_minimal() +
+    scale_x_continuous(limits = c(0, x_limit), 
+                       expand = expansion(mult = c(0, 0.03))) +
+    theme(
+      plot.background = element_rect(fill = "white"),
+      plot.title = element_text(hjust = 0, face = "bold", size = 25),
+      plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
+      axis.text.y = element_text(face = "bold", size = 25),
+      axis.text.x = element_text(face = "bold", size = 25),
+      axis.title.x = element_text(size = 25, margin = ggplot2::margin(t = 12)),
+      panel.grid.major.y = element_blank(), 
+      panel.grid.minor = element_blank())
+
     # Save to named R object
-    #object_name <- paste0(ft_set, "_", ft_name, "_", label, "_plot")
     object_name <- paste0("plot_", type, "_", ft_name, "_", label)
     assign(object_name, plot, envir = .GlobalEnv)
     merf_plots[[object_name]] <- plot
     png_name <- file.path(output_dir, paste0("feature_importance_", ft_name, "_", label, ".png"))
-    ggsave(filename = png_name, plot = plot, width = 9, height = 5, dpi = 300)
+    ggsave(filename = png_name, plot = plot, width = 12, height = 5, dpi = 300)
   }
 }
+```
 
-merf_long_plots <- merf_plots[c(2, 5, 6, 7)]
-combined_merf_long_plot <- wrap_plots(merf_long_plots, ncol = 2, nrow = 2) +
-  plot_annotation(title = "MERF longitudinal BMI Prediction Features",
-    theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(8, 8, 8, 8, unit = "pt"))
 
-merf_delta_plots <- merf_plots[c(2, 3, 5, 6)]
-combined_merf_delta_plot <- wrap_plots(merf_delta_plots, nrow = 2, ncol = 2) +
-  plot_annotation(title = "MERF BMI Change Prediction Features",
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(8, 20, 8, 20, unit = "pt"))
+```{r}
+#theme(plot.margin = margin(t = 10, r = 15, b = 10, l = 10, unit = "pt"))
+
+merf_long_plots <- merf_plots[c(2, 6, 7, 5)]
+combined_merf_long_plot <- wrap_plots(merf_long_plots, ncol = 1, nrow = 4, 
+                                      #widths = c(0.95,0.95),
+                                      heights = c(0.95,0.95)) +
+                           plot_annotation(title = "MERF longitudinal BMI Prediction Features",
+                           theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
+                           theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
+
+merf_delta_plots <- merf_plots[c(2, 6, 3, 5)]
+combined_merf_delta_plot <- wrap_plots(merf_delta_plots, ncol = 1, nrow = 4,
+                                       #widths = c(0.95,0.95),
+                                       heights = c(0.95,0.95)) +
+                            plot_annotation(title = "MERF BMI Change Prediction Features",
+                            theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
+                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
 
 print(combined_merf_delta_plot)
+print(combined_merf_long_plot)
 ```
+
 
 ```{r}
 for (i in seq_along(merf_plots)) {
   ggsave(
-    filename = file.path(omic_out_dir, paste0("merf_ft_imp/merf_plot_", i, ".png")),
+    filename = file.path(omic_out_dir, paste0("merf_ft_imp/merf_plot_dot_", i, ".png")),
     plot = merf_plots[[i]],
-    width = 6,
+    width = 8,
     height = 4,
     dpi = 300)
 }
+
+png_name <- file.path(omic_out_dir, paste0("combined_merf_long_ft_plot_dot", ".png"))
+ggsave(filename = png_name, plot = combined_merf_long_plot, width = 20, height = 30, dpi = 600)
+
+png_name <- file.path(omic_out_dir, paste0("combined_merf_delta_ft_plot_dot", ".png"))
+ggsave(filename = png_name, plot = combined_merf_delta_plot, width = 20, height = 30, dpi = 600)
 ```
 
-```{r}
-png_name <- file.path(omic_out_dir, paste0("combined_merf_long_ft_plot", ".png"))
-ggsave(filename = png_name, plot = combined_merf_long_plot, width = 16, height = 10, dpi = 300)
-```
-
-```{r echo=FALSE, fig.width = 10, fig.asp = 0.9, out.width="95%"}
-print(combined_merf_delta_plot)
-```
-
-```{r}
-png_name <- file.path(omic_out_dir, paste0("combined_merf_delta_ft_plot", ".png"))
-ggsave(filename = png_name, plot = combined_merf_delta_plot, width = 16, height = 10, dpi = 300)
-```
-
-```{r echo=FALSE, fig.width = 6.5, fig.asp = 1.5, out.width="80%"}
-print(combined_merf_delta_plot)
-```
 
 ```{r}
 merf_cow_plot_ft <- cowplot::plot_grid(
@@ -955,16 +1594,16 @@ merf_cow_plot_ft <- cowplot::plot_grid(
   combined_merf_delta_plot,
   ncol = 2,
   labels = c("A", "B"),
-  label_size = 12,
+  label_size = 25,
   align = "hv",
   axis = "tblr",  # Align both top/bottom and left/right axes
-  rel_widths = c(1, 1),
-  scale = c(.95, .95))
+  rel_widths = c(0.97, 0.97),
+  scale = c(.97, .97))
 
 merf_cow_plot_ft
 
-ggsave(paste0(omic_out_dir, "merf_ft_plot_combined.png"), merf_cow_plot_ft, 
-       width = 40, height = 18, dpi = 300, bg = 'white')
+ggsave(paste0(omic_out_dir, "merf_ft_plot_combined_all.png"), merf_cow_plot_ft, 
+       width = 45, height = 20, dpi = 400, bg = 'white')
 ```
 
 
@@ -972,14 +1611,22 @@ ggsave(paste0(omic_out_dir, "merf_ft_plot_combined.png"), merf_cow_plot_ft,
 
 ```{r echo=FALSE, fig.height=5, fig.width=7, out.width="100%"}
 
-lass_dfs_long <- list(Basic = gl_ftimp_long_basic, Meta = gl_ftimp_long_meta, 
-                      Taxa = gl_ftimp_long_taxa, Micom = gl_ftimp_long_micom, 
-                      Pathway = gl_ftimp_long_pathway, Metabo = gl_ftimp_long_metabo, 
+lass_dfs_long <- list(Basic = gl_ftimp_long_basic, 
+                      Labs = gl_ftimp_long_meta, 
+                      GRS = gl_ftimp_long_grs,
+                      Taxa = gl_ftimp_long_taxa, 
+                      Micom = gl_ftimp_long_micom, 
+                      Pathway = gl_ftimp_long_pathway, 
+                      Metabolomics = gl_ftimp_long_metabo, 
                       All = gl_ftimp_long_all)
 
-lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic, Meta = gl_ftimp_delta_meta, 
-                       Taxa = gl_ftimp_delta_taxa, Micom = gl_ftimp_delta_micom, 
-                       Pathway = gl_ftimp_delta_pathway, Metabo = gl_ftimp_delta_metabo, 
+lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic, 
+                       Labs = gl_ftimp_delta_meta, 
+                       GRS = gl_ftimp_delta_grs,
+                       Taxa = gl_ftimp_delta_taxa, 
+                       Micom = gl_ftimp_delta_micom, 
+                       Pathway = gl_ftimp_delta_pathway, 
+                       Metabolomics = gl_ftimp_delta_metabo, 
                        All = gl_ftimp_delta_all)
 
 # Combined feature sets
@@ -999,14 +1646,16 @@ imap_dfr(lass_dfs_delta, ~
            summarise(.x, min = min(Estimate, na.rm = TRUE), max = max(Estimate, na.rm = TRUE)) %>%
            mutate(name = .y)) %>% bind_rows() %>% dplyr::select(name, min, max)
 
-lass_plots <- list()
+lass_plots_lg <- list()
+lass_plots_delta <- list()
+
 for (type in names(all_lass_ft_dfs)) {
   ft_set <- all_lass_ft_dfs[[type]]$data
   color_map <- all_lass_ft_dfs[[type]]$colors
   label <- all_lass_ft_dfs[[type]]$label
-  model_label <- all_lass_ft_dfs[[type]]$model_label  # "MERF" or "GlmmLasso"
+  model_label <- all_lass_ft_dfs[[type]]$model_label
   x_ax_label <- all_lass_ft_dfs[[type]]$x_ax_label
-  
+
   for (ft_name in names(ft_set)) {
     top_features <- ft_set[[ft_name]]
     ymin <- -1.0
@@ -1014,99 +1663,74 @@ for (type in names(all_lass_ft_dfs)) {
     plot_feat <- top_features %>%
       dplyr::filter(!str_detect(tolower(Feature), "time")) %>%
       slice_head(n = 10) %>%
-      mutate(Estimate_capped = pmin(pmax(Estimate, ymin), ymax))  # Truncate values
-    
-    features <- ggplot(plot_feat, aes(x = reorder(Feature, Estimate_capped), 
-                                      y = Estimate_capped)) +
-      geom_col(fill = color_map[[ft_name]], width = 0.7) +
+      mutate(Estimate_capped = pmin(pmax(Estimate, ymin), ymax))
+
+    features <- ggplot(plot_feat,
+       aes(x = 0,
+           y = reorder(Feature, Estimate_capped))) +
+      geom_segment(aes(xend = Estimate_capped,
+                     yend = reorder(Feature, Estimate_capped)),
+                 lineend = "round", linewidth = 15,
+                 color = color_map[[ft_name]]) +
       ggtitle(paste("Top Features & Coefficients from glmmLasso Models", ft_name)) +
       labs(title = paste(model_label, toupper(ft_name)),
-           x = "Top 10 Model Features", 
-           y = paste("", x_ax_label)) +
+           y = NULL,
+           x = paste("", x_ax_label)) +
       theme_minimal(base_size = 14) +
-      theme(legend.position = "none",
-            plot.margin = ggplot2::margin(t = 1, r = 1, b = 1, 
-                                          l = 3, unit = "cm"),
-            plot.title = element_text(hjust = 0, face = "bold", size = 14, 
-                                      margin = ggplot2::margin(t = 0, r = 0, 
-                                                               b = 20, l = -150, 
-                                                               unit = "pt")),
-            axis.text.y = element_text(hjust = 1, size = 13),
-            axis.text.x = element_text(size = 13),
-            axis.title.x = element_text(margin = ggplot2::margin(0.5, 0, 0, 0, 
-                                                                 unit = "cm"), 
-                                                                 size = 14),
-            axis.title.y = element_text(margin = ggplot2::margin(0, 0.5, 0, 0, 
-                                                                 unit = "cm"), 
-                                                                 size = 14),
-            panel.background = element_rect(fill = "white", color = NA),
-            plot.background = element_rect(fill = "white", color = NA)) +
-      scale_y_continuous(limits = c(ymin, ymax), 
-                         expand = expansion(mult = c(0, 0.1))) +
-      coord_flip(clip = "off")
-    
+      theme(
+        plot.background = element_rect(fill = "white"),
+        plot.title = element_text(hjust = 0, face = "bold", size = 25),
+        plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
+        axis.text.y = element_text(face = "bold", size = 25),
+        axis.text.x = element_text(face = "bold", size = 25),
+        axis.title.x = element_text(size = 25, margin = ggplot2::margin(t = 12)),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank()) +
+      scale_y_discrete(expand = expansion(mult = c(0.05, 0.05)))
+
     object_name <- paste0("plot_", type, "_", ft_name, "_", label)
     assign(object_name, features, envir = .GlobalEnv)
-    lass_plots[[ft_name]] <- features # store or print
-    png_name <- file.path(output_dir, paste0("lass_ft_imp/feature_importance_", 
+
+    # Save to appropriate list
+    if (type == "lass_lg") {
+      lass_plots_lg[[ft_name]] <- features
+    } else if (type == "lass_delta") {
+      lass_plots_delta[[ft_name]] <- features
+    }
+
+    # Optional PNG saving
+    png_name <- file.path(omic_out_dir, paste0("lass_ft_imp/feature_importance_",
                                              ft_name, "_", label, ".png"))
-    #ggsave(filename = png_name, plot = plot, width = 9, height = 5, dpi = 300)
+    ggsave(filename = png_name, plot = features, width = 9, height = 5, dpi = 300)
   }
 }
+
 ```
 
 
-
-
 ```{r}
-for (i in seq_along(lass_plots)) {
-  ggsave(
-    filename = file.path(omic_out_dir, 
-                         paste0("lass_ft_imp/lass_plot_", i, ".png")),
-    plot = lass_plots[[i]],
-    width = 8,
-    height = 4,
-    dpi = 300)
-}
-
-for (i in seq_along(lass_plots_long)) {
-  ggsave(
-    filename = file.path(omic_out_dir, 
-                         paste0("lass_ft_imp/lass_plot_long", i, ".png")),
-    plot = lass_plots_long[[i]],
-    width = 8,
-    height = 4,
-    dpi = 300)
-}
-```
-
-```{r}
-lass_long_plots <- lass_plots_long[c(2, 6)]
+lass_long_plots <- lass_plots_lg[c(2,3,7)]
 combined_lass_long_plot <- wrap_plots(lass_long_plots, ncol = 1) +
   plot_annotation(title = "GlmmLasso longitudinal BMI Prediction Features",
                   theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
+  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
 png_name <- file.path(omic_out_dir, paste0("combined_lass_long_ft_plot", ".png"))
 ggsave(filename = png_name, 
        plot = combined_lass_long_plot, 
-       width = 9, height = 10, dpi = 300)
+       width = 16, height = 20, dpi = 300)
 combined_lass_long_plot
 ```
 
 ```{r}
-lass_delta_plots <- lass_plots[c(2, 3, 5, 6, 7)]
-combined_lass_delta_plot <- wrap_plots(lass_delta_plots, nrow = 3) +
+lass_delta_plots <- lass_plots_delta[c(2, 7, 8)]
+combined_lass_delta_plot <- wrap_plots(lass_delta_plots, ncol = 1) +
   plot_annotation(title = "GlmmLasso BMI Change Prediction Features",
                   theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(15, 25, 15, 25, unit = "pt"))
+  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
 png_name <- file.path(omic_out_dir, paste0("combined_lass_delta_ft_plot", ".png"))
-ggsave(filename = png_name, plot = combined_lass_delta_plot, width = 16, height = 16, dpi = 300)
-```
-
-```{r fig.width = 10, fig.asp = 1.3, out.width="95%"}
-print(combined_lass_delta_plot)
+ggsave(filename = png_name, plot = combined_lass_delta_plot, width = 16, height = 20, dpi = 300)
 ```
 
 ```{r fig.width = 12, fig.asp = 0.8, out.width="90%"}
@@ -1118,13 +1742,13 @@ lass_cow_plot_ft <- cowplot::plot_grid(
   label_size = 12,
   align = "hv",
   axis = "tblr",  # Align both top/bottom and left/right axes
-  rel_widths = c(1, 2),
+  rel_widths = c(.95, .95),
   scale = c(.95, .95))
 
 lass_cow_plot_ft
 
-ggsave(paste0(omic_out_dir, "lasso_ft_plot_combined.png"), lass_cow_plot_ft, 
-       width = 40, height = 25, dpi = 300, bg = 'white')
+ggsave(paste0(omic_out_dir, "lasso_ft_plot_all_combined.png"), lass_cow_plot_ft, 
+       width = 40, height = 22.5, dpi = 600, bg = 'white')
 ```
 
 
@@ -1132,13 +1756,15 @@ ggsave(paste0(omic_out_dir, "lasso_ft_plot_combined.png"), lass_cow_plot_ft,
 ## Heatmap
 
 ```{r echo=FALSE, fig.asp = 1.6, fig.width=7, out.width="100%"}
-common_cols <- c("bmi", "y_new_basic", "y_new_meta", "y_new_taxa", 
-                 "y_new_micom", "y_new_pathway", "y_new_metabo", "y_new_all")
+common_cols <- c("bmi", "y_new_basic", "y_new_grs",
+                 "y_new_meta", "y_new_taxa", 
+                 "y_new_micom", "y_new_pathway", 
+                 "y_new_metabo", "y_new_all")
 
 df_list_long <- list(merf_long = merf_long[common_cols],
-  gl_lasso_long = gl_lasso_long[common_cols])
+                 gl_lasso_long = gl_lasso_long[common_cols])
 df_list_delta <- list(merf_delta = merf_delta[common_cols],
-                      gl_lasso_delta = gl_lasso_delta[common_cols])
+                  gl_lasso_delta = gl_lasso_delta[common_cols])
 # Step 1: Compute correlations for each dataframe
 cor_matrices_long <- map(df_list_long, ~ cor(.x, use = "complete.obs"))
 cor_matrices_delta <- map(df_list_delta, ~ cor(.x, use = "complete.obs"))
@@ -1158,6 +1784,7 @@ cor_long_df <- list(
                         "Actual BMI" = "bmi",
                         "Basic Score" = "y_new_basic",
                         "Meta Score" = "y_new_meta",
+                        "GRS Score" = "y_new_grs",
                         "Taxa Score" = "y_new_taxa",
                         "Micom Score" = "y_new_micom",
                         "Pathway Score" = "y_new_pathway",
@@ -1167,6 +1794,7 @@ cor_long_df <- list(
                         "Actual BMI" = "bmi",
                         "Basic Score" = "y_new_basic",
                         "Meta Score" = "y_new_meta",
+                        "GRS Score" = "y_new_grs",
                         "Taxa Score" = "y_new_taxa",
                         "Micom Score" = "y_new_micom",
                         "Pathway Score" = "y_new_pathway",
@@ -1176,7 +1804,8 @@ cor_long_df <- list(
 final_heat <- ggplot(cor_long_df, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile() +
   facet_grid(method ~ type) +
-  scale_fill_gradient2(low = "#09236c", high = "#C96374", mid = "white", midpoint = 0.0,
+  scale_fill_gradient2(low = "#09236c", high = "#781720",
+                       mid = "white", midpoint = 0.0,
                        limit = c(-0.3, 1), name = "Correlation") +
   theme_minimal(base_size = 16) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
@@ -1243,10 +1872,10 @@ for (i in seq_along(omic_types)) {
   
   # Prepare input
   venn_input <- list(
-    GLMM_LG = unique(top_glmm_lg),
-    GLMM_DELTA = unique(top_glmm_delta),
-    MERF_LG = unique(top_merf_lg),
-    MERF_DELTA = unique(top_merf_delta))
+    `GLMM LG` = unique(top_glmm_lg),
+    `GLMM DELTA` = unique(top_glmm_delta),
+    `MERF LG` = unique(top_merf_lg),
+    `MERF DELTA` = unique(top_merf_delta))
   
   # Generate Venn diagram
   venn_plot <- venn.diagram(
@@ -1256,22 +1885,89 @@ for (i in seq_along(omic_types)) {
     alpha = 0.5,
     cex = 0.9,
     cat.cex = 0.9,
-    cat.fontface = "bold",
-    main = paste("Top 20 Feature Overlap -", toupper(omic)),
-    main.cex = 1.2)
-    #margin = 0.1)
+    #cat.fontface = "bold",
+    cat.fontfamily = "Arial",
+    fontfamily = "Arial",
+    #main = paste("Top Feature Overlaps -", toupper(omic)),
+    #main.cex = 1.2,
+    #main.pos = c(0.5, 0.30),
+    cat.dist = c(0.3, 0.3, 0.20, 0.20),
+    cat.pos = c(-26, 26, -20, 20),
+    margin = 0.3)
   
   venn_plots_4_[[omic]] <- venn_plot
   
   # Save to file
-  file_path <- file.path(venn_out_dir, paste0("venn_4set_", omic, ".png"))
-  png(file_path, width = 1000, height = 800, res = 150)
+  file_path <- file.path(omic_out_dir, paste0("venn_4set_", omic, ".png"))
+  png(file_path, width = 1200, height = 1000, res = 300)
+  
   grid.newpage()
-  grid.text(paste("Top 20 Feature Overlap -", toupper(omic)), gp = gpar(fontsize = 12, fontface = "bold"))
+  
+  # Add title BEFORE drawing the Venn plot
+  grid.text(
+    #paste("Top Feature Overlap -", toupper(omic), " Models"),
+    paste("Overlap of ", toupper(omic), " Models Top Features"),
+    x = 0.5, y = 0.90,                    # Centered and near the top
+    gp = gpar(fontsize = 12, fontface = "bold", fontfamily = "Arial"),
+    just = "center")
+  
+  # Draw Venn diagram
   grid.draw(venn_plot)
+  
   dev.off()
 }
 ```
+
+
+```{r}
+library(grid)
+library(gridExtra)
+
+# Select omics to display
+selected_omics <- c("meta", "taxa", "micom", "pathway", "metabo", "all")
+
+display_names <- c(
+  meta = "Clinical",
+  taxa = "Taxa",
+  micom = "Micom",
+  pathway = "Pathway",
+  metabo = "Metabolomics",
+  all = "All"
+)
+
+# Build individual Venn + title grobs
+venn_grobs <- lapply(selected_omics, function(omic) {
+  display_name <- display_names[[omic]]  # Get mapped display name
+  grobTree(
+    grid.text(paste(toupper(display_name), "Models"),
+              x = 0.5, y = 0.90,
+              gp = gpar(fontsize = 12, fontface = "bold", fontfamily = "Arial")),
+    venn_plots_4_[[omic]]
+  )
+})
+# Create overall title as a grob
+main_title <- textGrob(
+  "Overlap of Top Feature Across Omic Models",
+  gp = gpar(fontsize = 16, fontface = "bold", fontfamily = "Arial")
+)
+
+# Combine title and grid of plots
+combined_plot <- arrangeGrob(
+  do.call(arrangeGrob, c(venn_grobs, nrow = 2, ncol = 3)),
+  top = main_title
+)
+
+# Draw on a new page
+grid.newpage()
+grid.draw(combined_plot)
+
+file_path <- file.path(omic_out_dir, "venn_grid_overall_title.png")
+png(file_path, width = 3000, height = 2000, res = 300)
+grid.draw(combined_plot)
+dev.off()
+
+```
+
 
 ```{r echo=FALSE, fig.asp = 1.2, fig.width=10, out.width="90%"}
 g1 <- grobTree(venn_plots_4_$basic)

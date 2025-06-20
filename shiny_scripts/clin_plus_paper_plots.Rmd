@@ -69,8 +69,9 @@ all_md <- read.csv(file.path(predict_dir, "only_all_delta_april29.csv")) %>% dpl
 
 # GLMMLASSO LONG
 #gl_lasso_long <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/new_split_may/april_long_predictions_df_april29.csv") %>% 
-gl_lasso_long <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusapril_long_predictions_df.csv") %>%
+gl_lasso_long <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/june_lasso_long_predictions_df.csv") %>%
    dplyr::rename(y_new_meta = y_new_meta_only,
+                 y_new_grs = y_new_grs_only,
                  y_new_taxa = y_new_tax_only,
                  y_new_micom = y_new_micom_only,
                  y_new_pathway = y_new_path_only,
@@ -79,6 +80,7 @@ gl_lasso_long <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mut
 
 gl_ftimp_long_basic <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusbasic_gl_long_top_features.csv")
 gl_ftimp_long_meta <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusmeta_gl_long_top_features.csv")
+gl_ftimp_long_grs <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/grs_gl_long_top_features.csv")
 gl_ftimp_long_taxa <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plustaxa_gl_long_top_features.csv")
 gl_ftimp_long_micom <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusmicom_gl_long_top_features.csv")
 gl_ftimp_long_pathway <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_pluspathway_gl_long_top_features.csv")
@@ -89,6 +91,7 @@ gl_ftimp_long_all <- read.csv("/Users/emily/projects/research/Stanislawski/comps
 gl_lasso_delta <- read.csv('/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/gl_delta_predictions_df.csv') %>% 
    dplyr::rename(y_new_basic = y_new_basic_only,
                  y_new_meta = y_new_meta_only,
+                 y_new_grs = y_new_grs_only,
                  y_new_taxa = y_new_tax_only,
                  y_new_micom = y_new_micom_only,
                  y_new_pathway = y_new_path_only,
@@ -97,6 +100,7 @@ gl_lasso_delta <- read.csv('/Users/emily/projects/research/Stanislawski/comps/mu
 
 gl_ftimp_delta_basic <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/basic_gl_delta_top_features.csv")
 gl_ftimp_delta_meta <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/meta_gl_delta_top_features.csv")
+gl_ftimp_delta_grs <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/grs_gl_delta_top_features.csv")
 gl_ftimp_delta_taxa <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/taxa_gl_delta_top_features.csv")
 gl_ftimp_delta_micom <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/micom_gl_delta_top_features.csv")
 gl_ftimp_delta_pathway <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/pathway_gl_delta_top_features.csv")
@@ -307,7 +311,13 @@ feature_rename_pathway_lg <- c(
   "heme.biosynthesis.II..anaerobic." = "heme biosyn.II anaerobic",
   "lactose.and.galactose.degradation.I" = "lactose/galactose degr.I",
   "pyrimidine.deoxyribonucleotides.de.novo.biosynthesis.II" = "Pyr dNTP biosyn.II",
-  "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway")
+  "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway",
+  "superpathway.of.histidine..purine..and.pyrimidine.biosynthesis" = "His. Purine & Pyrimidine Biosyn.",
+  "superpathway.of.pyridoxal.5..phosphate.biosynthesis.and.salvage" = "Pyridoxal-5-phosphate Biosyn. & Salvage",
+  "purine.nucleotides.degradation.II..aerobic." = "Aerobic Purine Degradation II aerobic.",
+  "superpathway.of.L.methionine.biosynthesis..by.sulfhydrylation." = "Sulfhydrylation -> L-methionine Biosyn.",
+  "myo.inositol.degradation.I" = "Myo-inositol Degradation I"
+  )
 
 feature_rename_all <- c(
   "Dephospho.CoA" = "Dephospho-CoA",
@@ -329,7 +339,11 @@ feature_rename_all <- c(
   "MUFA_pct" = "MUFA (% of FAs)",
   "LA" = "Linoleic acid", 
   "Omega_6" = "Omega6 FA",
-  "TCA.cycle.VI..obligate.autotrophs." = "TCA VI (autotrophs)")
+  "TCA.cycle.VI..obligate.autotrophs." = "TCA VI (autotrophs)",
+  "g__Acetatifactor" = "G Acetatifactor",
+  "indole.3.acetate" = "Indole-3-acetate"
+  )
+
 ```
 
 
@@ -417,6 +431,7 @@ for (omic_name in names(omic_dfs)) {
   lmer_basic_b <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_basic_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_b <- lmer(bmi ~ y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_grs <- lmer(bmi ~ y_new_meta + y_new_grs  + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_micom <- lmer(bmi ~ y_new_meta + y_new_micom  + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_pathway <- lmer(bmi ~ y_new_meta + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_taxa <- lmer(bmi ~ y_new_meta + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
@@ -425,7 +440,8 @@ for (omic_name in names(omic_dfs)) {
   
   # Put your models into a named list
   models <- list(
-    `Basic + Clinical`  = lmer_basic_meta_b,
+    `Clinical`  = lmer_meta_b,
+    `Clinical + GRS`  = lmer_meta_grs,
     `Clinical + Micom` = lmer_meta_micom,
     `Clinical + Pathway` = lmer_meta_pathway,
     `Clinical + Taxa`    = lmer_meta_taxa,
@@ -443,7 +459,7 @@ for (omic_name in names(omic_dfs)) {
   assign(paste0(omic_name, "_r2_df"), r2_df_clin_plus)
   
   lmer_models <- list(
-     c("lmer_basic_b", "lmer_basic_meta_b"),
+    c("lmer_meta_b", "lmer_meta_grs"),
     c("lmer_meta_b", "lmer_meta_taxa"),
     c("lmer_meta_b", "lmer_meta_micom"),
     c("lmer_meta_b", "lmer_meta_pathway"),
@@ -477,7 +493,8 @@ for (omic_name in names(omic_dfs)) {
   dplyr::mutate(
     Compared_Model = dplyr::recode(
        model_comparison,
-       "lmer_basic_b vs lmer_basic_meta_b" = "Basic + Clinical",
+       #"lmer_basic_b vs lmer_basic_meta_b" = "Clinical",
+       "lmer_meta_b vs lmer_meta_grs" = "Clinical + GRS",
        "lmer_meta_b vs lmer_meta_taxa" = "Clinical + Taxa",
        "lmer_meta_b vs lmer_meta_micom" = "Clinical + Micom",
        "lmer_meta_b vs lmer_meta_pathway" = "Clinical + Pathway",
@@ -499,12 +516,13 @@ for (omic_name in names(omic_dfs)) {
   dplyr::select(Compared_Model, AIC, `Pr(>Chisq)`, Significance)
   
   # Apply the custom order to your data #START HERE ####
-  custom_order_clin_plus <- c("Basic + Clinical", 
-                    "Clinical + Pathway", 
-                    "Clinical + Taxa",
-                    "Clinical + Micom", 
-                    "Clinical + Metabo", 
-                    "Clinical + All")
+  custom_order_clin_plus <- c("Clinical", 
+                              "Clinical + GRS",
+                              "Clinical + Pathway", 
+                              "Clinical + Taxa",
+                              "Clinical + Micom", 
+                              "Clinical + Metabo", 
+                              "Clinical + All")
   
   r2_annotated_clin_plus <- r2_df_clin_plus %>%
                             left_join(anova_labels_clin_p, 
@@ -513,20 +531,22 @@ for (omic_name in names(omic_dfs)) {
                                  levels = custom_order_clin_plus)) %>%
                                  arrange(Model)
   
+  basic_r2 <- r2_annotated_clin_plus$R2m[r2_annotated_clin_plus$Model == "Clinical"]
   sig_plot_clin_plus <- ggplot(r2_annotated_clin_plus, 
                      aes(x = Model, y = R2m, fill = Model)) +
     geom_col(width = 0.7) +
-    geom_text(aes(y = R2m + 0.03, label = Significance), size = 8) +
+    geom_text(aes(y = R2m + 0.036, label = Significance), size = 8) +
+    geom_hline(yintercept = basic_r2, linetype = "dashed", color = "black") +
     scale_y_continuous(limits = c(0, 0.72),
                        expand = expansion(mult = c(0, 0.1))) +
     scale_fill_manual(values = c(
-      "Clinical + All"      = "#C13427",
+      "Clinical + All"      = "#b44241",
       "Clinical + Metabo"   = "#C76374",
       "Clinical + Micom"    = "#996759",
       "Clinical + Pathway"  = "#D8A39D",
       "Clinical + Taxa"     = "#8B3A3A",
-      "Basic + Clinical" = "#960018",
-      "Basic"            = "#582F2B")) +
+      "Clinical + GRS"      = "#E18476",
+      "Clinical"            = "#fecdc7")) +
     labs(title = glue("R² {omic_name_labels[[omic_name]]}"),
       x = "Model Comparisons",
       y = expression(R^2*" = Fixed Effect Variance")) +

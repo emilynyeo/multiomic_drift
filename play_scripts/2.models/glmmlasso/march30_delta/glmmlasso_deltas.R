@@ -148,8 +148,15 @@ for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
   numvar <- c() 
-  lambdavec <- seq(from = 25, to = 100, by = 1)
-  #lambdy <- 5` `
+  #lambdavec <- seq(from = 25, to = 100, by = 1)
+  
+  # Use smaller lambda sweep for basic and grs, default for others
+  if (df_name %in% c("grs", "basic")) {
+    lambdavec <- seq(from = 0.01, to = 1, by = 0.05)
+  } else {
+    lambdavec <- seq(from = 25, to = 100, by = 1)
+  }
+  
   # Loop through each lambda value to perform Lasso regression
   for (lambdy in lambdavec) {
     predictors <- setdiff(names(train_data), c("BMI", "subject_id", "range"))
@@ -191,6 +198,7 @@ for (df_name in data_frames) {
                           rnd = list(subject_id = ~ 1, range = ~ 1),
                           lambda = lambda_value,  # Use the lambda_value set manually
                           family = gaussian(link = "identity"))
+  assign(paste0(df_name, "_best_model"), best_model)
   
   # Extract lasso features
   lassoFeatures <- names(best_model$coefficients)

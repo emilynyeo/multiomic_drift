@@ -513,7 +513,6 @@ all <- all_deltas[, all_col, drop = FALSE] %>% unique() %>%
   dplyr::mutate(randomized_group = as.numeric(randomized_group))
 
 
-
 #################### TRYING ASHLEYS WYA OF COUTING FOR DELTA
 
 subject_counts_delta <- delta_new_split_table %>% 
