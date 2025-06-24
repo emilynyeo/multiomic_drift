@@ -1439,11 +1439,13 @@ ggsave(
 
 ```{r echo=FALSE, fig.width = 6.5, fig.asp = 1.6, out.width="90%"}
 merf_dfs_long <- list(Basic = basic, Labs = meta, 
+                      GRS = grs,
                Taxa = taxa, Micom = micom, 
                Pathway = pathway, Metabolomics = metabo, 
                All = all)
 
 merf_dfs_delta <- list(Basic = basic_md, Labs = meta_md, 
+                       GRS = grs_md, 
                      Taxa = taxa_md, Micom = micom_md, 
                      Pathway = pathway_md, Metabolomics = metabo_md, 
                      All = all_md)
@@ -1463,12 +1465,12 @@ ft_colors_delta <- c(Labs = "#fecdc7", Taxa = "#8B3A3A",
 # Combined feature sets
 all_ft_dfs <- list(merf_lg = list(data = merf_dfs_long, 
                                   colors = ft_colors, 
-                             label = "long", 
+                             label = "Long. BMI", 
                              model_label = "MERF (Longitudinal BMI Prediction)",
                              x_ax_label = "Feature Importance"),
                    merf_delta = list(data = merf_dfs_delta, 
                                      colors = ft_colors_delta, 
-                                label = "delta", 
+                                label = "ΔBMI", 
                                 model_label = "MERF (Change in BMI (Delta) Prediction)",
                                 x_ax_label = "Feature Importance"))
 
@@ -1519,18 +1521,18 @@ for (type in names(all_ft_dfs)) {
                      yend = reorder(Feature, avg_importance)),
                  lineend = "round", linewidth = 15, 
                  color = color_map[[ft_name]]) +
-    labs(title = paste("", toupper(ft_name)),
+    labs(title = paste(label, " ~ ",toupper(ft_name)),
        x = paste(" ", x_ax_label),
        y = NULL) +
     theme_minimal() +
     scale_x_continuous(limits = c(0, x_limit), 
-                       expand = expansion(mult = c(0, 0.03))) +
+                       expand = expansion(mult = c(0, 0.02))) +
     theme(
       plot.background = element_rect(fill = "white"),
-      plot.title = element_text(hjust = 0, face = "bold", size = 25),
+      plot.title = element_text(hjust = 0, face = "bold", size = 28),
       plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
-      axis.text.y = element_text(face = "bold", size = 25),
-      axis.text.x = element_text(face = "bold", size = 25),
+      axis.text.y = element_text(face = "bold", size = 27),
+      axis.text.x = element_text(face = "bold", size = 27),
       axis.title.x = element_text(size = 25, margin = ggplot2::margin(t = 12)),
       panel.grid.major.y = element_blank(), 
       panel.grid.minor = element_blank())
@@ -1549,15 +1551,17 @@ for (type in names(all_ft_dfs)) {
 ```{r}
 #theme(plot.margin = margin(t = 10, r = 15, b = 10, l = 10, unit = "pt"))
 
-merf_long_plots <- merf_plots[c(2, 6, 7, 5)]
-combined_merf_long_plot <- wrap_plots(merf_long_plots, ncol = 1, nrow = 4, 
+# Merf long: Clinical, Grs, Pathway, Metabo, All
+merf_long_plots <- merf_plots[c(2, 3, 6, 7, 8)]
+combined_merf_long_plot <- wrap_plots(merf_long_plots, ncol = 2, nrow = 3, 
                                       #widths = c(0.95,0.95),
                                       heights = c(0.95,0.95)) +
                            plot_annotation(title = "MERF longitudinal BMI Prediction Features",
                            theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
 
-merf_delta_plots <- merf_plots[c(2, 6, 3, 5)]
+# Merf delta: Clinical, Taxa, Meta, All
+merf_delta_plots <- merf_plots[c(10, 12, 15, 16)]
 combined_merf_delta_plot <- wrap_plots(merf_delta_plots, ncol = 1, nrow = 4,
                                        #widths = c(0.95,0.95),
                                        heights = c(0.95,0.95)) +
@@ -1565,8 +1569,18 @@ combined_merf_delta_plot <- wrap_plots(merf_delta_plots, ncol = 1, nrow = 4,
                             theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
                             theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
 
+merf_all_plots <- merf_plots[c(2, 3, 6, 7, 8, 10, 12, 15, 16)]
+combined_merf_all_plot <- wrap_plots(merf_all_plots, ncol = 3, nrow = 3,
+                                       widths = c(0.95, 0.95, 0.95),
+                                       heights = c(0.90, 0.90, 0.90),
+                                       tag_level = "keep") +
+                            plot_annotation(title = "All MERF Prediction Features",
+                            theme = theme(plot.title = element_text(size = 40, face = "bold"))) &
+                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
+
 print(combined_merf_delta_plot)
 print(combined_merf_long_plot)
+print(combined_merf_all_plot)
 ```
 
 
@@ -1580,11 +1594,14 @@ for (i in seq_along(merf_plots)) {
     dpi = 300)
 }
 
-png_name <- file.path(omic_out_dir, paste0("combined_merf_long_ft_plot_dot", ".png"))
-ggsave(filename = png_name, plot = combined_merf_long_plot, width = 20, height = 30, dpi = 600)
+png_name1 <- file.path(omic_out_dir, paste0("combined_merf_long_ft_plot_dot", ".png"))
+ggsave(filename = png_name1, plot = combined_merf_long_plot, width = 20, height = 30, dpi = 600)
 
-png_name <- file.path(omic_out_dir, paste0("combined_merf_delta_ft_plot_dot", ".png"))
-ggsave(filename = png_name, plot = combined_merf_delta_plot, width = 20, height = 30, dpi = 600)
+png_name2 <- file.path(omic_out_dir, paste0("combined_merf_delta_ft_plot_dot", ".png"))
+ggsave(filename = png_name2, plot = combined_merf_delta_plot, width = 20, height = 30, dpi = 600)
+
+png_name3 <- file.path(omic_out_dir, paste0("combined_merf_all_ft_plot_dot", ".png"))
+ggsave(filename = png_name3, plot = combined_merf_all_plot, width = 45, height = 30, dpi = 600)
 ```
 
 
