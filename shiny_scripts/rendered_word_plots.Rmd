@@ -1591,13 +1591,16 @@ for (type in names(all_ft_dfs)) {
     scale_x_continuous(limits = c(0, x_limit), 
                        expand = expansion(mult = c(0, 0.02))) +
     theme(
-      plot.background = element_rect(fill = "white"),
+      plot.background = element_blank(),
+      #plot.background = element_rect(fill = "white"),
       plot.title = element_text(hjust = 0, face = "bold", size = 28),
       plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
       axis.text.y = element_text(face = "bold", size = 32),
       axis.text.x = element_text(face = "bold", size = 32),
       axis.title.x = element_text(size = 28, margin = ggplot2::margin(t = 12)),
       panel.grid.major.y = element_blank(), 
+      panel.border     = element_blank(),  
+      panel.background = element_blank(),
       panel.grid.minor = element_blank())
 
     # Save to named R object
@@ -1792,13 +1795,16 @@ for (type in names(all_lass_ft_dfs)) {
            x = paste("", x_ax_label)) +
       theme_minimal(base_size = 14) +
       theme(
-        plot.background = element_rect(fill = "white"),
+        #plot.background = element_rect(fill = "white"),
         plot.title = element_text(hjust = 0, face = "bold", size = 28),
         plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
         axis.text.y = element_text(face = "bold", size = 32),
         axis.text.x = element_text(face = "bold", size = 32),
         axis.title.x = element_text(size = 28, margin = ggplot2::margin(t = 12)),
         panel.grid.major.y = element_blank(),
+        plot.background  = element_blank(), 
+        panel.border     = element_blank(),  
+        panel.background = element_blank(),
         panel.grid.minor = element_blank()) +
       scale_y_discrete(expand = expansion(mult = c(0.05, 0.05)))
 
@@ -1835,11 +1841,21 @@ basic_lass_long_plot <- wrap_plots(basic_lass_long, ncol = 1) +
   #                theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
   theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
-clin_lass_long <- lass_plots_lg[c(6,7)]
-clin_lass_long_plot <- wrap_plots(clin_lass_long, ncol = 1) +
-  #plot_annotation(title = "GlmmLasso longitudinal BMI Prediction Features",
-  #                theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
+basic_lass_long_plot <- wrap_plots(
+  basic_lass_long[[1]],
+  plot_spacer(),
+  basic_lass_long[[2]],
+  ncol = 1,
+  heights = c(1, 0.1, 1)) &
+theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
+
+clin_lass_long_plot <- wrap_plots(
+  clin_lass_long[[1]],
+  plot_spacer(),  # adds blank vertical space
+  clin_lass_long[[2]],
+  ncol = 1,
+  heights = c(1, 0.1, 1)) &
+theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
 png_name <- file.path(omic_out_dir, paste0("combined_lass_long_ft_plot", ".png"))
 ggsave(filename = png_name, 
@@ -1864,9 +1880,10 @@ basic_lass_delta_plot <- wrap_plots(basic_lass_delta, ncol = 1) +
 
 clin_lass_delta <- lass_plots_delta[c(7, 8)]
 clin_lass_delta_plot <- wrap_plots(clin_lass_delta, ncol = 1) +
-  #plot_annotation(title = "GlmmLasso BMI Change Prediction Features",
-  #                theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
+  theme(panel.border = element_blank(),  
+    plot.background  = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
 png_name <- file.path(omic_out_dir, paste0("combined_lass_delta_ft_plot", ".png"))
 ggsave(filename = png_name, plot = combined_lass_delta_plot, width = 16, height = 20, dpi = 300)
@@ -1912,6 +1929,30 @@ basic_long_cow <- ggdraw() +
   draw_plot(basic_merf_long_plot, x = 0.05, y = 0, width = .93, height = 0.55) +
   draw_plot_label(label = c("A.", "B.", "C."), size = 35,
                   x = c(0.03, 0.535, 0.03), y = c(1, 1, 0.55))
+
+basic_long_cow <- ggdraw() +
+  # Top-left plot
+  draw_plot(aov_basic_long_plt,
+            x = 0.08,
+            y = 0.55 + 0.03,
+            width = 0.445,
+            height = 0.4) +
+  # Top-right plot
+  draw_plot(basic_lass_long_plot,
+            x = 0.05 + 0.445 + 0.05,
+            y = 0.55 + 0.03,
+            width = 0.445,
+            height = 0.4) +
+  # Bottom plot (full width with margin)
+  draw_plot(basic_merf_long_plot,
+            x = 0.05,
+            y = 0.04,
+            width = 0.9,
+            height = 0.5) +
+  draw_plot_label(label = c("A.", "B.", "C."),
+    size = 35,
+    x = c(0.05, 0.545, 0.05),
+    y = c(0.98, 0.98, 0.55))
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_ft_aov_combined_cow.png"), basic_long_cow, 
        width = 40, height = 40, dpi = 400, bg = 'white')
