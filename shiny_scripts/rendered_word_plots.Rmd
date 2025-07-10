@@ -23,7 +23,8 @@ p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn,
        readr, plyr, dplyr, tidyr, purrr, tibble, stringr, psych, randomForest,  
        reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM, gridExtra,
        sjPlot, htmltools, officer, flextable, webshot, apaTables, MuMIn, lme4, 
-       glue, grid, rsq, pheatmap, GGally, VennDiagram, glmmTMB, broom.mixed, gt)
+       glue, grid, rsq, pheatmap, GGally, VennDiagram, glmmTMB, broom.mixed, gt,
+       pathcwork)
 #library(nlme)
 
 '%ni%' <- Negate('%in%')
@@ -614,8 +615,8 @@ for (omic_name in names(omic_dfs)) {
          color = "Predictor") +
     theme_minimal()
   long_plot
-  assign(paste0(omic_name, "_each_omic_plot_april29"), long_plot)
-  #ggsave(file.path(omic_out_dir, paste0(omic_name, "_each_omic_plot_april29.png")), plot = long_plot, width = 8, height = 6)
+  assign(paste0(omic_name, "_each_omic_plot"), long_plot)
+  ggsave(file.path(omic_out_dir, paste0("pred_vs_actual/", omic_name, "_each_omic_plot.png")), plot = long_plot, width = 8, height = 6)
   
   ### ANOVA 
   mod_dat <- omic
@@ -798,20 +799,20 @@ for (omic_name in names(omic_dfs)) {
       "Basic + Clinical" = "#fecdc7",
       "Basic"            = "#A9A9A9")) +
     labs(title = glue("R² {omic_name_labels[[omic_name]]}"),
-         x = "Basic vs. Added Omic Scores",
-         #x = expression(R^2*" : Omic vs. Basic"),
+         #x = "Basic vs. Added Omic Scores",
+         x = NULL, 
          y = expression(R^2*" = Fixed Effect Variance")) +
     theme_minimal(base_size = 25) +
     theme(legend.position = "none",
           plot.margin = ggplot2::margin(t = 2, r = 2, b = 2, l = 2, unit = "cm"),
-          axis.text.y = element_text(face = "bold", hjust = 1, size = 25),
-          axis.text.x = element_text(face = "bold", size = 25, hjust = 1, angle = 45),
+          axis.text.y = element_text(face = "bold", hjust = 1, size = 27),
+          axis.text.x = element_text(face = "bold", size = 27, hjust = 1, angle = 45),
           axis.title.x = element_text(margin = ggplot2::margin(0.5,0,0,0, unit = "cm"), size = 30),
           axis.title.y = element_text(margin = ggplot2::margin(0,0.8,0,0, unit = "cm"), size = 30))
   sig_plot
   assign(paste0(omic_name, "_basic_sig_plot"), sig_plot)
   # Save the sig plot
-  ggsave(file.path(omic_out_dir, paste0(omic_name, "_basic_sig_plot.png")), 
+  ggsave(file.path(omic_out_dir, paste0("anova_tables/", omic_name, "_basic_sig_plot.png")), 
          plot = sig_plot,  width = 10, height = 8)
 }
 ```
@@ -877,7 +878,7 @@ final_anova_table_initial <- combined_anova_df %>%
 
 final_anova_table_initial
 gtsave(final_anova_table_initial, 
-       filename = paste0(omic_out_dir, "anova_initial_table_with_grs.png"))
+       filename = paste0(omic_out_dir, "anova_tables/anova_initial_table_with_grs.png"))
 
 ```
 
@@ -931,7 +932,7 @@ final_plot <- cowplot::plot_grid(plotlist = table_grobs,
 
 # Show plot
 print(final_plot)
-ggsave(paste0(omic_out_dir, "anova_initial_combined_with_grs.png"), final_plot, 
+ggsave(paste0(omic_out_dir, "anova_tables/anova_initial_combined_with_grs.png"), final_plot, 
        width = 30, height = 20, dpi = 300, bg = 'white')
 ```
 
@@ -964,7 +965,7 @@ for (name in names(tables)) {
 }
 
 # Save the Word file
-print(doc, target = paste0(omic_out_dir, "anova_initial_combined.docx"))
+print(doc, target = paste0(omic_out_dir, "anova_tables/anova_initial_combined.docx"))
 ```
 
 
@@ -1001,15 +1002,15 @@ output_file_basic <- file.path(omic_out_dir, "_ANOVA_R2_Comparison_basic.png")
 #  width = 15, height = 12, dpi = 400)
 
 # Save the plots
-ggsave(filename = file.path(omic_out_dir, "combined_basic_plot.png"),
+ggsave(filename = file.path(omic_out_dir, "anova_plots/combined_basic_plot.png"),
        plot = combined_basic_plot,
        width = 15, height = 12, dpi = 400)
 
-ggsave(filename = file.path(omic_out_dir, "merf_basic_plot.png"),
+ggsave(filename = file.path(omic_out_dir, "anova_plots/merf_basic_plot.png"),
        plot = merf_basic_plot,
        width = 7.5, height = 10, dpi = 400)
 
-ggsave(filename = file.path(omic_out_dir, "gllass_basic_plot.png"),
+ggsave(filename = file.path(omic_out_dir, "anova_plots/gllass_basic_plot.png"),
        plot = gllass_basic_plot,
        width = 7.5, height = 10, dpi = 400)
 ```
@@ -1211,13 +1212,14 @@ for (omic_name in names(omic_dfs)) {
       "Clinical + GRS"      = "#E18476",
       "Clinical"            = "#A9A9A9")) +
     labs(title = glue("R² {omic_name_labels[[omic_name]]}"),
-      x = "Clinical vs. Added Omic Scores",
+      #x = "Clinical vs. Added Omic Scores",
+      x = NULL, 
       y = expression(R^2*" = Fixed Effect Variance")) +
     theme_minimal(base_size = 28) +
     theme(legend.position = "none",
           plot.margin = ggplot2::margin(t = 2, r = 2, b = 2, l = 2, unit = "cm"),
-      axis.text.y = element_text(face = "bold", hjust = 1, size = 25),
-      axis.text.x = element_text(face = "bold", size = 25, hjust = 1, angle = 45),
+      axis.text.y = element_text(face = "bold", hjust = 1, size = 27),
+      axis.text.x = element_text(face = "bold", size = 27, hjust = 1, angle = 45),
       axis.title.x = element_text(margin = ggplot2::margin(0.5,0,0,0, unit = "cm"), size = 30),
       axis.title.y = element_text(margin = ggplot2::margin(0,0.8,0,0, unit = "cm"), size = 30))
   assign(paste0(omic_name, "_sig_plot_clin_plus"), sig_plot_clin_plus)
@@ -1289,7 +1291,7 @@ final_plot_clin_p <- cowplot::plot_grid(plotlist = table_grobs_clin_p,
 
 # Show plot
 print(final_plot_clin_p)
-ggsave(paste0(omic_out_dir, "anova_clinical_combined.png"), final_plot_clin_p, 
+ggsave(paste0(omic_out_dir, "anova_plots/anova_clinical_combined.png"), final_plot_clin_p, 
        width = 30, height = 20, dpi = 600, bg = 'white')
 
 # Combined ANOVA table
@@ -1330,7 +1332,7 @@ final_anova_table_clin_p2 <- combined_anova_df_clin_p %>%
   locations = cells_row_groups())
 
 final_anova_table_clin_p2
-gtsave(final_anova_table_clin_p, filename = paste0(omic_out_dir, "anova_table_clin_p.png"))
+gtsave(final_anova_table_clin_p, filename = paste0(omic_out_dir, "anova_tables/anova_table_clin_p.png"))
 ```
 
 # ANOVA TABLE FOR CLINICAL ANOVA COMBINED 
@@ -1365,7 +1367,7 @@ for (name in names(tables_clin_p)) {
 }
 
 # Save the Word file
-print(doc, target = paste0(omic_out_dir, "anova_clinical_combined.docx"))
+print(doc, target = paste0(omic_out_dir, "anova_tables/anova_clinical_combined.docx"))
 ```
 
 
@@ -1410,15 +1412,15 @@ glmmlasso_sig_plot_clin_plus <- wrap_plots(glmmlasso_clin_plus, ncol = 1) +
                   theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
 
 
-ggsave(filename = file.path(omic_out_dir, "combined_clin_plot.png"),
+ggsave(filename = file.path(omic_out_dir, "anova_plots/combined_clin_plot.png"),
        plot = combined_sig_plot_clin_plus,
        width = 15, height = 12, dpi = 400)
 
-ggsave(filename = file.path(omic_out_dir, "merf_clin_plot.png"),
+ggsave(filename = file.path(omic_out_dir, "anova_plots/merf_clin_plot.png"),
        plot = merfs_sig_plot_clin_plus,
        width = 7.5, height = 10, dpi = 400)
 
-ggsave(filename = file.path(omic_out_dir, "gllass_clin_plot.png"),
+ggsave(filename = file.path(omic_out_dir, "anova_plots/gllass_clin_plot.png"),
        plot = glmmlasso_sig_plot_clin_plus,
        width = 7.5, height = 10, dpi = 400)
 
@@ -1441,7 +1443,7 @@ combined_all_plots <- wrap_plots(all_sig_plots, ncol = 4) +
     theme(plot.margin = ggplot2::margin(20, 10, 20, 3, unit = "pt"))
 
 # Save to file
-output_file_combined <- file.path(omic_out_dir, "Combined_ANOVA_Marginal_R2_base_clin.png")
+output_file_combined <- file.path(omic_out_dir, "anova_plots/Combined_ANOVA_Marginal_R2_base_clin.png")
 
 ggsave(filename = output_file_combined, plot = combined_all_plots,
        width = 20, height = 10, dpi = 600)
@@ -1694,13 +1696,13 @@ for (i in seq_along(merf_plots)) {
     dpi = 300)
 }
 
-png_name1 <- file.path(omic_out_dir, paste0("combined_merf_long_ft_plot_dot", ".png"))
+png_name1 <- file.path(omic_out_dir, paste0("merf_ft_imp/combined_merf_long_ft_plot_dot", ".png"))
 ggsave(filename = png_name1, plot = combined_merf_long_plot, width = 20, height = 30, dpi = 600)
 
-png_name2 <- file.path(omic_out_dir, paste0("combined_merf_delta_ft_plot_dot", ".png"))
+png_name2 <- file.path(omic_out_dir, paste0("merf_ft_imp/combined_merf_delta_ft_plot_dot", ".png"))
 ggsave(filename = png_name2, plot = combined_merf_delta_plot, width = 20, height = 30, dpi = 600)
 
-png_name3 <- file.path(omic_out_dir, paste0("combined_merf_all_ft_plot_dot", ".png"))
+png_name3 <- file.path(omic_out_dir, paste0("merf_ft_imp/combined_merf_all_ft_plot_dot", ".png"))
 ggsave(filename = png_name3, plot = combined_merf_all_plot, width = 45, height = 30, dpi = 600)
 ```
 
@@ -1719,7 +1721,7 @@ merf_cow_plot_ft <- cowplot::plot_grid(
 
 merf_cow_plot_ft
 
-ggsave(paste0(omic_out_dir, "merf_ft_plot_combined_all.png"), merf_cow_plot_ft, 
+ggsave(paste0(omic_out_dir, "merf_ft_imp/merf_ft_plot_combined_all.png"), merf_cow_plot_ft, 
        width = 45, height = 20, dpi = 400, bg = 'white')
 ```
 
@@ -1850,14 +1852,14 @@ basic_lass_long_plot <- wrap_plots(
 theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
 clin_lass_long_plot <- wrap_plots(
-  clin_lass_long[[1]],
+  combined_lass_long_plot[[1]],
   plot_spacer(),  # adds blank vertical space
-  clin_lass_long[[2]],
+  combined_lass_long_plot[[2]],
   ncol = 1,
   heights = c(1, 0.1, 1)) &
 theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
-png_name <- file.path(omic_out_dir, paste0("combined_lass_long_ft_plot", ".png"))
+png_name <- file.path(omic_out_dir, paste0("lass_ft_imp/combined_lass_long_ft_plot", ".png"))
 ggsave(filename = png_name, 
        plot = combined_lass_long_plot, 
        width = 16, height = 20, dpi = 300)
@@ -1878,14 +1880,14 @@ basic_lass_delta_plot <- wrap_plots(basic_lass_delta, ncol = 1) +
   #                theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
   theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
-clin_lass_delta <- lass_plots_delta[c(7, 8)]
+clin_lass_delta <- lass_plots_delta[c(7)]
 clin_lass_delta_plot <- wrap_plots(clin_lass_delta, ncol = 1) +
   theme(panel.border = element_blank(),  
     plot.background  = element_blank(),
     panel.background = element_blank(),
     plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
 
-png_name <- file.path(omic_out_dir, paste0("combined_lass_delta_ft_plot", ".png"))
+png_name <- file.path(omic_out_dir, paste0("lass_ft_imp/combined_lass_delta_ft_plot", ".png"))
 ggsave(filename = png_name, plot = combined_lass_delta_plot, width = 16, height = 20, dpi = 300)
 ```
 
@@ -1903,7 +1905,7 @@ lass_cow_plot_ft <- cowplot::plot_grid(
 
 lass_cow_plot_ft
 
-ggsave(paste0(omic_out_dir, "lasso_ft_plot_all_combined.png"), lass_cow_plot_ft, 
+ggsave(paste0(omic_out_dir, "lass_ft_imp/lasso_ft_plot_all_combined.png"), lass_cow_plot_ft, 
        width = 40, height = 22.5, dpi = 600, bg = 'white')
 ```
 
@@ -1955,45 +1957,119 @@ basic_long_cow <- ggdraw() +
     y = c(0.98, 0.98, 0.55))
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_ft_aov_combined_cow.png"), basic_long_cow, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 600, bg = 'white')
 
 # *** MERF & GLLASSO Basic Delta ***
 basic_delta <- mget(plot_names[c(3,4)])
 
 aov_basic_delta_plt <- wrap_plots(basic_delta, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
+                       theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
 
 aov_basic_delta_plt
 basic_lass_delta_plot
 basic_merf_delta_plot
 
+basic_delta_cow <- ggdraw() +
+  # Top-left plot
+  draw_plot(aov_basic_delta_plt,
+            x = 0.08,
+            y = 0.55 + 0.03,
+            width = 0.445,
+            height = 0.4) +
+  # Top-right plot
+  draw_plot(basic_merf_delta_plot,
+            x = 0.05 + 0.445,
+            y = 0.05,
+            width = 0.445,
+            height = 0.92) +
+  # Bottom plot (full width with margin)
+  draw_plot(basic_lass_delta_plot,
+            x = 0.05,
+            y = 0.04,
+            width = 0.445,
+            height = 0.5) +
+  draw_plot_label(label = c("A.", "B.", "C."),
+    size = 35,
+    x = c(0.05, 0.545, 0.05),
+    y = c(0.98, 0.98, 0.55))
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_delta_ft_aov_combined_cow.png"), basic_delta_cow, 
+       width = 40, height = 40, dpi = 200, bg = 'white')
+
+
 # MERF & GLLASSO Clinical Long
 clin_long <- mget(plot_names_clin_plus[c(1,2)])
 
 aov_clin_long_plt <- wrap_plots(clin_long, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
                   theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
 
 aov_clin_long_plt
 clin_lass_long_plot
 clin_merf_long_plot
 
+clin_long_cow <- ggdraw() +
+  # Top-left plot
+  draw_plot(aov_clin_long_plt,
+            x = 0.08,
+            y = 0.5 + 0.1,
+            width = 0.4,
+            height = 0.38) +
+  # top right plot
+  draw_plot(clin_lass_long_plot,
+            x = 0.45 + 0.05,
+            y = 0.5 + 0.1,
+            width = 0.4,
+            height = 0.38) +
+  # Bottom left (full width with margin)
+  draw_plot(clin_merf_long_plot,
+            x = 0.05,
+            y = 0.17,
+            width = 0.85,
+            height = 0.4) +
+  draw_plot_label(label = c("A.", "B.", "C."),
+    size = 35,
+    x = c(0.05, 0.545, 0.05),
+    y = c(0.98, 0.98, 0.58))
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/clinical_long_ft_aov_combined_cow.png"), clin_long_cow, 
+       width = 40, height = 40, dpi = 600, bg = 'white')
+
 # MERF & GLLASSO Clinical Delta
 clin_delta <- mget(plot_names_clin_plus[c(3,4)])
 
 aov_clin_delta_plt <- wrap_plots(clin_delta, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
                   theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
+
 aov_clin_delta_plt
 clin_lass_delta_plot
 clin_merf_delta_plot
+
+clin_delta_cow <- ggdraw() +
+  # Top-left plot
+  draw_plot(aov_clin_delta_plt,
+            x = 0.05,
+            y = 0.55 + 0.05,
+            width = 0.445,
+            height = 0.37) +
+  # Top-right plot
+  draw_plot(clin_merf_delta_plot,
+            x = 0.05 + 0.445,
+            y = 0.25,
+            width = 0.445,
+            height = 0.73) +
+  # Bottom plot (full width with margin)
+  draw_plot(clin_lass_delta_plot,
+            x = 0.06,
+            y = 0.25,
+            width = 0.37,
+            height = 0.32) +
+  draw_plot_label(label = c("A.", "B.", "C."),
+    size = 35,
+    x = c(0.05, 0.545, 0.05),
+    y = c(0.98, 0.98, 0.55))
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/clinical_delta_ft_aov_combined_cow.png"), clin_delta_cow, 
+       width = 40, height = 40, dpi = 600, bg = 'white')
 ```
 
 # Feature plots 
@@ -2214,7 +2290,7 @@ combined_plot <- arrangeGrob(
 grid.newpage()
 grid.draw(combined_plot)
 
-file_path <- file.path(omic_out_dir, "venn_grid_overall_title.png")
+file_path <- file.path(omic_out_dir, "venns/venn_grid_overall_title.png")
 png(file_path, width = 3000, height = 2000, res = 300)
 grid.draw(combined_plot)
 dev.off()
@@ -2266,81 +2342,10 @@ grid::grid.draw(p)
 
 ```{r}
 # Define file name
-png_name <- file.path(omic_out_dir, "venn_combined_plot.png")
+png_name <- file.path(omic_out_dir, "venns/venn_combined_plot.png")
 # Save the arranged plot to a PNG file
 png(filename = png_name, width = 2800, height = 2800, res = 300)
 grid.draw(p)
 dev.off()
-```
-
-
-```{r}
-library(officer)
-library(magrittr)
-library(flextable)
-
-# Named vector: custom section headings or figure captions
-image_labels <- c(
-  "final_heat_map_scores.png"       = "Heatmap of Prediction Scores",
-  "venn_combined_plot.png"          = "Venn Diagram of Overlapping Features",
-  "combined_lass_delta_ft_plot.png" = "LASSO Delta Feature Importance",
-  "combined_lass_long_ft_plot.png"  = "LASSO Longitudinal Feature Importance",
-  "combined_merf_delta_ft_plot.png" = "MERF Delta Feature Importance",
-  "combined_merf_long_ft_plot.png"  = "MERF Longitudinal Feature Importance"
-)
-
-# Ordered filenames
-ordered_names <- names(image_labels)
-
-# Full file paths
-ordered_files <- sapply(ordered_names, function(name) {
-  png_files[basename(png_files) == name]
-}, USE.NAMES = FALSE)
-
-# Create Word document
-doc <- read_docx()
-i <- 1
-
-while (i <= length(ordered_files)) {
-  file <- ordered_files[i]
-  fname <- basename(file)
-  
-  # Check for LASSO pair
-  if (fname == "combined_lass_delta_ft_plot.png" &&
-      i < length(ordered_files) &&
-      basename(ordered_files[i + 1]) == "combined_lass_long_ft_plot.png") {
-    
-    img1 <- external_img(ordered_files[i], width = 3, height = 3)
-    img2 <- external_img(ordered_files[i + 1], width = 3, height = 3)
-    
-    # Create a placeholder table
-    df <- data.frame(col1 = "img1", col2 = "img2", stringsAsFactors = FALSE)
-    ft <- flextable(df)
-    ft <- compose(ft, j = "col1", value = as_paragraph(img1))
-    ft <- compose(ft, j = "col2", value = as_paragraph(img2))
-    
-    doc <- doc %>%
-      body_add_par("LASSO Model Feature Importance", style = "heading 1") %>%
-      body_add_flextable(ft) %>%
-      body_add_par("Figure: LASSO Delta and Longitudinal Feature Importance", style = "Normal")
-    
-    i <- i + 2
-    
-  } else {
-    # Single image with manual label
-    label <- image_labels[fname]
-    doc <- doc %>%
-      body_add_par(label, style = "heading 1") %>%
-      body_add_img(src = file, width = 6, height = 4) %>%
-      body_add_par(paste("Figure:", label), style = "Normal")
-    
-    i <- i + 1
-  }
-}
-
-# Save Word doc
-#print(doc, target = "output_with_images.docx")
-print(doc, target = file.path(omic_out_dir, "output_with_images.docx"))
-
 ```
 
