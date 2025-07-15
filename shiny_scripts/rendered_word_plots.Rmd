@@ -1913,6 +1913,77 @@ ggsave(paste0(omic_out_dir, "lass_ft_imp/lasso_ft_plot_all_combined.png"), lass_
 ### COMBINE ANOVA R2, MERF and GLMMLASSO plots ###
 # For 4 figures set up ANOVA
 ```{r}
+## Testing all at once 
+bl <- c(mget(plot_names[c(1,2)]), merf_plots[c(2, 3, 6, 7, 8)],  lass_plots_delta[c(2, 7)])
+p <- ggdraw()
+p <- p +
+  draw_plot(bl[[1]], x = 0, y = 0.6+ 0.15, width = 0.48, height = 0.22) +
+  draw_plot(bl[[2]], x = 0, y = 0.4+ 0.15, width = 0.48, height = 0.22) +
+  draw_plot(bl[[8]], x = 0.01, y = 0.2+ 0.1, width = 0.48, height = 0.22) +   
+  draw_plot(bl[[9]], x = 0.01, y = 0 + 0.04,   width = 0.48, height = 0.22) + 
+  draw_plot(bl[[3]], x = 0.52, y = 0.76 + 0.04, width = 0.48, height = 0.18) + 
+  draw_plot(bl[[4]], x = 0.52, y = 0.58 + 0.04, width = 0.48, height = 0.18) + 
+  draw_plot(bl[[5]], x = 0.52, y = 0.4 + 0.04, width = 0.48, height = 0.18) + 
+  draw_plot(bl[[6]], x = 0.52, y = 0.22 + 0.04, width = 0.48, height = 0.18) + 
+  draw_plot(bl[[7]], x = 0.52, y = 0 + 0.04, width = 0.48, height = 0.18) + 
+# Right side 
+right_ys <- seq(0.7, 0, length.out = 5)  # y positions for 4 plots
+for (i in 1:5) {
+  p <- p + draw_plot(bl[[i+2]], x = 0.52, y = 0.05 + right_ys[i], width = 0.4, height = 0.18)
+}
+labels <- c("A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.", "I.")
+label_x <- c(0.01, 0.01, 0.01, 0.01, rep(0.516, 5))
+label_y <- c(0.6+0.15+0.22, 
+             0.4+0.15+0.22, 
+             0.2+0.1+0.22, 
+             0+0.05+0.22, 
+             right_ys + 0.05 + 0.2)
+
+p <- p + draw_plot_label(
+  label = labels,
+  x = label_x,
+  y = label_y,
+  fontface = "bold",
+  size = 25)
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_test.png"), p, 
+       width = 40, height = 40, dpi = 200, bg = 'white')
+
+# new way basic delta
+bd <- c(mget(plot_names[c(3,4)]), merf_plots[c(10, 12, 15, 16)],  lass_plots_delta[c(2, 7)])
+pd <- ggdraw()
+pd <- pd +
+  draw_plot(bd[[1]], x = 0, y = 0.6+ 0.15, width = 0.5, height = 0.22) +
+  draw_plot(bd[[2]], x = 0, y = 0.4+ 0.15, width = 0.5, height = 0.22) +
+  draw_plot(bd[[7]], x = 0.01, y = 0.2+ 0.1, width = 0.5, height = 0.22) +   
+  draw_plot(bd[[8]], x = 0.01, y = 0 + 0.05,   width = 0.5, height = 0.22)   
+# Right side 
+right_ysd <- seq(0.7, 0, length.out = 4)  # y positions for 4 plots
+for (i in 1:4) {
+  pd <- pd + draw_plot(bd[[i+2]], x = 0.52, y = 0.05 + right_ysd[i], width = 0.4, height = 0.215)
+}
+labelsd <- c("A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.")
+label_xd <- c(0.01, 0.01, 0.01, 0.01, rep(0.516, 4))
+label_yd <- c(0.6+0.15+0.22, 
+             0.4+0.15+0.22, 
+             0.2+0.1+0.22, 
+             0+0.05+0.22, 
+             right_ysd + 0.05 + 0.215)
+
+pd <- pd + draw_plot_label(
+  label = labelsd,
+  x = label_xd,
+  y = label_yd,
+  fontface = "bold",
+  size = 25)
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_delta_test.png"), pd, 
+       width = 40, height = 40, dpi = 200, bg = 'white')
+
+
+
+## Old way :
+
 # MERF & GLLASSO Basic Long 
 basic_long <- mget(plot_names[c(1,2)])
 
