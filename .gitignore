@@ -13,3 +13,5 @@ mutli-omic-predictions.Rproj
 *.docx
 *.pdf
 *.html
+*.log
+*play_scripts/older_sept25/
