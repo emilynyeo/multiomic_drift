@@ -7,3 +7,5 @@
 /../../../zachs_rerun/
 *.html
 *.code-workspace
+*.log
+*play_scripts/older_sept25/LongituRF/
