@@ -1581,7 +1581,7 @@ p <- p + draw_plot_label(label = labels, x = label_x, y = label_y,
                          fontface = "bold", size = 25)
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_test.png"), p, 
-       width = 40, height = 40, dpi = 600, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 
 # new way basic delta
 bd <- c(mget(plot_names[c(3,4)]), merf_plots[c(10, 12, 15, 16)],  lass_plots_delta[c(2, 7)])
@@ -1607,47 +1607,47 @@ pd <- pd + draw_plot_label(label = labelsd, x = label_xd, y = label_yd,
                            fontface = "bold", size = 25)
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_delta_test.png"), pd, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 
 # New way clinical long 
 cl <- c(mget(plot_names_clin_plus[c(1,2)]), merf_plots[c(7, 8)],  lass_plots_lg[c(3,7)])
 p_cl <- ggdraw()
 p_cl <- p_cl +
-  draw_plot(cl[[1]], x = 0.01, y = 0.59, width = 0.47, height = 0.22) +
-  draw_plot(cl[[2]], x = 0.01, 0.22 + 0.1, width = 0.47, height = 0.22) +
-  draw_plot(cl[[3]], x = 0.51, y = 0.59, width = 0.48, height = 0.22) +
-  draw_plot(cl[[4]], x = 0.51, y = 0.22 + 0.1, width = 0.48, height = 0.22) +
-  draw_plot(cl[[5]], x = 0.01, y = 0.05, width = 0.47, height = 0.22) +
-  draw_plot(cl[[6]], x = 0.51, y = 0.05, width = 0.48, height = 0.22) 
+  draw_plot(cl[[1]], x = 0.01, y = 0.565, width = 0.47, height = 0.25) + # a
+  draw_plot(cl[[2]], x = 0.01, y = 0.30 , width = 0.47, height = 0.25) + # b
+  draw_plot(cl[[3]], x = 0.51, y = 0.565, width = 0.48, height = 0.23) + # c
+  draw_plot(cl[[4]], x = 0.51, y = 0.30, width = 0.48, height = 0.23) + #d
+  draw_plot(cl[[5]], x = 0.01, y = 0.05, width = 0.47, height = 0.23) +
+  draw_plot(cl[[6]], x = 0.51, y = 0.05, width = 0.48, height = 0.23) 
 
 labelcl <- c("A.", "B.", "C.", "D.", "E.", "F.")
 label_xcl <- c(0.01, 0.01, 0.50, 0.50, 0.01, 0.50)
-label_ycl <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.22, 0.05 + 0.22)
+label_ycl <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.23, 0.05 + 0.23)
 p_cl <- p_cl + draw_plot_label(label = labelcl, x = label_xcl, y = label_ycl,
                                fontface = "bold", size = 25)
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_long_test.png"), p_cl, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 
 # New way clinical delta 
 cd <- c(mget(plot_names_clin_plus[c(3,4)]), merf_plots[c(12, 15, 16)],  lass_plots_delta[c(2)])
 p_cd <- ggdraw()
 p_cd <- p_cd +
-  draw_plot(cd[[1]], x = 0.01, y = 0.59, width = 0.47, height = 0.22) +
-  draw_plot(cd[[2]], x = 0.01, 0.22 + 0.1, width = 0.47, height = 0.22) +
-  draw_plot(cd[[3]], x = 0.51, y = 0.59, width = 0.48, height = 0.22) +
-  draw_plot(cd[[4]], x = 0.51, y = 0.22 + 0.1, width = 0.48, height = 0.22) +
-  draw_plot(cd[[5]], x = 0.51, y = 0.05, width = 0.48, height = 0.22) +
-  draw_plot(cd[[6]], x = 0.01, y = 0.05, width = 0.47, height = 0.22)
+  draw_plot(cd[[1]], x = 0.01, y = 0.565, width = 0.47, height = 0.25) + # a
+  draw_plot(cd[[2]], x = 0.01, y = 0.30 , width = 0.47, height = 0.25) + # b
+  draw_plot(cd[[3]], x = 0.51, y = 0.565, width = 0.48, height = 0.23) + # c
+  draw_plot(cd[[4]], x = 0.51, y = 0.30, width = 0.48, height = 0.23) + #d
+  draw_plot(cd[[5]], x = 0.01, y = 0.05, width = 0.47, height = 0.23) +
+  draw_plot(cd[[6]], x = 0.51, y = 0.05, width = 0.48, height = 0.23) 
 
 labelcd <- c("A.", "B.", "D.", "E.", "F.", "C.")
 label_xcd <- c(0.01, 0.01, 0.50, 0.50, 0.50, 0.01)
-label_ycd <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.22, 0.05 + 0.22)
+label_ycd <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.23, 0.05 + 0.23)
 p_cd <- p_cd + draw_plot_label(label = labelcd, x = label_xcd, y = label_ycd,
                                fontface = "bold", size = 25)
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_delta_test.png"), p_cd, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 ```
 
 ## Heatmap
