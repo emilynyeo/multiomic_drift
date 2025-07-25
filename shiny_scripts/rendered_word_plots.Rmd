@@ -1630,15 +1630,15 @@ ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_long_test.png"), p_cl,
        width = 40, height = 40, dpi = 500, bg = 'white')
 
 # New way clinical delta 
-cd <- c(mget(plot_names_clin_plus[c(3,4)]), merf_plots[c(12, 15, 16)],  lass_plots_delta[c(2)])
+cd <- c(mget(plot_names_clin_plus[c(3,4)]), merf_plots[c(12, 15, 16)],  lass_plots_delta[c(7)])
 p_cd <- ggdraw()
 p_cd <- p_cd +
   draw_plot(cd[[1]], x = 0.01, y = 0.565, width = 0.47, height = 0.25) + # a
   draw_plot(cd[[2]], x = 0.01, y = 0.30 , width = 0.47, height = 0.25) + # b
   draw_plot(cd[[3]], x = 0.51, y = 0.565, width = 0.48, height = 0.23) + # c
   draw_plot(cd[[4]], x = 0.51, y = 0.30, width = 0.48, height = 0.23) + #d
-  draw_plot(cd[[5]], x = 0.01, y = 0.05, width = 0.47, height = 0.23) +
-  draw_plot(cd[[6]], x = 0.51, y = 0.05, width = 0.48, height = 0.23) 
+  draw_plot(cd[[6]], x = 0.01, y = 0.05, width = 0.47, height = 0.23) +
+  draw_plot(cd[[5]], x = 0.51, y = 0.05, width = 0.48, height = 0.23) 
 
 labelcd <- c("A.", "B.", "D.", "E.", "F.", "C.")
 label_xcd <- c(0.01, 0.01, 0.50, 0.50, 0.50, 0.01)

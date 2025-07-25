@@ -1,4 +1,4 @@
-# MAKE TABLE 1:
+# MAKE TABLE 1 & Supplementary :
 rm(list = ls())
 # Combined all input processing script
 omic_out_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/"
@@ -55,6 +55,35 @@ long_imputed <- read_csv("/Users/emily/projects/research/Stanislawski/comps/mutl
 
 # deltas
 all_delta <- read_csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta_april29.csv")
+
+### Supplementary figure of BMI change:
+
+# Create the spaghetti plot
+ggplot(long_imputed, aes(x = as.factor(time), y = outcome_BMI_fnl, 
+                         group = subject_id, color = as.factor(randomized_group))) +
+  facet_wrap(vars(randomized_group)) +
+  geom_line(alpha = 0.4) +
+  geom_point(size = 2) +
+  geom_smooth(aes(group = randomized_group), method = "loess", se = TRUE, 
+              size = 1.2, linetype = "solid") +
+  scale_color_manual(
+    values = c("0" = "#218a93", "1" = "#a44d77"),  # custom colors
+    labels = c("DCR", "IMF")) +
+  labs(title = "BMI Trajectories Across Study Timepoints",
+       x = "Time Point",
+       y = expression("BMI (kg/m"^2*")"),
+       color = "Diet Group") +
+  theme_minimal() +
+  theme(
+    strip.text = element_blank(),
+    plot.title = element_text(size = 20, face = "bold"),
+    axis.title.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 14))
+
+### for table 1 ####
 
 # Exploring other splits:
 unique_subjects <- unique(long_imputed$subject_id)
@@ -121,7 +150,9 @@ long_feature <- data.frame(Group = c("Basic", "Meta", "Taxa",
 colnames(long_feature) <- c("Data Type", "Number of Features")
 ft <- flextable(long_feature)
 ft <- autofit(ft)
-output_path <- file.path(omic_out_dir, "paper_render/Long_Feature_Count_Table.docx")
+output_path <- file.path(omic_out_dir, "paper_render/basic_plus_diet/Long_Feature_Count_Table.docx")
+
+
 # save to word
 doc <- read_docx()
 doc <- body_add_flextable(doc, ft)
@@ -159,6 +190,54 @@ long_new_split_table6 <- long_new_split_table %>% dplyr::filter(Timepoint == "6 
 long_new_split_table12 <- long_new_split_table %>% dplyr::filter(Timepoint == "12 Months")
 
 ### FLEXTABLES ###
+
+# Stats for the tables below:
+compare_groups <- function(data, group_var, variables, factor_vars) {
+  results <- list()
+  for (var in variables) {
+    if (var %in% factor_vars) {
+      # Chi-squared test for categorical variables
+      tbl <- table(data[[group_var]], data[[var]])
+      test <- chisq.test(tbl)
+      results[[var]] <- data.frame(
+        Variable = var,
+        Test = "Chi-squared",
+        P_value = test$p.value)
+    } else {
+      # t-test for continuous variables
+      test <- t.test(data[[var]] ~ data[[group_var]])
+      results[[var]] <- data.frame(
+        Variable = var,
+        Test = "t-test",
+        P_value = test$p.value)
+    }
+  }
+  do.call(rbind, results)
+}
+
+# List of timepoints
+timepoints <- unique(long_new_split_table$Timepoint)
+
+# Variables to compare
+vars_to_check <- c("Sex", "Age", "Race", "Cohort Number", "BMI")
+factor_vars <- c("Sex", "Race", "Cohort Number")
+
+# Store all results
+all_results <- list()
+for (tp in timepoints) {
+  subset_data <- subset(long_new_split_table, Timepoint == tp)
+  
+  test_results <- compare_groups(
+    data = subset_data,
+    group_var = "Diet Group IMF", 
+    variables = vars_to_check,
+    factor_vars = factor_vars)
+  test_results$Timepoint <- tp
+  all_results[[tp]] <- test_results
+}
+
+final_results <- do.call(rbind, all_results)
+write.csv(final_results, paste0(omic_out_dir, "paper_render/basic_plus_diet/group_comparison_by_timepoint.csv"), row.names = FALSE)
 
 # all long
 table_long1 <- CreateTableOne(
@@ -218,7 +297,7 @@ doc <- read_docx() %>%
   body_add_flextable(value = ft) %>%
   body_add_par("", style = "Normal")  # Optional: adds a blank line after the table
 
-print(doc, target = paste0(omic_out_dir, "table1_flextable_output.docx"))
+print(doc, target = paste0(omic_out_dir, "paper_render/basic_plus_diet/table1_flextable_output.docx"))
 
 # long 0m
 table0 <- CreateTableOne(data = long_new_split_table0[c(4:8, 397:398)], 
@@ -320,7 +399,7 @@ styled_table <- t0_6_12_fixed %>%
   width(j = c("Baseline P-value", "P-value 6m", "P-value 12m"), width = 0.7)
 
 
-long_t1 <- paste0(omic_out_dir, "long_table1.docx")
+long_t1 <- paste0(omic_out_dir, "paper_render/basic_plus_diet/long_table1.docx")
 props_long <- officer::prop_section(
   page_size = officer::page_size(width = 21 / 2.54, height = 29.7 / 2.54, 
                                  orient = "landscape", unit = "in"),
