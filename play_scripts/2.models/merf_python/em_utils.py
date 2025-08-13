@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import re
+import shap
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -660,10 +661,80 @@ def run_merf_analysis_old2(X, Y, Z, clusters_train,
     # Return the R-squared values and the top features DataFrame for further analysis
     return r2_values, top_features_df
 
+
+# def save_shap_beeswarm(rf_model, X_numeric, output_dir, model_name):
+#     explainer = shap.TreeExplainer(rf_model)
+#     shap_values = explainer.shap_values(X_numeric)
+#     shap.summary_plot(shap_values, X_numeric, plot_type="violin", show=False)
+#     plt.savefig(os.path.join(output_dir, f"shap_beeswarm_{model_name.replace(' ', '_')}.png"), dpi=300, bbox_inches='tight')
+#     plt.close()
+
+
+# SHAP and Beeswarm 
+
+#def plot_shap_beeswarm(model, X_numeric, output_dir, model_name):
+#    explainer = shap.TreeExplainer(model)
+#    shap_values = explainer.shap_values(X_numeric)
+#    shap.summary_plot(shap_values, X_numeric, plot_type="violin", show=False)
+#    out_path = os.path.join(output_dir, f"shap_beeswarm_{model_name.replace(' ', '_')}.png")
+#    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+#    plt.close()
+
+# with csv save
+
+def plot_shap_beeswarm(model, X_numeric, output_dir, model_name):
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_numeric)
+
+    # Check if shap_values are valid
+    if shap_values is None:
+        print(f"[SKIP] SHAP values are None for model: {model_name}")
+        return
+
+    if isinstance(shap_values, list):
+        shap_values = shap_values[0]
+
+    # Ensure shape matches
+    if shap_values.shape[1] != X_numeric.shape[1]:
+        print(f"[ERROR] SHAP values shape {shap_values.shape} != X_numeric shape {X_numeric.shape} for {model_name}")
+        return
+
+    # Save SHAP plot
+    shap.summary_plot(shap_values, X_numeric, plot_type="violin", show=False)
+    plot_out_path = os.path.join(output_dir, f"shap_beeswarm_{model_name.replace(' ', '_')}.png")
+    plt.savefig(plot_out_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"[OK] SHAP beeswarm saved: {plot_out_path}")
+
+    # Save long-format data
+    shap_df = pd.DataFrame(shap_values, columns=X_numeric.columns)
+    shap_long = shap_df.melt(var_name='Feature', value_name='SHAP')
+    shap_long['Feature_Value'] = pd.concat(
+        [X_numeric[col].reset_index(drop=True) for col in X_numeric.columns],
+        axis=1
+    ).melt(value_name='Feature_Value')['Feature_Value']
+
+    shap_long['Model'] = model_name
+    csv_out_path = os.path.join(output_dir, f"shap_long_{model_name.replace(' ', '_')}.csv")
+    
+    shap_long.to_csv(csv_out_path, index=False)
+    print(f"[OK] SHAP long-format CSV saved: {csv_out_path}")
+    with open(os.path.join(output_dir, "shap_log.txt"), "a") as f:
+        f.write(f"[OK] SHAP beeswarm saved: {plot_out_path}\n")
+        f.write(f"[OK] SHAP long-format CSV saved: {csv_out_path}\n")
+
+    with open(os.path.join(output_dir, "shap_log.txt"), "a") as f:
+        f.write(f"[SKIP] SHAP values are None for model: {model_name}\n")
+
+
+
+
 def run_merf_analysis2(X, Y, Z, clusters_train, 
                       X_new, Y_new, Z_new, clusters_new,
                       df, output_dir, r2_out, r2_adj_out, 
-                      feature_imp_out, results_filename, time_new):
+                      feature_imp_out, results_filename, time_new, 
+                      include_shap=True, key=None):
     import pandas as pd
     import numpy as np
     from merf import MERF
@@ -790,13 +861,31 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
             plt.figure(figsize=(10, 6))
             plt.barh(top_features['Feature'], top_features['Importance'], color='skyblue')
             plt.xlabel('Importance')
-            plt.title('Top 15 Feature Importances')
+            plt.title(f'Top 15 Feature Importances - {model_name}')
             plt.gca().invert_yaxis()  # Invert y-axis to have the highest importance on top
             plt.tight_layout()
 
-            # Save the plot
-            plt.savefig(os.path.join(output_dir, feature_imp_out), dpi=300, bbox_inches='tight')
+            # Save the plot with model-specific name
+            model_specific_feature_imp_out = feature_imp_out.replace('.png', f'_{model_name.replace(" ", "_")}.png')
+            plt.savefig(os.path.join(output_dir, model_specific_feature_imp_out), dpi=300, bbox_inches='tight')
             plt.show()
+
+        # Generate SHAP beeswarm plot if requested
+        if include_shap:
+            try:
+                print(f"Generating SHAP beeswarm plot for {model_name}...")
+                # Use the trained random forest model from MERF
+                rf_model = mrf_fit.trained_fe_model
+                # Ensure X_numeric contains only numeric columns
+                #X_numeric = X_new.select_dtypes(include=[np.number])
+                #plot_shap_beeswarm(rf_model, X_numeric, output_dir, model_name)
+                X_numeric_train = X.select_dtypes(include=[np.number])
+                # Include key in model name if provided
+                model_name_with_key = f"{key}_{model_name}" if key else model_name
+                plot_shap_beeswarm(rf_model, X_numeric_train, output_dir, model_name_with_key)
+                print(f"SHAP beeswarm plot saved for {model_name}")
+            except Exception as e:
+                print(f"Error generating SHAP plot for {model_name}: {str(e)}")
 
         # Append results to the DataFrame for each y_hat_new value
         for y_hat, cluster, time in zip(y_hat_new, clusters_new, time_new):  # Associate each y_hat_new with its corresponding cluster and time
@@ -853,6 +942,34 @@ def run_merf_analysis2(X, Y, Z, clusters_train,
     # Determine the model with the highest R-squared value
     best_model_name = max(r2_values, key=r2_values.get)
     print(f"Best model: {best_model_name} with R-squared: {r2_values[best_model_name]:.4f}")
+
+    # Generate additional SHAP analysis for the best model if requested
+    if include_shap:
+        try:
+            print(f"Generating detailed SHAP analysis for best model: {best_model_name}")
+            # Get the best model based on R-squared
+            if best_model_name == 'MSE Model':
+                best_merf = mse_merf
+            elif best_model_name == 'Prev Model':
+                best_merf = prev_merf
+            elif best_model_name == 'PTEV Model':
+                best_merf = ptev_merf
+            else:  # 'OOB Model'
+                best_merf = oob_merf
+            
+            # Fit the best model if not already fitted
+            best_mrf_fit = best_merf.fit(X.select_dtypes(include=[np.number]), Z, pd.Series(clusters_train), Y)
+            best_rf_model = best_mrf_fit.trained_fe_model
+
+            X_numeric_train = X.select_dtypes(include=[np.number])
+            # Include key in best model name if provided
+            best_model_name_with_key = f"{key}_BEST_{best_model_name}" if key else f"BEST_{best_model_name}"
+            plot_shap_beeswarm(best_rf_model, X_numeric_train, output_dir, best_model_name_with_key)
+
+            print(f"Best model SHAP analysis completed for {best_model_name}")
+            
+        except Exception as e:
+            print(f"Error generating best model SHAP analysis: {str(e)}")
 
     # Return the R-squared values and the top features DataFrame for further analysis
     return r2_values, results_df

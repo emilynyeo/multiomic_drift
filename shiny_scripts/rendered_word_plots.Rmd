@@ -25,6 +25,10 @@ p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn,
        sjPlot, htmltools, officer, flextable, webshot, apaTables, MuMIn, lme4, 
        glue, grid, rsq, pheatmap, GGally, VennDiagram, glmmTMB, broom.mixed, gt,
        pathcwork)
+library(tidyverse)
+library(ggbeeswarm)
+library(scales)
+library(viridis)
 #library(nlme)
 
 '%ni%' <- Negate('%in%')
@@ -220,6 +224,54 @@ gl_ftimp_delta_metabo <- read.csv("/Users/emily/projects/research/Stanislawski/c
 gl_ftimp_delta_all <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/all_gl_delta_top_features.csv")
 ```
 
+
+# Read in SHAP value csvs for MERF 
+
+```{r}
+long_merf_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/long/"
+
+shap_dfs <- list(
+  shap_long_basic  = read_csv(file.path(long_merf_dir, "shap_long_basic_BEST_MSE_Model.csv")),
+  shap_long_meta   = read_csv(file.path(long_merf_dir, "shap_long_meta_keep_MSE_Model.csv")),
+  shap_long_grs    = read_csv(file.path(long_merf_dir, "shap_long_only_grs_MSE_Model.csv")),
+  shap_long_taxa   = read_csv(file.path(long_merf_dir, "shap_long_only_taxa_MSE_Model.csv")),
+  shap_long_pathway= read_csv(file.path(long_merf_dir, "shap_long_only_pathway_MSE_Model.csv")),
+  shap_long_micom  = read_csv(file.path(long_merf_dir, "shap_long_only_micom_MSE_Model.csv")),
+  shap_long_metabo = read_csv(file.path(long_merf_dir, "shap_long_only_metabo_MSE_Model.csv")),
+  shap_long_all    = read_csv(file.path(long_merf_dir, "shap_long_only_all_MSE_Model.csv"))
+)
+
+delta_merf_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta"
+
+shap_delta_dfs <- list(
+  shap_delta_basic  = read_csv(file.path(delta_merf_dir, "shap_long_basic_MSE_Model.csv")),
+  shap_delta_meta   = read_csv(file.path(delta_merf_dir, "shap_long_meta_keep_MSE_Model.csv")),
+  shap_delta_grs    = read_csv(file.path(delta_merf_dir, "shap_long_only_grs_MSE_Model.csv")),
+  shap_delta_taxa   = read_csv(file.path(delta_merf_dir, "shap_long_only_taxa_MSE_Model.csv")),
+  shap_delta_pathway= read_csv(file.path(delta_merf_dir, "shap_long_only_pathway_MSE_Model.csv")),
+  shap_delta_micom  = read_csv(file.path(delta_merf_dir, "shap_long_only_micom_MSE_Model.csv")),
+  shap_delta_metabo = read_csv(file.path(delta_merf_dir, "shap_long_only_metabo_MSE_Model.csv")),
+  shap_delta_all    = read_csv(file.path(delta_merf_dir, "shap_long_only_all_MSE_Model.csv"))
+)
+```
+
+
+```{r}
+cluster_palette_contrast <- c(
+  "#004E64", # deep teal blue
+  "#B0E0E6", # powder blue
+  "#4682B4", # steel blue
+  "#2F4F4F", # dark slate gray
+  "#556B2F", # dark olive green
+  "#6B8E23", # olive drab
+  "#708090", # slate gray
+  "#A9CBB7", # sage green
+  "#F0E68C", # khaki
+  "#E6BE8A", # camel tan
+  "#FFF5E1", # warm cream
+  "#B5A642")  # antique gold
+```
+
 # Rename top 20 features 
 
 ```{r}
@@ -231,8 +283,20 @@ gl_ftimp_delta_meta <- gl_ftimp_delta_meta %>%
       "Randomized group1" = "IMF Diet Grp.",
       "Sex" = "Sex (Male)",
       "Hdl" = "HDL",
-      "Glucose" = "Glucose x",
+      "Glucose x" = "Glucose",
       "Homo ir" = "Homo-IR"))
+
+gl_ftimp_delta_grs <- gl_ftimp_delta_grs %>%
+  dplyr::mutate(
+    Feature = dplyr::recode(
+      Feature,
+      "Bmi prs" = "GRS"))
+
+gl_ftimp_long_grs <- gl_ftimp_long_grs %>%
+  dplyr::mutate(
+    Feature = dplyr::recode(
+      Feature,
+      "Bmi prs" = "GRS"))
 
 gl_ftimp_delta_pathway <- gl_ftimp_delta_pathway %>%
   dplyr::mutate(
@@ -257,6 +321,8 @@ gl_ftimp_delta_metabo <- gl_ftimp_delta_metabo %>%
       "Vldl size" = "VLDL-size",
       "Hdl size" = "HDL-size",
       "Gly" = "Glycine",
+      "Tyr" = "Tyrosine",
+      "Phe" = "Phenylalanine",
       "Vldl tg" = "TGs in VLDL",
       "Tg by pg" = "TGs/Phosphoglycerides",
       "Dha pct" = "DHA (% of FAs)",
@@ -286,7 +352,7 @@ gl_ftimp_long_meta <- gl_ftimp_long_meta %>%
       "Randomized group1" = "IMF Diet Grp.",
       "Sex" = "Sex (Male)",
       "Hdl" = "HDL",
-      "Glucose" = "Glucose x",
+      "Glucose x" = "Glucose",
       "Homo ir" = "Homo-IR"))
 
 gl_ftimp_long_metabo <- gl_ftimp_long_metabo %>%
@@ -301,6 +367,8 @@ gl_ftimp_long_metabo <- gl_ftimp_long_metabo %>%
       "Gly" = "Glycine",
       "Gln" = "Glutamine",
       "Vldl tg" = "TGs in VLDL",
+      "Tyr" = "Tyrosine",
+      "Phe" = "Phenylalanine",
       "Tg by pg" = "TGs/Phosphoglycerides",
       "Dha pct" = "DHA (% of FAs)",
       "Vldl l" = "Lipids in VLDL"))
@@ -335,8 +403,16 @@ library(purrr)
 library(dplyr)
 
 # Define a renaming dictionary
+feature_rename_basic <- c(
+  "age" = "Age",
+  "randomized_group" = "IMF Diet Grp.",
+  "sex" = "Sex (Male)")
+
+feature_rename_grs <- c(
+  "bmi_prs" = "GRS")
+
 feature_rename_meta <- c(
-  "Triglyceride_lipid" = "TG",
+  "Triglyceride_lipid" = "Triglycerides",
   "HDL_Total_Direct_lipid" = "HDL",
   "LDL_Calculated" = "LDL",
   "Glucose.x" = "Glucose",
@@ -348,6 +424,7 @@ feature_rename_meta <- c(
   "randomized_group" = "IMF Diet Grp.")
 
 feature_rename_metabo <- c(
+  "PUFA_by_MUFA" = "PUFA:MUFA ratio",
   "GlycA" = "Glycoprotein Acetyls",
   "DHA_pct" = "DHA (% of FAs)",
   "Gly" = "Glycine",
@@ -359,10 +436,14 @@ feature_rename_metabo <- c(
   "IDL_CE_pct" = "Cholesteryl Esters (% of IDL Lipids)",
   "PUFA_pct" = "PUFA (%)",
   "HDL_size" = "HDL-size",
+  "VLDL_size" = "VLDL-size",
   "VLDL_TG" = "TGs in VLDL",
+  "Phe" = "Phenylalanine", 
+  "His" = "Histidine", 
   "LA" = "Linoleic Acid (% of FAs)")
 
 feature_rename_taxa <- c(
+  "g__Anaerotruncus" = "G Anaerotruncus",
   "g__Anaerobutyricum" = "G Anaerobutyricum",
   "g__Anaerotignum_189125" = "G Anaerotignum 189125",
   "g__CAG-127" = "G CAG-127",
@@ -407,6 +488,8 @@ feature_rename_taxa <- c(
   )
 
 feature_rename_pathway <- c(
+  "sulfate.reduction.I..assimilatory." = "Sulfate reduction assimilation",
+  "superpathway.of.phylloquinol.biosynthesis" = "Phylloquinol biosyn. pathways",
   "D.glucarate.degradation.I" = "D-glucarate degr. ",
   "L.lysine.biosynthesis.II" = "L-lysine biosyn. II",
   "L.lysine.fermentation.to.acetate.and.butanoate" = "Lys ferm. to acetate/butanoate",
@@ -419,18 +502,18 @@ feature_rename_pathway <- c(
   "isopropanol.biosynthesis" = "Isopropanol biosyn.",
   "Bifidobacterium.shunt" = "Bifidobacterium shunt",
   "GDP.mannose.biosynthesis" = "GDP mannose biosyn.",
-  "L.histidine.degradation.I" = "L-hist. degr.I ",
+  "L.histidine.degradation.I" = "L-histadine. degr.I ",
   "UDP.2.3.diacetamido.2.3.dideoxy..alpha..D.mannuronate.biosynthesis" = "UDP-DDDA-ManA biosyn.",
   "X1.4.dihydroxy.6.naphthoate.biosynthesis.I " = "1,4 dihydroxy naphthoate biosyn.I",
   "X1.4.dihydroxy.6.naphthoate.biosynthesis.II" = "1,4 dihydroxy naphthoate biosyn.II",
   "allantoin.degradation.to.glyoxylate.III" = "Allantoin → Glyoxylate III",
   "arginine..ornithine.and.proline.interconversion" = "Arg–Orn–Pro interconversion",
   "glycolysis.V..Pyrococcus." = "Glycolysis V Pyro.",
-  "heme.biosynthesis.II..anaerobic." = "heme biosyn.II anaerobic",
+  "heme.biosynthesis.II..anaerobic." = "Heme biosyn.II anaerobic",
   "lactose.and.galactose.degradation.I" = "lactose/galactose degr.I",
   "pyrimidine.deoxyribonucleotides.de.novo.biosynthesis.II" = "Pyr dNTP biosyn.II",
   "hexitol.fermentation.to.lactate..formate..ethanol.and.acetate" = "Hexitol Fermentation",
-  "X4.deoxy.L.threo.hex.4.enopyranuronate.degradation" = "deoxy enopyranuronate degr.",
+  "X4.deoxy.L.threo.hex.4.enopyranuronate.degradation" = "Deoxy enopyranuronate degr.",
   "TCA.cycle.VI..obligate.autotrophs." = "TCA VI obligate autotrophs",
   "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway",
   "superpathway.of.sulfur.oxidation..Acidianus.ambivalens." = "Acidianus Ambivalens (Sulfur Oxi.)",
@@ -466,6 +549,9 @@ feature_rename_pathway <- c(
   )
 
 feature_rename_all <- c(
+  "reductive.acetyl.coenzyme.A.pathway" = "Red. Acetyl-CoA Pathway",
+  "IDL_CE_pct" = "Cholesteryl Esters (% of IDL Lipids)",
+  "aromatic.biogenic.amine.degradation..bacteria." = "Aromatic amine degr. (bacteria)",
   "Dephospho.CoA" = "Dephospho-CoA",
   "GlycA" = "Glycoprotein Acetyls",
   "DHA_pct" = "DHA (% of FAs)",
@@ -491,13 +577,66 @@ feature_rename_all <- c(
   "g__Acetatifactor" = "G Acetatifactor",
   "indole.3.acetate" = "Indole-3-acetate")
 
+feature_rename_grs_lg <- feature_rename_grs
+feature_rename_basic_lg <- feature_rename_basic
 feature_rename_meta_lg <- feature_rename_meta
 feature_rename_metabo_lg <- feature_rename_metabo
 feature_rename_pathway_lg <- feature_rename_pathway
 feature_rename_taxa_lg <- feature_rename_taxa
 feature_rename_all_lg <- feature_rename_all
+
+feature_rename_grs_delta <- feature_rename_grs
+feature_rename_basic_delta <- feature_rename_basic
+feature_rename_meta_delta <- feature_rename_meta
+feature_rename_metabo_delta <- feature_rename_metabo
+feature_rename_pathway_delta <- feature_rename_pathway
+feature_rename_taxa_delta <- feature_rename_taxa
+feature_rename_all_delta <- feature_rename_all
 ```
 
+# Rename SHAPS MERF dfs 
+
+```{r}
+rename_maps <- list(
+  shap_long_basic = feature_rename_basic,
+  shap_long_grs = feature_rename_grs,
+  shap_long_meta     = feature_rename_meta,
+  shap_long_metabo   = feature_rename_metabo,
+  shap_long_taxa     = feature_rename_taxa,
+  shap_long_pathway  = feature_rename_pathway,
+  shap_long_all = feature_rename_all)
+
+shap_dfs <- lapply(names(shap_dfs), function(nm) {
+  if (nm %in% names(rename_maps)) {
+    shap_dfs[[nm]] %>%
+      mutate(Feature = recode(Feature, !!!rename_maps[[nm]]))
+  } else {
+    shap_dfs[[nm]]
+  }
+}) %>% setNames(names(shap_dfs))
+
+
+# and for delta shaps 
+rename_maps_delta <- list(
+  shap_delta_basic = feature_rename_basic,
+  shap_delta_grs = feature_rename_grs,
+  shap_delta_meta     = feature_rename_meta,
+  shap_delta_metabo   = feature_rename_metabo,
+  shap_delta_taxa     = feature_rename_taxa,
+  shap_delta_pathway  = feature_rename_pathway,
+  shap_delta_all = feature_rename_all)
+
+shap_delta_dfs <- lapply(names(shap_delta_dfs), function(nm) {
+  if (nm %in% names(rename_maps_delta)) {
+    shap_delta_dfs[[nm]] %>%
+      mutate(Feature = recode(Feature, !!!rename_maps_delta[[nm]]))
+  } else {
+    shap_delta_dfs[[nm]]
+  }
+}) %>% setNames(names(shap_delta_dfs))
+```
+
+## Rename lasso 
 
 ```{r}
 # Renaming function
@@ -564,6 +703,7 @@ all_md <- all_md %>%
                                               ~rename_features_in_json(.x, feature_rename_all)))
 ```
 
+
 # ANOVA tables for not basic plus 
 
 ```{r}
@@ -575,6 +715,204 @@ AIC(lmer_basic)
 AIC(lmer_grs_b)
 ```
 
+
+```{r}
+library(forcats)
+ft_colors <- c(
+  Clinical     = "#fbbdd1",
+  Taxa         = "#8B3A3A",
+  Micom        = "#996759",
+  Pathway      = "#D8A39D",
+  Metabolomics = "#C76374",
+  All          = "#b44241",
+  GRS          = "#E18476",
+  Basic        = "#582F2B")
+
+plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
+  shap_df %>%
+    filter(Feature != "time") %>%
+
+    # Step 1: Filter features based on SHAP value proportion
+    group_by(Feature) %>%
+    mutate(prop_small_shap = mean(SHAP > -0.005 & SHAP < 0.005, na.rm = TRUE)) %>%
+    filter(prop_small_shap <= 0.5) %>%
+
+    # Step 2: Reorder and normalize
+    mutate(
+      Feature = fct_reorder(Feature, abs(SHAP), .fun = max),
+      Norm_Feature_Value = rescale(Feature_Value, to = c(0, 1))) %>%
+    ungroup() %>%
+
+    # Step 3: Plot
+    ggplot(aes(x = SHAP, y = Feature, color = Norm_Feature_Value)) +
+    geom_quasirandom(alpha = 0.5, width = 0.1, size = 4.5, groupOnX = FALSE) +
+    scale_color_gradientn(
+      colors = c("#004E64", high_color),
+      values = scales::rescale(c(0, 1)),
+      name = "Feature Value",
+      breaks = c(0, 1),
+      labels = c("Low", "High")) +
+    labs(title = plot_title,
+      x = "SHAP Value (Impact on Model Output)",
+      y = NULL) +
+    scale_y_discrete(expand = expansion(add = 0.75)) +
+    theme_minimal(base_size = 18) +
+    theme(legend.position = "right",
+          legend.box.just = "center",
+          legend.title = element_text(face = "bold", size = 25, 
+                                      hjust = 0.5, vjust = 2,
+                                      margin = ggplot2::margin(b = 15)),
+          legend.text = element_text(size = 28),
+          axis.text = element_text(face = "bold"), 
+          plot.background = element_blank(),
+          plot.title = element_text(hjust = 0, face = "bold", size = 28),
+          plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
+          axis.text.y = element_text(face = "bold", size = 32),
+          axis.text.x = element_text(face = "bold", size = 32),
+          axis.title.x = element_text(size = 28, margin = ggplot2::margin(t = 14)),
+          panel.grid.major.y = element_blank(), 
+          panel.border     = element_blank(),  
+          panel.background = element_blank(),
+          panel.grid.minor = element_blank())
+}
+```
+
+
+```{r}
+library(patchwork)
+title_map <- c(
+  shap_long_micom      = "MERF Long Micom",
+  shap_long_basic      = "MERF Long Basic",
+  shap_long_all      = "MERF Long All",
+  shap_long_metabo   = "MERF Long Metabolomics",
+  shap_long_grs      = "MERF Long GRS",
+  shap_long_pathway  = "MERF Long Pathway",
+  shap_long_taxa     = "MERF Long Taxonomy",
+  shap_long_meta     = "MERF Long Clinical")
+
+shap_long_plot_list <- list()
+heights_vec <- numeric(0)
+
+for (name in names(shap_dfs)) {
+  df <- shap_dfs[[name]]
+
+  # Determine group for color mapping
+  group_key <- case_when(
+    grepl("meta$", name)      ~ "Clinical",
+    grepl("taxa$", name)      ~ "Taxa",
+    grepl("micom$", name)     ~ "Micom",
+    grepl("pathway$", name)   ~ "Pathway",
+    grepl("metabo$", name)    ~ "Metabolomics",
+    grepl("all$", name)       ~ "All",
+    grepl("grs$", name)       ~ "GRS",
+    grepl("basic$", name)     ~ "Basic",
+    TRUE ~ "All")
+  high_col <- ft_colors[[group_key]]
+
+  # Count features & limit to top 10
+  top_features <- df %>%
+    filter(Feature != "time") %>%
+    group_by(Feature) %>%
+    summarise(max_abs_shap = max(abs(SHAP), na.rm = TRUE), .groups = "drop") %>%
+    arrange(desc(max_abs_shap)) %>%
+    slice_head(n = 10) %>%
+    pull(Feature)
+  df_top10 <- df %>% filter(Feature %in% top_features)
+
+  # Calculate height
+  n_features <- length(unique(df_top10$Feature))
+  heights_vec <- c(heights_vec, n_features + 2)
+
+  # Create plot
+  plot_title <- title_map[[name]]
+  p <- plot_shap_beeswarm(df_top10, plot_title, high_color = high_col) +
+    theme(plot.margin = ggplot2::margin(25, 20, 25, 20))
+  shap_long_plot_list[[name]] <- p
+}
+
+# Normalize heights to sum to 1
+heights_norm <- heights_vec / sum(heights_vec)
+combined_shap_long <- wrap_plots(shap_long_plot_list,  # Combine vertically
+                                 ncol = 1, heights = heights_norm)
+
+# Save large PDF
+ggsave(
+  filename = file.path(omic_out_dir, "all_shap_plots_combined_abs.pdf"),
+  plot = combined_shap_long,
+  width = 18,
+  height = sum(heights_vec) * 0.5,
+  units = "in",
+  limitsize = FALSE)
+
+
+## Repeat the above for SHAP delta 
+title_map_delta <- c(
+  shap_delta_micom      = "MERF Delta Micom",
+  shap_delta_basic      = "MERF Delta Basic",
+  shap_delta_all      = "MERF Delta All",
+  shap_delta_metabo   = "MERF Delta Metabolomics",
+  shap_delta_grs      = "MERF Delta GRS",
+  shap_delta_pathway  = "MERF Delta Pathway",
+  shap_delta_taxa     = "MERF Delta Taxonomy",
+  shap_delta_meta     = "MERF Delta Clinical")
+
+shap_delta_plot_list <- list()
+heights_vec <- numeric(0)
+
+for (name in names(shap_delta_dfs)) {
+  df <- shap_delta_dfs[[name]]
+
+  # Determine group for color mapping
+  group_key <- case_when(
+    grepl("meta$", name)      ~ "Clinical",
+    grepl("taxa$", name)      ~ "Taxa",
+    grepl("micom$", name)     ~ "Micom",
+    grepl("pathway$", name)   ~ "Pathway",
+    grepl("metabo$", name)    ~ "Metabolomics",
+    grepl("all$", name)       ~ "All",
+    grepl("grs$", name)       ~ "GRS",
+    grepl("basic$", name)     ~ "Basic",
+    TRUE ~ "All")
+  high_col <- ft_colors[[group_key]]
+
+  # Count features & limit to top 10
+  top_features <- df %>%
+    filter(Feature != "time") %>%
+    group_by(Feature) %>%
+    summarise(max_abs_shap = max(abs(SHAP), na.rm = TRUE), .groups = "drop") %>%
+    arrange(desc(max_abs_shap)) %>%
+    slice_head(n = 10) %>%
+    pull(Feature)
+  df_top10 <- df %>% filter(Feature %in% top_features)
+
+  # Calculate height
+  n_features <- length(unique(df_top10$Feature))
+  heights_vec <- c(heights_vec, n_features + 2)
+
+  # Create plot
+  plot_title <- title_map_delta[[name]]
+  p <- plot_shap_beeswarm(df_top10, plot_title, high_color = high_col) +
+    theme(plot.margin = ggplot2::margin(25, 20, 25, 20))
+  shap_delta_plot_list[[name]] <- p
+}
+
+# Normalize heights to sum to 1
+heights_norm <- heights_vec / sum(heights_vec)
+combined_shap_delta <- wrap_plots(shap_delta_plot_list,  # Combine vertically
+                                 ncol = 1, heights = heights_norm)
+
+# Save large PDF
+ggsave(
+  filename = file.path(omic_out_dir, "all_delta_shap_plots_combined_abs.pdf"),
+  plot = combined_shap_delta,
+  width = 18,
+  height = sum(heights_vec) * 0.5,
+  units = "in",
+  limitsize = FALSE)
+
+```
+
+##
 
 ```{r echo=FALSE, fig.height=5, fig.width=7, out.width="100%", fig.width = 6, fig.asp = 1, warning=FALSE}
 ### PREDICTED vs ACTUAL BMI 
@@ -1319,9 +1657,57 @@ for (name in names(tables_clin_p)) {
     body_add_par("", style = "Normal")  # Add spacing between tables
 }
 
+
 # Save the Word file
 print(doc, target = paste0(omic_out_dir, "anova_tables/anova_clinical_combined.docx"))
 ```
+
+
+# with % increase 
+```{r}
+library(officer)
+library(flextable)
+library(magrittr)
+
+# Function to add % R² Increase column *next to* R² column
+add_r2_increase <- function(tbl) {
+  base_r2 <- tbl$`R²`[1]
+  r2_increase <- c(NA, round(100 * (tbl$`R²`[-1] - base_r2) / base_r2, 2))
+  tbl <- tibble::add_column(tbl, `% R² Increase` = r2_increase, .after = "R²")
+  return(tbl)
+}
+
+tables_clin_p_plus <- lapply(tables_clin_p, add_r2_increase)
+
+# Initialize the Word document
+doc <- read_docx()
+
+# Loop over each table
+for (name in names(tables_clin_p_plus)) {
+  table_data <- tables_clin_p_plus[[name]]
+  
+  # Create a formatted flextable
+  ft <- flextable(table_data) %>%
+    autofit() %>%
+    theme_vanilla() %>%
+    set_caption(caption = name) %>%
+    fontsize(size = 10, part = "all") %>%
+    align(align = "center", part = "all") %>%
+    border_remove() %>%
+    border_outer(border = fp_border(color = "black", width = 1)) %>%
+    border_inner(border = fp_border(color = "gray", width = 0.5))
+
+  # Add a title paragraph
+  doc <- doc %>%
+    body_add_par(name, style = "heading 2") %>%
+    body_add_flextable(ft) %>%
+    body_add_par("", style = "Normal")  # Add spacing between tables
+}
+
+# Save the document
+print(doc, target = paste0(omic_out_dir, "anova_tables/anova_clinical_combined_with_increase.docx"))
+```
+
 
 ```{r}
 plot_names <- glue("{names(omic_dfs)}_basic_sig_plot")
@@ -1333,25 +1719,25 @@ plot_names_clin_plus <- glue("{names(omic_dfs)}_sig_plot_clin_plus")
 # Figure xxx : MERF feature importances
 
 ```{r echo=FALSE, fig.width = 6.5, fig.asp = 1.6, out.width="90%"}
-merf_dfs_long <- list(Basic = basic, Labs = meta, 
+merf_dfs_long <- list(Basic = basic, Clinical = meta, 
                       GRS = grs,
                Taxa = taxa, Micom = micom, 
                Pathway = pathway, Metabolomics = metabo, 
                All = all)
 
-merf_dfs_delta <- list(Basic = basic_md, Labs = meta_md, 
+merf_dfs_delta <- list(Basic = basic_md, Clinical = meta_md, 
                        GRS = grs_md, 
                      Taxa = taxa_md, Micom = micom_md, 
                      Pathway = pathway_md, Metabolomics = metabo_md, 
                      All = all_md)
 
-ft_colors <- c(Labs = "#fecdc7", Taxa = "#8B3A3A", 
+ft_colors <- c(Clinical = "#fecdc7", Taxa = "#8B3A3A", 
                Micom = "#996759", Pathway = "#D8A39D", 
                Metabolomics  = "#C76374", 
                All = "#b44241", GRS = "#E18476",
                Basic = "#582F2B")
 
-ft_colors_delta <- c(Labs = "#fecdc7", Taxa = "#8B3A3A", 
+ft_colors_delta <- c(Clinical = "#fecdc7", Taxa = "#8B3A3A", 
                      Micom = "#996759", Pathway = "#D8A39D", 
                      Metabolomics  = "#C76374", 
                      All = "#b44241", GRS = "#E18476",
@@ -1451,7 +1837,7 @@ for (type in names(all_ft_dfs)) {
 ```{r echo=FALSE, fig.height=5, fig.width=7, out.width="100%"}
 
 lass_dfs_long <- list(Basic = gl_ftimp_long_basic, 
-                      Labs = gl_ftimp_long_meta, 
+                      Clinical = gl_ftimp_long_meta, 
                       GRS = gl_ftimp_long_grs,
                       Taxa = gl_ftimp_long_taxa, 
                       Micom = gl_ftimp_long_micom, 
@@ -1460,7 +1846,7 @@ lass_dfs_long <- list(Basic = gl_ftimp_long_basic,
                       All = gl_ftimp_long_all)
 
 lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic, 
-                       Labs = gl_ftimp_delta_meta, 
+                       Clinical = gl_ftimp_delta_meta, 
                        GRS = gl_ftimp_delta_grs,
                        Taxa = gl_ftimp_delta_taxa, 
                        Micom = gl_ftimp_delta_micom, 
@@ -1648,6 +2034,106 @@ p_cd <- p_cd + draw_plot_label(label = labelcd, x = label_xcd, y = label_ycd,
 
 ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_delta_test.png"), p_cd, 
        width = 40, height = 40, dpi = 500, bg = 'white')
+```
+
+### Repeat and replace with SHAP MERF feature plots 
+
+```{r}
+## Testing all at once 
+bl <- c(mget(plot_names[c(1,2)]), shap_long_plot_list[c(2, 3, 5, 7, 8)],  lass_plots_lg[c(2, 7)])
+p <- ggdraw()
+p <- p +
+  draw_plot(bl[[1]], x = 0, y = 0.6+ 0.15, width = 0.48, height = 0.22) + #A
+  draw_plot(bl[[2]], x = 0, y = 0.4+ 0.15, width = 0.48, height = 0.22) + #B
+  
+  draw_plot(bl[[3]], x = 0.53, y = 0.8 + 0.04, width = 0.46, height = 0.14) + #E
+  draw_plot(bl[[4]], x = 0.55, y = 0.66 + 0.04, width = 0.44, height = 0.12) + #F
+  draw_plot(bl[[5]], x = 0.51, y = 0.44 + 0.04, width = 0.48, height = 0.20) + #G
+  draw_plot(bl[[6]], x = 0.51, y = 0.22 + 0.04, width = 0.48, height = 0.20) + #H
+  draw_plot(bl[[7]], x = 0.51, y = 0 + 0.04, width = 0.48, height = 0.20) + #I
+  
+  draw_plot(bl[[8]], x = 0.01, y = 0.2+ 0.1, width = 0.47, height = 0.22) +   #C
+  draw_plot(bl[[9]], x = 0.01, y = 0 + 0.04,   width = 0.47, height = 0.22) #D
+  
+labels <- c("A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.", "I.")
+label_x <- c(0.01, 0.01, 0.01, 0.01, rep(0.51, 5))
+label_y <- c(0.6+0.15+0.22, 0.4+0.15+0.22, 
+             0.2+0.1+0.22, 0+0.05+0.22, 
+             0.6+0.15+0.23, 0.62+0.2,
+             0.67, 0.47, 
+             0+0.05+0.22)
+p <- p + draw_plot_label(label = labels, x = label_x, y = label_y,
+                         fontface = "bold", size = 25)
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_shap.png"), p, 
+       width = 40, height = 40, dpi = 500, bg = 'white')
+
+# new way basic delta
+bd <- c(mget(plot_names[c(3,4)]), shap_delta_plot_list[c(2, 4, 7, 8)],  lass_plots_delta[c(2, 7)])
+pd <- ggdraw()
+pd <- pd +
+  draw_plot(bd[[1]], x = 0, y = 0.6+ 0.15, width = 0.5, height = 0.22) +
+  draw_plot(bd[[2]], x = 0, y = 0.4+ 0.15, width = 0.5, height = 0.22) +
+  draw_plot(bd[[7]], x = 0.01, y = 0.2+ 0.1, width = 0.5, height = 0.22) +   
+  draw_plot(bd[[8]], x = 0.01, y = 0 + 0.05,   width = 0.5, height = 0.22)   
+# Right side 
+right_ysd <- seq(0.7, 0, length.out = 4)  # y positions for 4 plots
+for (i in 1:4) {
+  pd <- pd + draw_plot(bd[[i+2]], x = 0.52, y = 0.05 + right_ysd[i], width = 0.48, height = 0.215)
+}
+labelsd <- c("A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.")
+label_xd <- c(0.01, 0.01, 0.01, 0.01, rep(0.516, 4))
+label_yd <- c(0.6+0.15+0.22, 
+             0.4+0.15+0.22, 
+             0.2+0.1+0.22, 
+             0+0.05+0.22, 
+             right_ysd + 0.05 + 0.215)
+pd <- pd + draw_plot_label(label = labelsd, x = label_xd, y = label_yd,
+                           fontface = "bold", size = 25)
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_delta_shap.png"), pd, 
+       width = 40, height = 40, dpi = 500, bg = 'white')
+
+# New way clinical long 
+cl <- c(mget(plot_names_clin_plus[c(1,2)]), shap_long_plot_list[c(7, 8)],  lass_plots_lg[c(3,7)])
+p_cl <- ggdraw()
+p_cl <- p_cl +
+  draw_plot(cl[[1]], x = 0.01, y = 0.565, width = 0.47, height = 0.25) + # a
+  draw_plot(cl[[2]], x = 0.01, y = 0.30 , width = 0.47, height = 0.25) + # b
+  draw_plot(cl[[3]], x = 0.51, y = 0.565, width = 0.48, height = 0.23) + # c
+  draw_plot(cl[[4]], x = 0.51, y = 0.30, width = 0.48, height = 0.23) + #d
+  draw_plot(cl[[5]], x = 0.01, y = 0.05, width = 0.47, height = 0.23) +
+  draw_plot(cl[[6]], x = 0.51, y = 0.05, width = 0.48, height = 0.23) 
+
+labelcl <- c("A.", "B.", "C.", "D.", "E.", "F.")
+label_xcl <- c(0.01, 0.01, 0.50, 0.50, 0.01, 0.50)
+label_ycl <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.23, 0.05 + 0.23)
+p_cl <- p_cl + draw_plot_label(label = labelcl, x = label_xcl, y = label_ycl,
+                               fontface = "bold", size = 25)
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_long_shap.png"), p_cl, 
+       width = 40, height = 40, dpi = 500, bg = 'white')
+
+# New way clinical delta 
+cd <- c(mget(plot_names_clin_plus[c(3,4)]), shap_delta_plot_list[c(4, 7, 8)],  lass_plots_delta[c(7)])
+p_cd <- ggdraw()
+p_cd <- p_cd +
+  draw_plot(cd[[1]], x = 0.01, y = 0.565, width = 0.47, height = 0.25) + # a
+  draw_plot(cd[[2]], x = 0.01, y = 0.30 , width = 0.47, height = 0.25) + # b
+  draw_plot(cd[[3]], x = 0.51, y = 0.565, width = 0.48, height = 0.23) + # c
+  draw_plot(cd[[4]], x = 0.51, y = 0.30, width = 0.48, height = 0.23) + #d
+  draw_plot(cd[[6]], x = 0.01, y = 0.05, width = 0.47, height = 0.23) +
+  draw_plot(cd[[5]], x = 0.51, y = 0.05, width = 0.48, height = 0.23) 
+
+labelcd <- c("A.", "B.", "D.", "E.", "F.", "C.")
+label_xcd <- c(0.01, 0.01, 0.50, 0.50, 0.50, 0.01)
+label_ycd <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.23, 0.05 + 0.23)
+p_cd <- p_cd + draw_plot_label(label = labelcd, x = label_xcd, y = label_ycd,
+                               fontface = "bold", size = 25)
+
+ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_delta_shap.png"), p_cd, 
+       width = 40, height = 40, dpi = 500, bg = 'white')
+
 ```
 
 ## Heatmap
@@ -1914,376 +2400,4 @@ png_name <- file.path(omic_out_dir, "venns/venn_combined_plot.png")
 png(filename = png_name, width = 2800, height = 2800, res = 300)
 grid.draw(p)
 dev.off()
-```
-
-
-
-# No Longer Used 
-
-## ANOVA Combinations
-
-# Figure x : Combined ANOVA R2 plots for initial
-
-```{r echo=FALSE, fig.width = 10, fig.asp = 1.05, out.width="95%", warning=FALSE}
-# Combine all plots into 1
-plot_names <- glue("{names(omic_dfs)}_basic_sig_plot")
-sig_plots <- mget(plot_names)
-merf_basic_anova_plots <- mget(plot_names[c(1,3)])
-glass_basic_anova_plots <- mget(plot_names[c(2,4)])
-
-combined_basic_plot <- wrap_plots(sig_plots, ncol = 2) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-merf_basic_plot <- wrap_plots(merf_basic_anova_plots, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-gllass_basic_plot <- wrap_plots(glass_basic_anova_plots, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-print(combined_basic_plot)
-output_file_basic <- file.path(omic_out_dir, "_ANOVA_R2_Comparison_basic.png")
-
-# Save the plot
-#ggsave(filename = output_file_basic,
-#  plot = combined_basic_plot,
-#  width = 15, height = 12, dpi = 400)
-
-# Save the plots
-ggsave(filename = file.path(omic_out_dir, "anova_plots/combined_basic_plot.png"),
-       plot = combined_basic_plot,
-       width = 15, height = 12, dpi = 400)
-
-ggsave(filename = file.path(omic_out_dir, "anova_plots/merf_basic_plot.png"),
-       plot = merf_basic_plot,
-       width = 7.5, height = 10, dpi = 400)
-
-ggsave(filename = file.path(omic_out_dir, "anova_plots/gllass_basic_plot.png"),
-       plot = gllass_basic_plot,
-       width = 7.5, height = 10, dpi = 400)
-```
-
-## Arrange basic and clin plus anova plots 
-```{r}
-# Combine all plots into 1
-plot_names <- glue("{names(omic_dfs)}_basic_sig_plot")
-sig_plots <- mget(plot_names)
-combined_plot <- wrap_plots(sig_plots, ncol = 2) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-output_file <- file.path(omic_out_dir, "ANOVA_Marginal_R2_Comparison_initial_with_grs.png")
-
-# Save the plot
-# ggsave(filename = output_file, plot = combined_plot,
-#        width = 15, height = 12, dpi = 300)
-
-plot_names_clin_plus <- glue("{names(omic_dfs)}_sig_plot_clin_plus")
-
-sig_plots_clin_plus <- mget(plot_names_clin_plus)
-merf_plots_clin_plus <- mget(plot_names_clin_plus[c(1,3)])
-glmmlasso_clin_plus <- mget(plot_names_clin_plus[c(2,4)])
-
-combined_sig_plot_clin_plus <- wrap_plots(sig_plots_clin_plus, ncol = 2) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-merfs_sig_plot_clin_plus <- wrap_plots(merf_plots_clin_plus, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-glmmlasso_sig_plot_clin_plus <- wrap_plots(glmmlasso_clin_plus, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-
-ggsave(filename = file.path(omic_out_dir, "anova_plots/combined_clin_plot.png"),
-       plot = combined_sig_plot_clin_plus,
-       width = 15, height = 12, dpi = 400)
-
-ggsave(filename = file.path(omic_out_dir, "anova_plots/merf_clin_plot.png"),
-       plot = merfs_sig_plot_clin_plus,
-       width = 7.5, height = 10, dpi = 400)
-
-ggsave(filename = file.path(omic_out_dir, "anova_plots/gllass_clin_plot.png"),
-       plot = glmmlasso_sig_plot_clin_plus,
-       width = 7.5, height = 10, dpi = 400)
-
-output_file_sig_plot_clin_plus <- file.path(omic_out_dir, 
-                                            "ANOVA_Marginal_R2_Comparison_sig_plot_clin_plus.png")
-
-# Save the plot
-ggsave(filename = output_file_sig_plot_clin_plus,
-       plot = combined_sig_plot_clin_plus, width = 15, height = 12, dpi = 300)
-
-### together 
-all_sig_plots <- c(sig_plots, sig_plots_clin_plus) # Combine both lists
-
-# Combine into one grid with 4 columns and 2 rows
-combined_all_plots <- wrap_plots(all_sig_plots, ncol = 4) +
-  plot_annotation(
-    title = "Comparison of Marginal R² Across BMI Modeling Scores",
-    tag_levels = 'A',tag_suffix = '.',
-    theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-    theme(plot.margin = ggplot2::margin(20, 10, 20, 3, unit = "pt"))
-
-# Save to file
-output_file_combined <- file.path(omic_out_dir, "anova_plots/Combined_ANOVA_Marginal_R2_base_clin.png")
-
-ggsave(filename = output_file_combined, plot = combined_all_plots,
-       width = 20, height = 10, dpi = 600)
-
-```
-
-# For 4 figures set up ANOVAs 
-```{r}
-# MERF & GLLASSO Basic Long 
-basic_long <- mget(plot_names[c(1,2)])
-
-basic_long_plt <- wrap_plots(basic_long, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-basic_long_plt
-# MERF & GLLASSO Basic Delta
-basic_delta <- mget(plot_names[c(3,4)])
-
-basic_delta_plt <- wrap_plots(basic_delta, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-# MERF & GLLASSO Clinical Long
-clin_long <- mget(plot_names_clin_plus[c(1,2)])
-
-clin_long_plt <- wrap_plots(clin_long, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-# MERF & GLLASSO Clinical Delta
-clin_delta <- mget(plot_names_clin_plus[c(3,4)])
-
-clin_delta_plt <- wrap_plots(clin_delta, ncol = 1) + 
-  plot_annotation(title = "Comparison of Marginal R² Across BMI Modeling Scores", 
-                  theme = theme(plot.title = element_text(size = 18, 
-                                                          face = "bold"))) &
-                  theme(plot.margin = ggplot2::margin(20, 20, 20, 20, unit = "pt"))
-
-# Save Basic Long plot
-ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/paper_render/basic_plus_diet/anova_plots/long_basic/basic_long_plt.png", plot = basic_long_plt, width = 8, height = 10, dpi = 300)
-# Save Basic Delta plot
-ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/paper_render/basic_plus_diet/anova_plots/delta_basic/basic_delta_plt.png", plot = basic_delta_plt, width = 8, height = 10, dpi = 300)
-# Save Clinical Long plot
-ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/paper_render/basic_plus_diet/anova_plots/long_clin/clin_long_plt.png", plot = clin_long_plt, width = 8, height = 10, dpi = 300)
-# Save Clinical Delta plot
-ggsave("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/plots/paper_render/basic_plus_diet/anova_plots/delta_clin/clin_delta_plt.png", plot = clin_delta_plt, width = 8, height = 10, dpi = 300)
-```
-
-
-## Merf plots combinations 
-
-```{r}
-#theme(plot.margin = margin(t = 10, r = 15, b = 10, l = 10, unit = "pt"))
-
-# Merf long: Clinical, Grs, Pathway, Metabo, All
-merf_long_plots <- merf_plots[c(2, 3, 6, 7, 8)]
-combined_merf_long_plot <- wrap_plots(merf_long_plots, ncol = 2, nrow = 3, 
-                                      #widths = c(0.95,0.95),
-                                      heights = c(0.95,0.95)) +
-                           #plot_annotation(title = "MERF longitudinal BMI Prediction Features",
-                           #theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
-                           theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-basic_merf_long <- merf_plots[c(2, 3, 6, 7, 8)]
-basic_merf_long_plot <- wrap_plots(basic_merf_long, ncol = 2, nrow = 3, 
-                                      #widths = c(0.95,0.95),
-                                      heights = c(0.95,0.95)) +
-                           #plot_annotation(title = "MERF longitudinal BMI Prediction Features",
-                           #theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
-                           theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-
-clin_merf_long <- merf_plots[c(7, 8)]
-clin_merf_long_plot <- wrap_plots(clin_merf_long, ncol = 2, nrow = 2, 
-                                      #widths = c(0.95,0.95),
-                                      heights = c(0.95,0.95)) +
-                           #plot_annotation(title = "MERF longitudinal BMI Prediction Features",
-                           #theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
-                           theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-# Merf delta: Clinical, Taxa, Meta, All
-merf_delta_plots <- merf_plots[c(10, 12, 15, 16)]
-combined_merf_delta_plot <- wrap_plots(merf_delta_plots, ncol = 1, nrow = 4,
-                                       #widths = c(0.95,0.95),
-                                       heights = c(0.95,0.95)) +
-                            #plot_annotation(title = "MERF BMI Change Prediction Features",
-                            #theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
-                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-basic_merf_delta <- merf_plots[c(10, 12, 15, 16)]
-basic_merf_delta_plot <- wrap_plots(basic_merf_delta, ncol = 1, nrow = 4,
-                                       #widths = c(0.95,0.95),
-                                       heights = c(0.95,0.95)) +
-                            #plot_annotation(title = "MERF BMI Change Prediction Features",
-                            #theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
-                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-clin_merf_delta <- merf_plots[c(12, 15, 16)]
-clin_merf_delta_plot <- wrap_plots(clin_merf_delta, ncol = 1, nrow = 3,
-                                       #widths = c(0.95,0.95),
-                                       heights = c(0.95,0.95)) +
-                            #plot_annotation(title = "MERF BMI Change Prediction Features",
-                            #theme = theme(plot.title = element_text(size = 25, face = "bold"))) &
-                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-# Merf ALl
-merf_all_plots <- merf_plots[c(2, 3, 6, 7, 8, 10, 12, 15, 16)]
-combined_merf_all_plot <- wrap_plots(merf_all_plots, ncol = 3, nrow = 3,
-                                       widths = c(0.95, 0.95, 0.95),
-                                       heights = c(0.90, 0.90, 0.90),
-                                       tag_level = "keep") +
-                            plot_annotation(title = "All MERF Prediction Features",
-                            theme = theme(plot.title = element_text(size = 40, face = "bold"))) &
-                            theme(plot.margin = ggplot2::margin(t = 10, r = 5, b = 10, l = 3, unit = "pt"))
-
-print(combined_merf_delta_plot)
-print(combined_merf_long_plot)
-print(combined_merf_all_plot)
-```
-
-
-```{r}
-for (i in seq_along(merf_plots)) {
-  ggsave(
-    filename = file.path(omic_out_dir, paste0("merf_ft_imp/merf_plot_dot_", i, ".png")),
-    plot = merf_plots[[i]],
-    width = 8,
-    height = 4,
-    dpi = 300)
-}
-
-png_name1 <- file.path(omic_out_dir, paste0("merf_ft_imp/combined_merf_long_ft_plot_dot", ".png"))
-ggsave(filename = png_name1, plot = combined_merf_long_plot, width = 20, height = 30, dpi = 600)
-
-png_name2 <- file.path(omic_out_dir, paste0("merf_ft_imp/combined_merf_delta_ft_plot_dot", ".png"))
-ggsave(filename = png_name2, plot = combined_merf_delta_plot, width = 20, height = 30, dpi = 600)
-
-png_name3 <- file.path(omic_out_dir, paste0("merf_ft_imp/combined_merf_all_ft_plot_dot", ".png"))
-ggsave(filename = png_name3, plot = combined_merf_all_plot, width = 45, height = 30, dpi = 600)
-```
-
-```{r}
-merf_cow_plot_ft <- cowplot::plot_grid(
-  combined_merf_long_plot,
-  combined_merf_delta_plot,
-  ncol = 2,
-  labels = c("A", "B"),
-  label_size = 25,
-  align = "hv",
-  axis = "tblr",  # Align both top/bottom and left/right axes
-  rel_widths = c(0.97, 0.97),
-  scale = c(.97, .97))
-
-merf_cow_plot_ft
-
-ggsave(paste0(omic_out_dir, "merf_ft_imp/merf_ft_plot_combined_all.png"), merf_cow_plot_ft, 
-       width = 45, height = 20, dpi = 400, bg = 'white')
-```
-
-## Lass plots combinations
-
-```{r}
-lass_long_plots <- lass_plots_lg[c(2,3,7)]
-combined_lass_long_plot <- wrap_plots(lass_long_plots, ncol = 1) +
-  plot_annotation(title = "GlmmLasso longitudinal BMI Prediction Features",
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-basic_lass_long <- lass_plots_lg[c(2,7)]
-basic_lass_long_plot <- wrap_plots(basic_lass_long, ncol = 1) +
-  #plot_annotation(title = "GlmmLasso longitudinal BMI Prediction Features",
-  #                theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-basic_lass_long_plot <- wrap_plots(
-  basic_lass_long[[1]],
-  plot_spacer(),
-  basic_lass_long[[2]],
-  ncol = 1,
-  heights = c(1, 0.1, 1)) &
-theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-clin_lass_long_plot <- wrap_plots(
-  combined_lass_long_plot[[1]],
-  plot_spacer(),  # adds blank vertical space
-  combined_lass_long_plot[[2]],
-  ncol = 1,
-  heights = c(1, 0.1, 1)) &
-theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-png_name <- file.path(omic_out_dir, paste0("lass_ft_imp/combined_lass_long_ft_plot", ".png"))
-ggsave(filename = png_name, 
-       plot = combined_lass_long_plot, 
-       width = 16, height = 20, dpi = 300)
-combined_lass_long_plot
-```
-
-
-```{r}
-lass_delta_plots <- lass_plots_delta[c(2, 7, 8)]
-combined_lass_delta_plot <- wrap_plots(lass_delta_plots, ncol = 1) +
-  plot_annotation(title = "GlmmLasso BMI Change Prediction Features",
-                  theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-basic_lass_delta <- lass_plots_delta[c(2, 7)]
-basic_lass_delta_plot <- wrap_plots(basic_lass_delta, ncol = 1) +
-  #plot_annotation(title = "GlmmLasso BMI Change Prediction Features",
-  #                theme = theme(plot.title = element_text(size = 18, face = "bold"))) &
-  theme(plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-clin_lass_delta <- lass_plots_delta[c(7)]
-clin_lass_delta_plot <- wrap_plots(clin_lass_delta, ncol = 1) +
-  theme(panel.border = element_blank(),  
-    plot.background  = element_blank(),
-    panel.background = element_blank(),
-    plot.margin = ggplot2::margin(10, 10, 10, 10, unit = "pt"))
-
-png_name <- file.path(omic_out_dir, paste0("lass_ft_imp/combined_lass_delta_ft_plot", ".png"))
-ggsave(filename = png_name, plot = combined_lass_delta_plot, width = 16, height = 20, dpi = 300)
-```
-
-
-```{r fig.width = 12, fig.asp = 0.8, out.width="90%"}
-lass_cow_plot_ft <- cowplot::plot_grid(
-  combined_lass_long_plot,
-  combined_lass_delta_plot,
-  ncol = 2,
-  labels = c("A", "B"),
-  label_size = 12,
-  align = "hv",
-  axis = "tblr",  # Align both top/bottom and left/right axes
-  rel_widths = c(.95, .95),
-  scale = c(.95, .95))
-
-lass_cow_plot_ft
-
-ggsave(paste0(omic_out_dir, "lass_ft_imp/lasso_ft_plot_all_combined.png"), lass_cow_plot_ft, 
-       width = 40, height = 22.5, dpi = 600, bg = 'white')
 ```
