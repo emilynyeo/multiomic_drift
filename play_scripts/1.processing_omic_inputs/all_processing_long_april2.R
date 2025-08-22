@@ -732,7 +732,7 @@ table(table(long_min_na_0_12m$subject_id))
 # Take out black box line and impute the rest 
 print(names(which(table(long_min_na_0_12m$subject_id) == 5)))
 
-###### MAKE DELTAS #############################################################
+###### MAKE DELTAS DF ##########################################################
 # Filter the data into two data frames based on 'time' column (0 and 6)
 df_time_6 <- long_min_na_0_6m %>% filter(time == 6)
 check_status(df_time_6, id_track = "subject_id")

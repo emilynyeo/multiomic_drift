@@ -24,7 +24,7 @@ p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn,
        reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM, gridExtra,
        sjPlot, htmltools, officer, flextable, webshot, apaTables, MuMIn, lme4, 
        glue, grid, rsq, pheatmap, GGally, VennDiagram, glmmTMB, broom.mixed, gt,
-       pathcwork)
+       patchwork)
 library(tidyverse)
 library(ggbeeswarm)
 library(scales)
@@ -728,6 +728,7 @@ ft_colors <- c(
   GRS          = "#E18476",
   Basic        = "#582F2B")
 
+
 plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
   shap_df %>%
     filter(Feature != "time") %>%
@@ -825,7 +826,8 @@ for (name in names(shap_dfs)) {
 
   # Create plot
   plot_title <- title_map[[name]]
-  p <- plot_shap_beeswarm(df_top10, plot_title, high_color = high_col) +
+  # p <- plot_shap_beeswarm(df_top10, plot_title, high_color = high_col) +
+  p <- plot_shap_beeswarm(df_top10, plot_title, high_color = "#C76374") + # setting to one col just for now
     theme(plot.margin = ggplot2::margin(25, 20, 25, 20))
   shap_long_plot_list[[name]] <- p
 }
@@ -1888,6 +1890,7 @@ for (type in names(all_lass_ft_dfs)) {
     plot_feat <- top_features %>%
       dplyr::filter(!str_detect(tolower(Feature), "time")) %>%
       slice_head(n = 10) %>%
+      dplyr::filter(Estimate != 0) %>%   # <-- Remove rows with Estimate == 0
       mutate(Estimate_capped = pmin(pmax(Estimate, ymin), ymax))
 
     features <- ggplot(plot_feat,
@@ -2065,7 +2068,7 @@ label_y <- c(0.6+0.15+0.22, 0.4+0.15+0.22,
 p <- p + draw_plot_label(label = labels, x = label_x, y = label_y,
                          fontface = "bold", size = 25)
 
-ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_shap.png"), p, 
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_long_shap_1col.png"), p, 
        width = 40, height = 40, dpi = 500, bg = 'white')
 
 # new way basic delta
@@ -2073,25 +2076,26 @@ bd <- c(mget(plot_names[c(3,4)]), shap_delta_plot_list[c(2, 4, 7, 8)],  lass_plo
 pd <- ggdraw()
 pd <- pd +
   draw_plot(bd[[1]], x = 0, y = 0.6+ 0.15, width = 0.5, height = 0.22) +
-  draw_plot(bd[[2]], x = 0, y = 0.4+ 0.15, width = 0.5, height = 0.22) +
-  draw_plot(bd[[7]], x = 0.01, y = 0.2+ 0.1, width = 0.5, height = 0.22) +   
-  draw_plot(bd[[8]], x = 0.01, y = 0 + 0.05,   width = 0.5, height = 0.22)   
+  draw_plot(bd[[2]], x = 0, y = 0.4+ 0.12, width = 0.5, height = 0.22) +
+  draw_plot(bd[[7]], x = 0.015, y = 0.2+ 0.15, width = 0.45, height = 0.15) +   
+  draw_plot(bd[[8]], x = 0.01, y = 0 + 0.05,   width = 0.5, height = 0.25)   
 # Right side 
 right_ysd <- seq(0.7, 0, length.out = 4)  # y positions for 4 plots
 for (i in 1:4) {
-  pd <- pd + draw_plot(bd[[i+2]], x = 0.52, y = 0.05 + right_ysd[i], width = 0.48, height = 0.215)
+  pd <- pd + draw_plot(bd[[i+2]], x = 0.52, y = 0.05 + right_ysd[i], 
+                       width = 0.48, height = 0.215)
 }
 labelsd <- c("A.", "B.", "C.", "D.", "E.", "F.", "G.", "H.")
 label_xd <- c(0.01, 0.01, 0.01, 0.01, rep(0.516, 4))
 label_yd <- c(0.6+0.15+0.22, 
              0.4+0.15+0.22, 
              0.2+0.1+0.22, 
-             0+0.05+0.22, 
+             0+0.1+0.22, 
              right_ysd + 0.05 + 0.215)
 pd <- pd + draw_plot_label(label = labelsd, x = label_xd, y = label_yd,
                            fontface = "bold", size = 25)
 
-ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_delta_shap.png"), pd, 
+ggsave(paste0(omic_out_dir, "aov_feats_combined/basic_delta_shap_1col.png"), pd, 
        width = 40, height = 40, dpi = 500, bg = 'white')
 
 # New way clinical long 
@@ -2111,7 +2115,7 @@ label_ycl <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.23, 
 p_cl <- p_cl + draw_plot_label(label = labelcl, x = label_xcl, y = label_ycl,
                                fontface = "bold", size = 25)
 
-ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_long_shap.png"), p_cl, 
+ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_long_shap_1col.png"), p_cl, 
        width = 40, height = 40, dpi = 500, bg = 'white')
 
 # New way clinical delta 
@@ -2131,7 +2135,7 @@ label_ycd <- c(0.59 + 0.21, 0.32 + 0.22, 0.59 + 0.21, 0.32 + 0.22, 0.05 + 0.23, 
 p_cd <- p_cd + draw_plot_label(label = labelcd, x = label_xcd, y = label_ycd,
                                fontface = "bold", size = 25)
 
-ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_delta_shap.png"), p_cd, 
+ggsave(paste0(omic_out_dir, "aov_feats_combined/clin_delta_shap_1col.png"), p_cd, 
        width = 40, height = 40, dpi = 500, bg = 'white')
 
 ```
@@ -2205,6 +2209,107 @@ ggsave(filename = png_name, plot = final_heat, width = 14, height = 10, dpi = 30
 ```{r echo=FALSE, fig.asp = 0.75, fig.width=10, out.width="95%"}
 final_heat
 ```
+
+### Venn of features responsible for the top 50% of importance ? 
+
+I'll need to rerun MERF for this. 
+
+```{r}
+get_top_features <- function(df) {
+  df %>%
+    mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
+    mutate(parsed = map(Top_15_Feature_Importances, fromJSON)) %>%
+    unnest(parsed) %>%
+    filter(Feature != "time") %>%
+    group_by(Feature) %>%
+    summarise(avg_importance = mean(Importance, na.rm = TRUE), .groups = "drop") %>%
+    arrange(desc(avg_importance)) %>%
+    mutate(
+      cum_importance = cumsum(avg_importance),
+      total_importance = sum(avg_importance),
+      cum_percent = cum_importance / total_importance
+    ) %>%
+    filter(cum_percent <= 0.5 | row_number() == 1) %>%  # always keep at least 1 feature
+    pull(Feature)
+}
+
+# Define omics and assign colors
+omic_types <- c("basic", "meta", "taxa", "micom", "pathway", "metabo", "all")
+venn_colors <- c("#d2495e", "#e9919c", "#5d2a3b", "#f1c28d", "#c0522d", "#f1cabb", "#872657")
+
+# Output directory
+venn_out_dir <- paste0(omic_out_dir, "venn_outputs")
+dir.create(venn_out_dir, showWarnings = FALSE)
+
+# Loop through each omic type
+venn_plots_4_ <- list() 
+for (i in seq_along(omic_types)) {
+  omic <- omic_types[i]
+  color <- venn_colors[i %% length(venn_colors) + 1]  # rotate if more omics than colors
+  
+  # Extract top 20 from GLMM
+  top_glmm_lg <- get(paste0("gl_ftimp_long_", omic)) %>%
+    arrange(desc(abs_estimate)) %>%
+    #slice_head(n = 20) %>%
+    pull(Feature)
+  
+  top_glmm_delta <- get(paste0("gl_ftimp_delta_", omic)) %>%
+    arrange(desc(abs_estimate)) %>%
+    #slice_head(n = 20) %>%
+    pull(Feature)
+  
+  # Extract top 20 from MERF
+  top_merf_lg <- get_top_features(get(omic))
+  top_merf_delta <- get_top_features(get(paste0(omic, "_md")))
+  
+  # Prepare input
+  venn_input <- list(
+    `GLMM LG` = unique(top_glmm_lg),
+    `GLMM DELTA` = unique(top_glmm_delta),
+    `MERF LG` = unique(top_merf_lg),
+    `MERF DELTA` = unique(top_merf_delta))
+  
+  # Generate Venn diagram
+  venn_plot <- venn.diagram(
+    x = venn_input,
+    filename = NULL,
+    fill = rep(color, 4),
+    alpha = 0.5,
+    cex = 0.9,
+    cat.cex = 0.9,
+    #cat.fontface = "bold",
+    cat.fontfamily = "Arial",
+    fontfamily = "Arial",
+    #main = paste("Top Feature Overlaps -", toupper(omic)),
+    #main.cex = 1.2,
+    #main.pos = c(0.5, 0.30),
+    cat.dist = c(0.3, 0.3, 0.20, 0.20),
+    cat.pos = c(-26, 26, -20, 20),
+    margin = 0.3)
+  
+  venn_plots_4_[[omic]] <- venn_plot
+  
+  # Save to file
+  file_path <- file.path(venn_out_dir, paste0("venn_top50_", omic, ".png"))
+  png(file_path, width = 1200, height = 1000, res = 300)
+  
+  grid.newpage()
+  
+  # Add title BEFORE drawing the Venn plot
+  grid.text(
+    #paste("Top Feature Overlap -", toupper(omic), " Models"),
+    paste("Overlap of ", toupper(omic), " Models Top Features"),
+    x = 0.5, y = 0.90,                    # Centered and near the top
+    gp = gpar(fontsize = 12, fontface = "bold", fontfamily = "Arial"),
+    just = "center")
+  
+  # Draw Venn diagram
+  grid.draw(venn_plot)
+  
+  dev.off()
+}
+```
+
 
 #### Ven Diagram 
 
