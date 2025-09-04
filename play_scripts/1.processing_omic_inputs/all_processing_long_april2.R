@@ -287,6 +287,14 @@ check_status <- function(df, id_track = "Sample ID") {
 tabo <- read_csv("data/metabolomics/UTF-8SendSafely_NGH19889 results_20250401T080522Z/19889 COinterv-01-Apr-2025-Results.csv")
 colnames(tabo)
 head(tabo[1:30])
+# details of samle number per time
+timepoints <- sub(".*\\.", "", tabo$`Sample ID`)  # e.g., "10.12m" -> "12m"
+subject_ids <- sub("\\..*", "", tabo$`Sample ID`)  # e.g., "10.12m" -> "10"
+df <- data.frame(subject_id = subject_ids, timepoint = timepoints)
+unique_counts <- aggregate(subject_id ~ timepoint, data = df, FUN = function(x) length(unique(x)))
+print(unique_counts)
+
+
 # Remove 2-21 cols which are empty & keep only 0,6,12m rows
 tabo <- tabo[, c(1, 23:ncol(tabo))] %>% 
   filter(!grepl("\\.3m$", `Sample ID`),
@@ -327,6 +335,7 @@ preProcValues
 tab_cs <- predict(preProcValues, tabo2) 
 cor_mat_2 <- cor(tab_cs[2:ncol(tab_cs)], use = "pairwise.complete.obs")
 heatmap(cor_mat_2)
+check_status(tab_cs, id_track = "SampleID")
 
 tab_cs <- tab_cs %>%
   separate(SampleID, into = c("record_id", "time"), sep = "\\.")
@@ -339,12 +348,13 @@ tab_cs <- tab_cs %>%
 
 check_status(tab_cs, id_track = "record_id")
 
-#CreateTableOne(data = tab_cs[2:ncol(tab_cs)], strata = "time")
+CreateTableOne(data = tab_cs[2:ncol(tab_cs)], strata = "time")
 
 ########### META ###############################################################
 
 meta <- read_csv("~/projects/research/Stanislawski/BMI_risk_scores/data/correct_meta_files/ashleys_meta/DRIFT_working_dataset_meta_deltas_filtered_05.21.2024.csv")
 check_status(meta, id_track = "subject_id")
+
 # Replace spaces with underscores in column names
 colnames(meta) <- gsub(" ", "_", colnames(meta))
 length(unique(meta$subject_id))
@@ -376,7 +386,7 @@ a2_extra <- meta %>% dplyr::select(c(record_id, subject_id, randomized_group, co
          completer = as.factor(completer),
          cohort_number = as.factor(cohort_number))
 
-my_plt_density(a2_extra, 9:39, c(-2, 80), "Meta Count Raw")
+my_plt_density(a2_extra, 9:39, c(-2, 160), "Meta Count Raw")
 check_normality_and_skewness(a2_extra, 9:39)
 vis_miss(a2_extra)
 age <- a2_extra %>% dplyr::select(c(subject_id, age))
@@ -394,7 +404,6 @@ meta_cs <- predict(preProcValues, a2_extra)
 my_plt_density(meta_cs, 9:39, c(-10, 10), "META CENTER SCALED")
 check_normality_and_skewness(meta_cs, 9:39)
 check_status(meta_cs, id_track = "subject_id")
-#CreateTableOne(data = meta_cs[2:ncol(meta_cs)], strata = "randomized_group")
 
 ### Seperate outcome vars ######################################################
 siy <- meta %>% dplyr::select(c(subject_id, outcome_BMI_fnl_BL, 
@@ -413,13 +422,20 @@ check_normality_and_skewness(grs, 2:2)
 grs <- grs %>% distinct(subject_id, .keep_all = TRUE)
 check_status(grs, id_track = "subject_id")
 
-preProcValues <- preProcess(grs[,2:2], 
+# remove non-consenting individuals 
+samples_to_remove <- c("GHA-035", "MST-039", 
+                       "RAM-050", "SCR-061",
+                       "CRO-108", "PBE-123")
+
+grs2 <- grs %>% dplyr::filter(!(subject_id %in% samples_to_remove))
+
+preProcValues <- preProcess(grs2[,2:2], 
                             method = c("nzv", "scale", "center"), 
                             thresh = 0.95, na.remove = TRUE, 
                             numUnique = 15, verbose = TRUE,  freqCut = 95/5, 
                             uniqueCut = 10, cutoff = 0.95)
 preProcValues
-grs_transformed <- predict(preProcValues, grs[, 1:2]) 
+grs_transformed <- predict(preProcValues, grs2[, 1:2]) 
 my_plt_density(grs_transformed, 2:2, c(-10, 10), "GRS nzv")
 check_status(grs_transformed, id_track = "subject_id")
 
@@ -428,9 +444,13 @@ load("~/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/Phylos
 load("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/microbiome_rs/data/Genus_Sp_tables.RData")
 print_ps(drift.phy.count)
 
+# remove non consenting individuals 
+ps_filtered <- prune_samples(!(sample_names(drift.phy.count) %in% samples_to_remove), drift.phy.count)
+print_ps(ps_filtered)
+
 # Step 1: Remove taxa not seen more than 3 times in at least 10% of the samples
-initial_taxa_count <- ntaxa(drift.phy.count)
-GP_count <- filter_taxa(drift.phy.count, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
+initial_taxa_count <- ntaxa(ps_filtered)
+GP_count <- filter_taxa(ps_filtered, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
 print_taxa_summary(initial_taxa_count, ntaxa(GP_count), "1")
 
 # Step 2: Apply coefficient of variation cutoff
@@ -490,10 +510,17 @@ cs_transformed$all_samples <- process_names_all(cs_transformed$subject_id)
 check_status(cs_transformed, id_track = "subject_id")
 
 ### Functional ####################################################################################################
-pathways <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/pathways_out/path_abun_unstrat_descrip.tsv") %>% 
+pathways0 <- fread("/Users/emily/projects/research/Stanislawski/BMI_risk_scores/picrust2/june7/pathways_out/path_abun_unstrat_descrip.tsv") %>% 
   .[, -1] %>% 
   t() %>% as.data.frame() %>% row_to_names(1) %>% 
   rownames_to_column("SampleID") %>% mutate(across(-1, as.numeric))
+
+# remove non-consenting indivuals 
+# Extract the subject ID prefix from SampleID
+pathways <- pathways0 %>%
+  dplyr::mutate(subject_id = sub("\\..*", "", SampleID)) %>%
+  dplyr::filter(!(subject_id %in% samples_to_remove)) %>%
+  dplyr::select(-subject_id)  # Optional: remove helper column
 
 my_plt_density(pathways, 2:391, c(-50, 50), "Pathways")
 check_status(pathways, id_track = "SampleID")
@@ -537,11 +564,21 @@ check_status(path_all_time_cs, id_track = "SampleID")
 
 ### MICOM ####################################################################################################
 load("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/micom/WD_Cplex/products_all.RData")
-flux <- products.all %>% 
+check_status(products.all, id_track = "subject_id")
+flux0 <- products.all %>% 
   dplyr::filter(diet == "Western", timepoint2 %in% c("BL", "6m", "12m")) %>% 
   dplyr::select(sample_id, description, flux) %>% 
   pivot_wider(names_from = description, values_from = flux, values_fill = list(flux = 0))
-any(flux < 0, na.rm = TRUE)
+
+any(flux0 < 0, na.rm = TRUE)
+check_status(flux0, id_track = "sample_id")
+
+# Remove non-consenting individuals
+flux <- flux0 %>%
+  dplyr::mutate(subject_id2 = sub("\\..*", "", sample_id)) %>%
+  dplyr::filter(!(subject_id2 %in% samples_to_remove)) %>%
+  dplyr::select(-subject_id2)  # Optional: remove helper column
+
 check_status(flux, id_track = "sample_id")
 
 # Remove variables with % of zero values is greater than or equal to the threshold
@@ -594,7 +631,7 @@ check_status(flux_all_time_cs, id_track = "sample_id")
 ##### Merging DFs ###########################################################################
 siy_meta <- merge(siy, meta_cs, by = "subject_id", all = TRUE)
 check_status(siy_meta, id_track = "subject_id")
-siy_meta_grs <- merge(siy_meta, grs, by = "subject_id", all = TRUE)
+siy_meta_grs <- merge(siy_meta, grs2, by = "subject_id", all = TRUE)
 check_status(siy_meta_grs, id_track = "subject_id")
 
 meta_cs_0 <- siy_meta_grs %>% setNames(gsub("_BL$", "", colnames(.))) %>% 
@@ -631,6 +668,7 @@ check_status(tx_pth_micom, id_track = "all_samples")
 long <- merge(lg_met_met, tx_pth_micom, 
               by.x = c("record_id", "time"), by.y = c("all_samples", "time.x"),
               all = TRUE) %>% arrange(time) %>% unique()
+
 check_status(long, id_track = "record_id")
 #check_status(long, id_track = "all_samples")
 
@@ -654,33 +692,37 @@ count(unique(missing_6_12m_bmi$subject_id)) # 45
 long_too_missing <- long %>% dplyr::filter(is.na(outcome_BMI_fnl)) %>% 
                              dplyr::filter(rowSums(is.na(.)) / ncol(.) <= 0.80)
 
-long_for_models <- long %>% dplyr::filter(!is.na(outcome_BMI_fnl)) %>% 
+long_for_models0 <- long %>% dplyr::filter(!is.na(outcome_BMI_fnl)) %>% 
                             dplyr::filter(rowSums(is.na(.)) / ncol(.) <= 0.8)
 
+long_for_models <- long_for_models0 %>%
+  dplyr::arrange(subject_id, time) %>%  # ensures consistent order
+  dplyr::distinct(subject_id, time, .keep_all = TRUE)
+
 length(unique(long_for_models$subject_id))
-table(table(long_for_models$subject_id)) #  LBL-047 is repeated? 
+table(table(long_for_models$subject_id)) #  LBL-047 is repeated? (removed in the distinct step)
 vis_miss(long_for_models)
 check_status(long_for_models, id_track = "subject_id")
 
 # remove LBL-047
-print(names(which(table(long_for_models$subject_id) == 5)))
-long_for_models2 <- long_for_models[!grepl("LBL-047", long_for_models$subject_id), ] 
-print(names(which(table(long_for_models2$subject_id) == 5)))
-table(table(long_for_models2$subject_id))
-vis_miss(long_for_models2)
-check_status(long_for_models2, id_track = "subject_id")
+#print(names(which(table(long_for_models$subject_id) == 5)))
+#long_for_models2 <- long_for_models[!grepl("LBL-047", long_for_models$subject_id), ] 
+#print(names(which(table(long_for_models2$subject_id) == 5)))
+#table(table(long_for_models2$subject_id))
+#vis_miss(long_for_models2)
+#check_status(long_for_models2, id_track = "subject_id")
 
 ### Weird peeps: VCA-041, TFA-016, DSC-024
-# The people below just have suss predictions
+# The people below just have suss BMIs
 long_suss <- long_for_models %>% 
              dplyr::filter(subject_id %in%  
                           c("AHE-055", "VCA-041", "TFA-016", "DSC-024")) # "AHE-055", "TFA-016"
 vis_miss(long_suss)
-long_suss2 <- long_for_models2 %>% dplyr::filter(subject_id %in% c("TFA-016"))
+long_suss2 <- long_for_models %>% dplyr::filter(subject_id %in% c("TFA-016"))
 vis_miss(long_suss2)
 
-# Deciding to remove TFA-016
-long_for_models3 <- long_for_models2[!grepl("TFA-016", long_for_models2$subject_id), ]
+# Deciding to remove TFA-016 because of the NAs 
+long_for_models3 <- long_for_models[!grepl("TFA-016", long_for_models$subject_id), ]
 check_status(long_for_models3, id_track = "subject_id")
 
 # impute. test
@@ -693,9 +735,15 @@ check_status(long_imputed, id_track = "subject_id")
 
 # This DF will be used for the DELTA making 
 print(names(which(table(long$subject_id) == 5)))
-long2 <- long[!grepl("LBL-047", long$subject_id), ]
+#long2 <- long[!grepl("LBL-047", long$subject_id), ]
+long2 <- long %>%
+  dplyr::arrange(subject_id, time) %>%  # ensures consistent order
+  dplyr::distinct(subject_id, time, .keep_all = TRUE)
+check_status(long2, id_track = "subject_id")
+
 long3 <- long2[!grepl("TFA-016", long2$subject_id), ]
 check_status(long3, id_track = "subject_id")
+
 long_no_drops_0_6m <- long3 %>% 
                       dplyr::filter(!(time = 6 & is.na(outcome_BMI_fnl))) %>% 
                       arrange(time)
@@ -905,7 +953,7 @@ CreateTableOne(data = all_delta, strata = "time")
 # long 
 #write.csv(long_imputed, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long_april29.csv')
 #long_imputed <- read_csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long_april29.csv")
-
+#write.csv(long_imputed, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/long_sept1.csv')
 # deltas
 CreateTableOne(data = change_all_0_6[3:ncol(change_all_0_6)], strata = "time")
 CreateTableOne(data = change_all_6_12[3:ncol(change_all_6_12)], strata = "time")
@@ -914,6 +962,9 @@ CreateTableOne(data = all_delta[3:ncol(all_delta)], strata = "time")
 #write.csv(change_all_6_12, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_6_12.csv')
 #write.csv(all_delta, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta_april29.csv')
 #all_delta <- read_csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta_april29.csv")
+#write.csv(change_all_0_6, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_0_6_sept1.csv')
+#write.csv(change_all_6_12, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/delta_6_12_sept1.csv')
+#write.csv(all_delta, file = '/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/data/april_processing/all_delta_sept1.csv')
 
 # old test and train set info
 # # Define test sample names

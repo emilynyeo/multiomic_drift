@@ -2210,6 +2210,115 @@ ggsave(filename = png_name, plot = final_heat, width = 14, height = 10, dpi = 30
 final_heat
 ```
 
+## bar plot instead of heatmap 
+
+```{r}
+rename_map <- c(
+  "Actual BMI" = "bmi",
+  "Basic Score" = "y_new_basic",
+  "Clinical Score" = "y_new_meta",
+  "GRS Score" = "y_new_grs",
+  "Taxa Score" = "y_new_taxa",
+  "Micom Score" = "y_new_micom",
+  "Pathway Score" = "y_new_pathway",
+  "Metabolomics Score" = "y_new_metabo",
+  "All Omic Score" = "y_new_all")
+
+score_colors <- c(
+  "Basic Score" = "#582F2B",
+  "Clinical Score" = "#fecdc7",  
+  "GRS Score" = "#E18476",
+  "Taxa Score" = "#8B3A3A",
+  "Micom Score" = "#996759",
+  "Pathway Score" = "#D8A39D",
+  "Metabolomics Score" = "#C76374",
+  "All Omic Score" = "#b44241",
+  "Actual BMI" = "grey50")
+
+
+merf_delta_bar <- merf_delta %>% rename(!!!rename_map) %>% 
+                  filter(Time == 6)
+merf_long_bar <- merf_long %>% rename(!!!rename_map) %>% 
+                  filter(Time == 6)
+gl_lasso_delta_bar <- gl_lasso_delta %>% rename(!!!rename_map) %>% 
+                  filter(Time == 1)
+gl_lasso_long_bar <- gl_lasso_long %>% rename(!!!rename_map) %>% 
+                  filter(Time == 2)
+
+plot_score_means_delta <- function(df, title = "Mean Scores with Error Bars") {
+  summary_df <- df %>%
+    select(`Basic Score`, `Clinical Score`, `GRS Score`, `Taxa Score`,
+           `Micom Score`, `Pathway Score`, `Metabolomics Score`,  
+           `All Omic Score`, `Actual BMI`) %>%
+    pivot_longer(cols = everything(), 
+                 names_to = "Score Type", 
+                 values_to = "Value") %>%
+    group_by(`Score Type`) %>%
+    summarise(Mean = mean(Value, na.rm = TRUE),
+              SE = sd(Value, na.rm = TRUE) / sqrt(n()),
+              .groups = "drop")
+
+  # Set desired order of bars
+  summary_df$`Score Type` <- factor(summary_df$`Score Type`, levels = c(
+    "Actual BMI", "Basic Score", "Clinical Score",
+    "GRS Score", "Taxa Score", "Micom Score",
+    "Pathway Score", "Metabolomics Score", "All Omic Score"
+  ))
+
+  # Plot using the summary_df
+  ggplot(summary_df, aes(x = `Score Type`, y = Mean, fill = `Score Type`)) +
+    geom_col() +
+    geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2) +
+    scale_fill_manual(values = score_colors) +
+    #coord_cartesian(ylim = c(25, 34)) +
+    labs(x = NULL, y = "Mean Score", title = title) +
+    theme_minimal(base_size = 14) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none")
+}
+
+
+plot_score_means_long <- function(df, title = "Mean Scores with Error Bars") {
+  summary_df <- df %>%
+    select(`Basic Score`, `Clinical Score`, `GRS Score`, `Taxa Score`,
+           `Micom Score`, `Pathway Score`, `Metabolomics Score`,  
+           `All Omic Score`, `Actual BMI`) %>%
+    pivot_longer(cols = everything(), 
+                 names_to = "Score Type", 
+                 values_to = "Value") %>%
+    group_by(`Score Type`) %>%
+    summarise(Mean = mean(Value, na.rm = TRUE),
+              SE = sd(Value, na.rm = TRUE) / sqrt(n()),
+              .groups = "drop")
+  
+  summary_df$`Score Type` <- factor(summary_df$`Score Type`, levels = c(
+  "Actual BMI", "Basic Score", "Clinical Score",
+  "GRS Score", "Taxa Score", "Pathway Score",
+  "Micom Score", "Metabolomics Score","All Omic Score"))
+
+  ggplot(summary_df, aes(x = `Score Type`, y = Mean, fill = `Score Type`)) +
+    geom_col() +
+    geom_errorbar(aes(ymin = Mean - SE, ymax = Mean + SE), width = 0.2) +
+    scale_fill_manual(values = score_colors) +
+    coord_cartesian(ylim = c(25, 34)) +
+    labs(x = NULL, y = "Mean Score", title = title) +
+    theme_minimal(base_size = 14) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "none") 
+}
+
+p10 <- plot_score_means_delta(merf_delta_bar, title = "MERF Delta: Mean Scores ± SE")
+p20 <- plot_score_means_long(merf_long_bar, title = "MERF Long: Mean Scores ± SE")
+p30 <- plot_score_means_delta(gl_lasso_delta_bar, title = "GLMM Delta: Mean Scores ± SE")
+p40 <- plot_score_means_long(gl_lasso_long_bar, title = "GLMM Long: Mean Scores ± SE")
+
+combined_raw_scores_plot <- (p10 | p20) / (p30 | p40)
+ggsave(paste0(omic_out_dir, "score_means_grid.png"), 
+       combined_raw_scores_plot, width = 12, height = 10, dpi = 300)
+
+```
+
+
 ### Venn of features responsible for the top 50% of importance ? 
 
 I'll need to rerun MERF for this. 
