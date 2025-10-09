@@ -44,7 +44,7 @@ ft_colors <- c(
   Micom        = "#996759",
   Pathway      = "#D8A39D",
   Metabolomics = "#C76374",
-  All          = "#b44241",
+  Combined     = "#b44241",
   GRS          = "#E18476",
   Basic        = "#582F2B")
 ```
@@ -235,8 +235,7 @@ for (omic_name in names(omic_dfs)) {
     `Basic + Pathway` = lmer_path_b,
     `Basic + Taxa` = lmer_tax_b,
     `Basic + Metabolomics` = lmer_metabo_b,
-    `Basic + Combined` = lmer_all_b
-  )
+    `Basic + Combined` = lmer_all_b)
 
   # Extract R² values
   r2_df <- do.call(rbind, lapply(names(models), function(name) {
@@ -490,8 +489,8 @@ gtsave(final_anova_table_initial,
 doc <- read_docx()
 
 # Loop over each table
-for (name in names(tables)) {
-  table_data <- tables[[name]]
+for (name in names(raw_tables)) {
+  table_data <- raw_tables[[name]]
   
   # Create a formatted flextable
   ft <- flextable(table_data) %>%
@@ -518,21 +517,9 @@ print(doc, target = paste0(omic_out_dir, "/anova_tables/anova_initial_combined.d
 
 ################################################################################
 
-# DO we see and improvement in the omics upon clinical models
+# DO we see and improvement in the omics upon CLINICAL models
 
-```{r}
-# lmer_meta_b <- lmer(bmi ~ y_new_meta + (1|Cluster), data = gl_lasso_long, REML = FALSE)
-# lmer_meta_grs <- lmer(bmi ~ y_new_meta + y_new_grs  + (1|Cluster), data = gl_lasso_long, REML = FALSE)
-# 
-# AIC(lmer_meta_b)
-# AIC(lmer_meta_grs)
-# 
-# r.squaredGLMM(lmer_meta_b)
-# r.squaredGLMM(lmer_meta_grs)
-# 
-# anova(lmer_meta_b, lmer_meta_grs)
-```
-
+Set up Omic Clinical Data and Models 
 
 ```{r}
 omic_dfs <- list(
@@ -547,41 +534,49 @@ omic_name_labels <- c(
   "merf_delta"     = "MERF BMI Changes (Deltas)",
   "gl_lasso_delta" = "GlmmLasso BMI Changes (Deltas)")
 
+# Fit models and get R squared 
 for (omic_name in names(omic_dfs)) {
   omic <- omic_dfs[[omic_name]]
-  
-  ### ANOVA 
   mod_dat <- omic
-  lmer_basic_b <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_basic_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_b <- lmer(bmi ~ y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_grs <- lmer(bmi ~ y_new_meta + y_new_grs  + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_micom <- lmer(bmi ~ y_new_meta + y_new_micom  + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_pathway <- lmer(bmi ~ y_new_meta + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_taxa <- lmer(bmi ~ y_new_meta + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_metabo <- lmer(bmi ~ y_new_meta + y_new_metabo + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_all <- lmer(bmi ~ y_new_meta + y_new_all + (1|Cluster), data = mod_dat, REML = FALSE)
   
-  # Put your models into a named list
+  # Fit models
+  lmer_basic_b       <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_basic_meta_b  <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_b        <- lmer(bmi ~ y_new_meta + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_grs      <- lmer(bmi ~ y_new_meta + y_new_grs + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_micom    <- lmer(bmi ~ y_new_meta + y_new_micom + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_pathway  <- lmer(bmi ~ y_new_meta + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_taxa     <- lmer(bmi ~ y_new_meta + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_metabo   <- lmer(bmi ~ y_new_meta + y_new_metabo + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_all      <- lmer(bmi ~ y_new_meta + y_new_all + (1|Cluster), data = mod_dat, REML = FALSE)
+
   models <- list(
-    `Clinical`  = lmer_meta_b,
-    `Clinical + GRS`  = lmer_meta_grs,
-    `Clinical + Micom` = lmer_meta_micom,
+    `Clinical`           = lmer_meta_b,
+    `Clinical + GRS`     = lmer_meta_grs,
+    `Clinical + Micom`   = lmer_meta_micom,
     `Clinical + Pathway` = lmer_meta_pathway,
     `Clinical + Taxa`    = lmer_meta_taxa,
-    `Clinical + Metabo`  = lmer_meta_metabo,
-    `Clinical + All` = lmer_meta_all)
-  
-  # Extract R2 values for each model
+    `Clinical + Metabolomics`  = lmer_meta_metabo,
+    `Clinical + Combined`     = lmer_meta_all)
+
   r2_df_clin_plus <- do.call(rbind, lapply(names(models), function(name) {
     r2_vals_clin_plus <- r.squaredGLMM(models[[name]])
     data.frame(Model = name,
-      R2m = r2_vals_clin_plus[1, "R2m"],
-      R2c = r2_vals_clin_plus[1, "R2c"])
+               R2m = r2_vals_clin_plus[1, "R2m"],
+               R2c = r2_vals_clin_plus[1, "R2c"])
   }))
-  #print(r2_df)
   assign(paste0(omic_name, "_r2_df"), r2_df_clin_plus)
-  
+}
+```
+
+Clinical Anova Table 
+
+```{r anova_table_generation}
+for (omic_name in names(omic_dfs)) {
+  # Get R² results and model
+  r2_df_clin_plus <- get(paste0(omic_name, "_r2_df"))
+  lmer_meta_b <- get("lmer_meta_b")  # needed for AIC later
+
   lmer_models <- list(
     c("lmer_meta_b", "lmer_meta_b"),
     c("lmer_meta_b", "lmer_meta_grs"),
@@ -590,144 +585,118 @@ for (omic_name in names(omic_dfs)) {
     c("lmer_meta_b", "lmer_meta_pathway"),
     c("lmer_meta_b", "lmer_meta_metabo"),
     c("lmer_meta_b", "lmer_meta_all"))
-  
-  lmer_models_clin_p <- list()  # empty list to store ANOVA results
-  all_anova_tables_clin_p <- list()
+
+  # Run ANOVA comparisons
+  lmer_models_clin_p <- list()
   for (model_pair in lmer_models) {
     model_1 <- get(model_pair[1])
     model_2 <- get(model_pair[2])
-    anova_out_clin_p <- anova(model_1, model_2)  # lmerMod objects
-    # tidied_result <- tidy(anova_result)
-    anova_out_clin_p$model_comparison <- paste(model_pair[1], "vs", model_pair[2])
-    lmer_models_clin_p[[length(lmer_models_clin_p) + 1]] <- anova_out_clin_p
+    anova_out <- anova(model_1, model_2)
+    anova_out$model_comparison <- paste(model_pair[1], "vs", model_pair[2])
+    lmer_models_clin_p[[length(lmer_models_clin_p) + 1]] <- anova_out
   }
-  # Combine all results into one dataframe
-  anova_table_clin_p <- do.call(rbind, lmer_models_clin_p)
-  anova_table_clean_clin_p <- anova_table_clin_p %>%
-    dplyr::filter(!is.na(`Chisq`) & !is.na(`Pr(>Chisq)`)) %>%
-    dplyr::mutate(across(where(is.numeric), round, 3)) %>% 
-    dplyr::select(-c("npar")) 
-  rownames(anova_table_clean_clin_p) <- NULL
 
-  # Extract model names for reference
-  anova_table_clean_clin_p$model_1 <- gsub(" vs .*", "", anova_table_clean_clin_p$model_comparison)
-  anova_table_clean_clin_p$model_2 <- gsub(".* vs ", "", anova_table_clean_clin_p$model_comparison)
+  anova_table <- do.call(rbind, lmer_models_clin_p) %>%
+    filter(!is.na(`Chisq`) & !is.na(`Pr(>Chisq)`)) %>%
+    mutate(across(where(is.numeric), round, 3)) %>%
+    select(-npar)
+
+  rownames(anova_table) <- NULL
+  anova_table$model_1 <- gsub(" vs .*", "", anova_table$model_comparison)
+  anova_table$model_2 <- gsub(".* vs ", "", anova_table$model_comparison)
+
+  # Add significance & rename models
+  anova_labels <- anova_table %>%
+    mutate(
+      Compared_Model = recode(model_comparison,
+        "lmer_meta_b vs lmer_meta_b"     = "Clinical",
+        "lmer_meta_b vs lmer_meta_grs"   = "Clinical + GRS",
+        "lmer_meta_b vs lmer_meta_taxa"  = "Clinical + Taxa",
+        "lmer_meta_b vs lmer_meta_micom" = "Clinical + Micom",
+        "lmer_meta_b vs lmer_meta_pathway" = "Clinical + Pathway",
+        "lmer_meta_b vs lmer_meta_metabo" = "Clinical + Metabolomics",
+        "lmer_meta_b vs lmer_meta_all"     = "Clinical + Combined"),
+      Significance = case_when(
+        `Pr(>Chisq)` < 0.001 ~ "***",
+        `Pr(>Chisq)` < 0.01  ~ "**",
+        `Pr(>Chisq)` < 0.05  ~ "*",
+        TRUE                 ~ ""),
+      `Pr(>Chisq)` = case_when(
+        `Pr(>Chisq)` < 0.001 ~ "<0.001",
+        `Pr(>Chisq)` < 0.01  ~ "<0.01",
+        TRUE ~ as.character(`Pr(>Chisq)`))
+    ) %>%
+    select(Compared_Model, AIC, `Pr(>Chisq)`, Significance)
+
+  custom_order <- c("Clinical", "Clinical + GRS", "Clinical + Pathway", 
+                    "Clinical + Taxa", "Clinical + Micom", 
+                    "Clinical + Metabolomics", "Clinical + Combined")
   
-  # Annotate significance and select relevant columns only
-  anova_labels_clin_p <- anova_table_clean_clin_p %>%
-  dplyr::mutate(
-    Compared_Model = dplyr::recode(
-       model_comparison,
-       "lmer_meta_b vs lmer_meta_b" = "Clinical",
-       "lmer_meta_b vs lmer_meta_grs" = "Clinical + GRS",
-       "lmer_meta_b vs lmer_meta_taxa" = "Clinical + Taxa",
-       "lmer_meta_b vs lmer_meta_micom" = "Clinical + Micom",
-       "lmer_meta_b vs lmer_meta_pathway" = "Clinical + Pathway",
-       "lmer_meta_b vs lmer_meta_metabo" = "Clinical + Metabo",
-       "lmer_meta_b vs lmer_meta_all" = "Clinical + All"
-    ),
-    Significance = case_when(
-      `Pr(>Chisq)` < 0.001 ~ "***",
-      `Pr(>Chisq)` < 0.01  ~ "**",
-      `Pr(>Chisq)` < 0.05  ~ "*",
-      TRUE            ~ ""
-    ),
-    `Pr(>Chisq)` = case_when(
-      `Pr(>Chisq)` < 0.001 ~ "<0.001",
-      `Pr(>Chisq)` < 0.01  ~ "<0.01",
-      TRUE ~ as.character(`Pr(>Chisq)`)
-    )
-  ) %>%
-  dplyr::select(Compared_Model, AIC, `Pr(>Chisq)`, Significance)
-  
-  # Apply the custom order to your data #START HERE ####
-  custom_order_clin_plus <- c("Clinical", 
-                              "Clinical + GRS",
-                              "Clinical + Pathway", 
-                              "Clinical + Taxa",
-                              "Clinical + Micom", 
-                              "Clinical + Metabo", 
-                              "Clinical + All")
-  
-  r2_annotated_clin_plus <- r2_df_clin_plus %>%
-                            left_join(anova_labels_clin_p, 
-                                      by = c("Model" = "Compared_Model")) %>%
-                            dplyr::mutate(Model = factor(Model, 
-                                 levels = custom_order_clin_plus)) %>%
-                                 arrange(Model)
   clinical_aic <- AIC(lmer_meta_b)
-  
-  r2_annotated_clin_plus <- r2_annotated_clin_plus %>%
-  dplyr::mutate(AIC = ifelse(Model == "Clinical", round(clinical_aic, 3), AIC))
-  
-  for_table_cp <- r2_annotated_clin_plus %>% 
-               dplyr::select(-c(R2c)) %>% 
-               rename("R²" = R2m, 
-                      "P-Value" = `Pr(>Chisq)`)  %>%
-  mutate(across(c(`P-Value`, Significance), ~replace_na(., "-")))
-  
-  final_anova_table_clin_p <- for_table_cp %>% gt() %>%
+  r2_annotated <- r2_df_clin_plus %>%
+    left_join(anova_labels, by = c("Model" = "Compared_Model")) %>%
+    mutate(Model = factor(Model, levels = custom_order)) %>%
+    arrange(Model) %>%
+    mutate(AIC = ifelse(Model == "Clinical", 
+                        round(clinical_aic, 3), AIC)) %>%
+    select(-R2c) %>%
+    rename("R²" = R2m, "P-Value" = `Pr(>Chisq)`) %>%
+    mutate(across(c(`P-Value`, Significance), ~replace_na(., "-")))
+
+  final_anova_table <- r2_annotated %>%
+    gt() %>%
     tab_header(title = "Model Comparison (ANOVA)") %>%
     fmt_number(columns = where(is.numeric), decimals = 2) %>%
     sub_missing(missing_text = "-") %>%
-    cols_width(1 ~ pct(20),
-               `R²` ~ pct(15), 
-              Significance ~ pct(15),
-              `P-Value` ~ pct(15), 
-              AIC ~ pct(11), 
-              Significance ~ pct(11)) %>%
-    cols_align(align = "center",
-      columns = everything()) %>% 
-    cols_align("left", columns = Model) %>%
-    tab_options(table.width = pct(60),
-                table.align = "center") %>%
-    opt_table_font(font = list(
-        google_font("Arial"),   # fallback to system font if unavailable
-        default_fonts())) %>%
-  # Style body text
-  tab_style(style = cell_text(size = 14),
-    locations = cells_body()) %>%
-  # Style column labels
-  tab_style(style = cell_text(size = 16, weight = "bold"),
-    locations = cells_column_labels()) %>%
-  # Style title
-  tab_style(style = cell_text(size = 18, weight = "bold"),
-    locations = cells_title())
-  assign(paste0(omic_name, "_anova_table_clin_p"), final_anova_table_clin_p)
-  
-  ## And plot the anova 
-  basic_r2 <- r2_annotated_clin_plus$R2m[r2_annotated_clin_plus$Model == "Clinical"]
-  sig_plot_clin_plus <- ggplot(r2_annotated_clin_plus, 
-                     aes(x = Model, y = R2m, fill = Model)) +
+    cols_align(align = "center", columns = everything()) %>%
+    tab_options(table.width = pct(60), table.align = "center") %>%
+    opt_table_font(font = list(google_font("Arial"), default_fonts())) %>%
+    tab_style(style = cell_text(size = 14), locations = cells_body()) %>%
+    tab_style(style = cell_text(size = 16, weight = "bold"), locations = cells_column_labels()) %>%
+    tab_style(style = cell_text(size = 18, weight = "bold"), locations = cells_title())
+
+  assign(paste0(omic_name, "_anova_table_clin_p"), final_anova_table)
+  assign(paste0(omic_name, "_r2_annotated_clin_plus"), r2_annotated)
+}
+```
+
+CLinical Anova plots 
+
+```{r anova_plot_generation}
+for (omic_name in names(omic_dfs)) {
+  r2_annotated <- get(paste0(omic_name, "_r2_annotated_clin_plus"))
+  basic_r2 <- r2_annotated$`R²`[r2_annotated$Model == "Clinical"]
+
+  sig_plot <- ggplot(r2_annotated, aes(x = Model, y = `R²`, fill = Model)) +
     geom_col(width = 0.7) +
-    geom_text(aes(y = R2m + 0.036, label = Significance), size = 12) +
-    #geom_hline(yintercept = basic_r2, linetype = "dashed", color = "black") +
-    scale_y_continuous(limits = c(0, 0.72),
-                       expand = expansion(mult = c(0, 0.1))) +
+    geom_text(aes(y = `R²` + 0.036, label = Significance), size = 12) +
+    scale_y_continuous(limits = c(0, 0.72), expand = expansion(mult = c(0, 0.1))) +
     scale_fill_manual(values = c(
-      "Clinical + All"      = "#b44241",
-      "Clinical + Metabo"   = "#C76374",
+      "Clinical + Combined"      = "#b44241",
+      "Clinical + Metabolomics"   = "#C76374",
       "Clinical + Micom"    = "#996759",
       "Clinical + Pathway"  = "#D8A39D",
       "Clinical + Taxa"     = "#8B3A3A",
       "Clinical + GRS"      = "#E18476",
       "Clinical"            = "#A9A9A9")) +
     labs(title = glue("R² {omic_name_labels[[omic_name]]}"),
-      #x = "Clinical vs. Added Omic Scores",
-      x = NULL, 
-      y = expression(R^2*" = Fixed Effect Variance")) +
+         x = NULL, 
+         #y = expression(R^2*" = Fixed Effect Variance")) +
+         y = expression("Marginal " ~ R^2)) +
     theme_minimal(base_size = 28) +
-    theme(legend.position = "none",
-          plot.margin = ggplot2::margin(t = 2, r = 2, b = 2, l = 2, unit = "cm"),
+    theme(
+      legend.position = "none",
+      plot.margin = ggplot2::margin(2, 2, 2, 2, unit = "cm"),
       axis.text.y = element_text(face = "bold", hjust = 1, size = 27),
       axis.text.x = element_text(face = "bold", size = 27, hjust = 1, angle = 45),
-      axis.title.x = element_text(margin = ggplot2::margin(0.5,0,0,0, unit = "cm"), size = 30),
-      axis.title.y = element_text(margin = ggplot2::margin(0,0.8,0,0, unit = "cm"), size = 30))
-  assign(paste0(omic_name, "_sig_plot_clin_plus"), sig_plot_clin_plus)
+      axis.title.x = element_text(margin = ggplot2::margin(0.5, 0, 0, 0, unit = "cm"), size = 30),
+      axis.title.y = element_text(margin = ggplot2::margin(0, 0.8, 0, 0, unit = "cm"), size = 30))
+
+  assign(paste0(omic_name, "_sig_plot_clin_plus"), sig_plot)
 }
 ```
 
-
+Clinical ANOVAs GT tables 
 ```{r}
 # Assuming you saved the cleaned data frames *before* turning them into gt tables:
 all_anova_clean_tables_clin_p <- list(
@@ -755,8 +724,7 @@ combined_anova_df_clin_p <- combined_anova_df_clin_p %>%
     Model_Type == "gl_lasso_long"  ~ "B. GlmmLasso (Longitudinal BMI Prediction)",
     Model_Type == "merf_delta"     ~ "C. MERF (Change in BMI (Delta) Prediction)",
     Model_Type == "gl_lasso_delta" ~ "A. GlmmLasso (Change in BMI (Delta) Prediction)",
-    TRUE ~ Model_Type
-  ))
+    TRUE ~ Model_Type))
 
 table_data_clin_p <- combined_anova_df_clin_p %>%
   dplyr::select(-Source) %>%
@@ -764,36 +732,8 @@ table_data_clin_p <- combined_anova_df_clin_p %>%
   dplyr::mutate(across(where(is.numeric), ~ round(.x, 3))) %>%
   dplyr::select(-Model_Type)
 
-# Step 2: Split by model type
+# Split by model type
 tables_clin_p <- split(table_data_clin_p, combined_anova_df_clin_p$Model_Type)
-
-# Step 3: Create title + table stacked using cowplot
-table_grobs_clin_p <- lapply(names(tables_clin_p), function(name) {
-  
-  # Title as a ggdraw object
-  title_grob_clin_p <- cowplot::ggdraw() +
-    cowplot::draw_label(name, fontface = "bold", size = 12,
-                        hjust = 0.5, vjust = 12,
-                        fontfamily = "Arial") +
-    theme(plot.margin = ggplot2::margin(0, 0, 0, 0))  # space below title
-  # Table as a ggdraw object
-  table_clin_p <- ggtexttable(tables_clin_p[[name]], 
-                       theme = ttheme("classic"), rows = NULL)
-  table_grob_clin_p <- cowplot::ggdraw(table_clin_p)
-  # Combine title and table vertically
-  cowplot::plot_grid(title_grob_clin_p, table_grob_clin_p, 
-                     ncol = 1, 
-                     rel_heights = c(0.08, 1),
-                     align = 'v')
-})
-# Step 4: Arrange all tables into a grid
-final_plot_clin_p <- cowplot::plot_grid(plotlist = table_grobs_clin_p, 
-                                        ncol = 2, rel_widths = c(1, 1))
-
-# Show plot
-print(final_plot_clin_p)
-ggsave(paste0(omic_out_dir, "anova_plots/anova_clinical_combined.png"), final_plot_clin_p, 
-       width = 30, height = 20, dpi = 600, bg = 'white')
 
 # Combined ANOVA table
 final_anova_table_clin_p2 <- combined_anova_df_clin_p %>% 
@@ -803,12 +743,10 @@ final_anova_table_clin_p2 <- combined_anova_df_clin_p %>%
     Model_Type == "gl_lasso_long" ~ "GlmmLasso (Longitudinal BMI Prediction)",
     Model_Type == "merf_delta" ~ "MERF (Change in BMI (Delta) Prediction)",
     Model_Type == "gl_lasso_delta" ~ "GlmmLasso (Change in BMI (Delta) Prediction)",
-    TRUE ~ Model_Type
-  )) %>% 
+    TRUE ~ Model_Type)) %>% 
   gt(groupname_col = "Model_Type") %>%
     tab_header(title = "Additive Model Comparison's (ANOVA)") %>%
     fmt_number(columns = where(is.numeric), decimals = 3) %>%
-    #fmt_number(columns = "Df", decimals = 0) %>% 
     sub_missing(missing_text = "-") %>%
     cols_width(1 ~ pct(16),
                `R²` ~ pct(10), 
@@ -833,7 +771,7 @@ final_anova_table_clin_p2 <- combined_anova_df_clin_p %>%
   locations = cells_row_groups())
 
 final_anova_table_clin_p2
-gtsave(final_anova_table_clin_p, filename = paste0(omic_out_dir, "anova_tables/anova_table_clin_p.png"))
+gtsave(final_anova_table_clin_p2, filename = paste0(omic_out_dir, "/anova_tables/anova_table_clin_p.png"))
 ```
 
 # ANOVA TABLE FOR CLINICAL ANOVA COMBINED 
@@ -841,8 +779,6 @@ gtsave(final_anova_table_clin_p, filename = paste0(omic_out_dir, "anova_tables/a
 ```{r}
 # Create a new Word document
 doc <- read_docx()
-
-# Loop over each table
 for (name in names(tables_clin_p)) {
   table_data <- tables_clin_p[[name]]
   
@@ -857,14 +793,13 @@ for (name in names(tables_clin_p)) {
     border_outer(border = fp_border(color = "black", width = 1)) %>%
     border_inner(border = fp_border(color = "gray", width = 0.5))
 
-  # Add a title paragraph
   doc <- doc %>%
     body_add_par(name, style = "heading 2") %>%
     body_add_flextable(ft) %>%
     body_add_par("", style = "Normal")  # Add spacing between tables
 }
 
-print(doc, target = paste0(omic_out_dir, "anova_tables/anova_clinical_combined.docx"))
+print(doc, target = paste0(omic_out_dir, "/anova_tables/anova_clinical_combined.docx"))
 ```
 
 
@@ -877,13 +812,10 @@ add_r2_increase <- function(tbl) {
   tbl <- tibble::add_column(tbl, `% R² Increase` = r2_increase, .after = "R²")
   return(tbl)
 }
-
 tables_clin_p_plus <- lapply(tables_clin_p, add_r2_increase)
 
 # Initialize the Word document
 doc <- read_docx()
-
-# Loop over each table
 for (name in names(tables_clin_p_plus)) {
   table_data <- tables_clin_p_plus[[name]]
   
@@ -898,15 +830,12 @@ for (name in names(tables_clin_p_plus)) {
     border_outer(border = fp_border(color = "black", width = 1)) %>%
     border_inner(border = fp_border(color = "gray", width = 0.5))
 
-  # Add a title paragraph
   doc <- doc %>%
     body_add_par(name, style = "heading 2") %>%
     body_add_flextable(ft) %>%
-    body_add_par("", style = "Normal")  # Add spacing between tables
+    body_add_par("", style = "Normal")  #
 }
-
-# Save the document
-print(doc, target = paste0(omic_out_dir, "anova_tables/anova_clinical_combined_with_increase.docx"))
+print(doc, target = paste0(omic_out_dir, "/anova_tables/anova_clinical_combined_with_increase.docx"))
 ```
 
 
@@ -920,28 +849,29 @@ plot_names_clin_plus <- glue("{names(omic_dfs)}_sig_plot_clin_plus")
 # Figure xxx : MERF feature importances
 
 ```{r echo=FALSE, fig.width = 6.5, fig.asp = 1.6, out.width="90%"}
-merf_dfs_long <- list(Basic = basic, Clinical = meta, 
+merf_dfs_long <- list(Basic = basic, 
+                      Clinical = meta, 
                       GRS = grs,
                Taxa = taxa, Micom = micom, 
                Pathway = pathway, Metabolomics = metabo, 
-               All = all)
+               Combined = all)
 
 merf_dfs_delta <- list(Basic = basic_md, Clinical = meta_md, 
                        GRS = grs_md, 
                      Taxa = taxa_md, Micom = micom_md, 
                      Pathway = pathway_md, Metabolomics = metabo_md, 
-                     All = all_md)
+                     Combined = all_md)
 
 ft_colors <- c(Clinical = "#fecdc7", Taxa = "#8B3A3A", 
                Micom = "#996759", Pathway = "#D8A39D", 
                Metabolomics  = "#C76374", 
-               All = "#b44241", GRS = "#E18476",
+               Combined = "#b44241", GRS = "#E18476",
                Basic = "#582F2B")
 
 ft_colors_delta <- c(Clinical = "#fecdc7", Taxa = "#8B3A3A", 
                      Micom = "#996759", Pathway = "#D8A39D", 
                      Metabolomics  = "#C76374", 
-                     All = "#b44241", GRS = "#E18476",
+                     Combined = "#b44241", GRS = "#E18476",
                      Basic = "#582F2B")
 
 # Combined feature sets
@@ -1044,7 +974,7 @@ lass_dfs_long <- list(Basic = gl_ftimp_long_basic,
                       Micom = gl_ftimp_long_micom, 
                       Pathway = gl_ftimp_long_pathway, 
                       Metabolomics = gl_ftimp_long_metabo, 
-                      All = gl_ftimp_long_all)
+                      Combined = gl_ftimp_long_all)
 
 lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic, 
                        Clinical = gl_ftimp_delta_meta, 
@@ -1053,7 +983,7 @@ lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic,
                        Micom = gl_ftimp_delta_micom, 
                        Pathway = gl_ftimp_delta_pathway, 
                        Metabolomics = gl_ftimp_delta_metabo, 
-                       All = gl_ftimp_delta_all)
+                       Combined = gl_ftimp_delta_all)
 
 # Combined feature sets
 all_lass_ft_dfs <- list(lass_lg = list(data = lass_dfs_long, colors = ft_colors, 
@@ -1375,7 +1305,7 @@ cor_long_df <- list(
                         "Micom Score" = "y_new_micom",
                         "Pathway Score" = "y_new_pathway",
                         "Metabolomics Score" = "y_new_metabo",
-                        "All Omic Score" = "y_new_all"),
+                        "Combined Omic Score" = "y_new_all"),
       Var2 = fct_recode(Var2,
                         "Actual BMI" = "bmi",
                         "Basic Score" = "y_new_basic",
@@ -1385,7 +1315,7 @@ cor_long_df <- list(
                         "Micom Score" = "y_new_micom",
                         "Pathway Score" = "y_new_pathway",
                         "Metabolomics Score" = "y_new_metabo",
-                        "All Omic Score" = "y_new_all"))
+                        "Combined Omic Score" = "y_new_all"))
 
 final_heat <- ggplot(cor_long_df, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile() +
@@ -1421,7 +1351,7 @@ rename_map <- c(
   "Micom Score" = "y_new_micom",
   "Pathway Score" = "y_new_pathway",
   "Metabolomics Score" = "y_new_metabo",
-  "All Omic Score" = "y_new_all")
+  "Combined Omic Score" = "y_new_all")
 
 score_colors <- c(
   "Basic Score" = "#582F2B",
@@ -1431,7 +1361,7 @@ score_colors <- c(
   "Micom Score" = "#996759",
   "Pathway Score" = "#D8A39D",
   "Metabolomics Score" = "#C76374",
-  "All Omic Score" = "#b44241",
+  "Combined Omic Score" = "#b44241",
   "Actual BMI" = "grey50")
 
 
@@ -1448,7 +1378,7 @@ plot_score_means_delta <- function(df, title = "Mean Scores with Error Bars") {
   summary_df <- df %>%
     select(`Basic Score`, `Clinical Score`, `GRS Score`, `Taxa Score`,
            `Micom Score`, `Pathway Score`, `Metabolomics Score`,  
-           `All Omic Score`, `Actual BMI`) %>%
+           `Combined Omic Score`, `Actual BMI`) %>%
     pivot_longer(cols = everything(), 
                  names_to = "Score Type", 
                  values_to = "Value") %>%
@@ -1461,7 +1391,7 @@ plot_score_means_delta <- function(df, title = "Mean Scores with Error Bars") {
   summary_df$`Score Type` <- factor(summary_df$`Score Type`, levels = c(
     "Actual BMI", "Basic Score", "Clinical Score",
     "GRS Score", "Taxa Score", "Micom Score",
-    "Pathway Score", "Metabolomics Score", "All Omic Score"
+    "Pathway Score", "Metabolomics Score", "Combined Omic Score"
   ))
 
   # Plot using the summary_df
@@ -1481,7 +1411,7 @@ plot_score_means_long <- function(df, title = "Mean Scores with Error Bars") {
   summary_df <- df %>%
     select(`Basic Score`, `Clinical Score`, `GRS Score`, `Taxa Score`,
            `Micom Score`, `Pathway Score`, `Metabolomics Score`,  
-           `All Omic Score`, `Actual BMI`) %>%
+           `Combined Omic Score`, `Actual BMI`) %>%
     pivot_longer(cols = everything(), 
                  names_to = "Score Type", 
                  values_to = "Value") %>%
@@ -1493,7 +1423,7 @@ plot_score_means_long <- function(df, title = "Mean Scores with Error Bars") {
   summary_df$`Score Type` <- factor(summary_df$`Score Type`, levels = c(
   "Actual BMI", "Basic Score", "Clinical Score",
   "GRS Score", "Taxa Score", "Pathway Score",
-  "Micom Score", "Metabolomics Score","All Omic Score"))
+  "Micom Score", "Metabolomics Score","Combined Omic Score"))
 
   ggplot(summary_df, aes(x = `Score Type`, y = Mean, fill = `Score Type`)) +
     geom_col() +
@@ -1542,7 +1472,7 @@ get_top_features <- function(df) {
 }
 
 # Define omics and assign colors
-omic_types <- c("basic", "meta", "taxa", "micom", "pathway", "metabo", "all")
+omic_types <- c("basic", "meta", "taxa", "micom", "pathway", "metabo", "Combined")
 venn_colors <- c("#d2495e", "#e9919c", "#5d2a3b", "#f1c28d", "#c0522d", "#f1cabb", "#872657")
 
 # Output directory
@@ -1637,7 +1567,7 @@ get_top_features <- function(df) {
 }
 
 # Define omics and assign colors
-omic_types <- c("basic", "meta", "taxa", "micom", "pathway", "metabo", "all")
+omic_types <- c("basic", "meta", "taxa", "micom", "pathway", "metabo", "Combined")
 venn_colors <- c("#d2495e", "#e9919c", "#5d2a3b", "#f1c28d", "#c0522d", "#f1cabb", "#872657")
 
 # Output directory
@@ -1716,7 +1646,7 @@ for (i in seq_along(omic_types)) {
 
 ```{r}
 # Select omics to display
-selected_omics <- c("meta", "taxa", "micom", "pathway", "metabo", "all")
+selected_omics <- c("meta", "taxa", "micom", "pathway", "metabo", "Combined")
 
 display_names <- c(
   meta = "Clinical",
@@ -1724,7 +1654,7 @@ display_names <- c(
   micom = "Micom",
   pathway = "Pathway",
   metabo = "Metabolomics",
-  all = "All"
+  all = "Combined"
 )
 
 # Build individual Venn + title grobs

@@ -8,7 +8,7 @@ p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn,
        reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM, gridExtra,
        sjPlot, htmltools, officer, flextable, webshot, apaTables, MuMIn, lme4, 
        glue, grid, rsq, pheatmap, GGally, VennDiagram, glmmTMB, broom.mixed, gt,
-       patchwork, tidyverse, ggbeeswarm, scales, viridis, magrittr)
+       patchwork, tidyverse, ggbeeswarm, scales, viridis, magrittr, ggpubr)
 
 ##### FUNCTIONS ###########################################################
 
