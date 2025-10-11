@@ -159,6 +159,35 @@ rename_features_in_json <- function(json_str, feature_rename_map) {
   toJSON(renamed_list, auto_unbox = TRUE)
 }
 
+###### Get color for bar plots Basic ############################################
+
+get_color <- function(model_name) {
+  if (model_name == "Basic") return("#A9A9A9")
+  for (key in names(ft_colors)) {
+    if (grepl(key, model_name, ignore.case = TRUE)) {
+      return(ft_colors[[key]])
+    }
+  }
+  return("#000000") # fallback to black if no match
+}
+
+###### Get color for bar plots Clinical  ############################################
+
+get_color_clin <- function(model_name) {
+  # Explicitly set gray for base "Clinical" model
+  if (model_name == "Clinical") return("#A9A9A9")
+  
+  # Skip "Clinical" in feature matching to avoid accidental early match
+  feature_keys <- setdiff(names(ft_colors), "Clinical")
+  
+  for (key in feature_keys) {
+    if (grepl(key, model_name, ignore.case = TRUE)) {
+      return(ft_colors[[key]])
+    }
+  }
+  return("#000000")  # fallback
+}
+
 ##### BeSwarm Plot Function ################################################### 
 
 plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
@@ -181,10 +210,10 @@ plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
     
     # Step 3: Plot
     ggplot(aes(x = SHAP, y = Feature, color = Norm_Feature_Value)) +
-    geom_quasirandom(alpha = 0.5, width = 0.1, size = 4.5, groupOnX = FALSE) +
+    geom_quasirandom(alpha = 0.45, width = 0.4, size = 2, groupOnX = FALSE) +
     
     scale_color_gradientn(
-      colors = c("#004E64", high_color),
+      colors = c("#1161FF", high_color),
       values = scales::rescale(c(0, 1)),
       name = "Feature Value",
       breaks = c(0, 1),
@@ -214,4 +243,24 @@ plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
           panel.background = element_blank(),
           panel.grid.minor = element_blank())
 }
+
+##### Plot theme 
+
+uniform_plot_theme <- function() {
+  theme_minimal(base_size = 14) +
+    theme(
+      plot.title      = element_text(hjust = 0, face = "bold", size = 28),
+      axis.text.x     = element_text(face = "bold", size = 32, angle = 0),
+      axis.text.y     = element_text(face = "bold", size = 32),
+      axis.title.x    = element_text(size = 28, margin = ggplot2::margin(t = 12)),
+      axis.title.y    = element_blank(),
+      plot.margin     = ggplot2::margin(t = 3, r = 10, b = 3, l = 2),
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor   = element_blank(),
+      panel.border       = element_blank(),
+      panel.background   = element_blank(),
+      plot.background    = element_rect(fill = "white", color = NA) 
+    )
+}
+
 
