@@ -210,57 +210,86 @@ plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
     
     # Step 3: Plot
     ggplot(aes(x = SHAP, y = Feature, color = Norm_Feature_Value)) +
-    geom_quasirandom(alpha = 0.45, width = 0.4, size = 2, groupOnX = FALSE) +
+    geom_quasirandom(alpha = 0.45, width = 0.4, size = 3, groupOnX = FALSE) +
     
     scale_color_gradientn(
-      colors = c("#1161FF", high_color),
+      colors = c("#1682B4", high_color),
       values = scales::rescale(c(0, 1)),
       name = "Feature Value",
       breaks = c(0, 1),
       labels = c("Low", "High")) +
     
     labs(title = plot_title,
-         x = "SHAP Value (Impact on Model Output)",
+         x = "SHAP Value",
          y = NULL) +
     
     scale_y_discrete(expand = expansion(add = 0.75)) +
     theme_minimal(base_size = 18) +
     theme(legend.position = "right",
           legend.box.just = "center",
-          legend.title = element_text(face = "bold", size = 25, 
+          legend.title = element_text(face = "bold", size = 16, 
                                       hjust = 0.5, vjust = 2,
-                                      margin = ggplot2::margin(b = 15)),
-          legend.text = element_text(size = 28),
-          axis.text = element_text(face = "bold"), 
-          plot.background = element_blank(),
-          plot.title = element_text(hjust = 0, face = "bold", size = 28),
-          plot.margin = ggplot2::margin(r = 10, l = 2, t = 3, b = 3),
-          axis.text.y = element_text(face = "bold", size = 32),
-          axis.text.x = element_text(face = "bold", size = 32),
-          axis.title.x = element_text(size = 28, margin = ggplot2::margin(t = 14)),
+                                      margin = ggplot2::margin(b = 2)),
+          legend.text = element_text(size = 16),
+          axis.text = element_text(face = "bold", color = "black"), 
+          plot.background = element_rect(fill = "white", color = NA),
+          plot.title = element_text(hjust = 0, face = "bold", size = 20, color = "black"),
+          plot.margin = ggplot2::margin(0.1, 0.1, 0.1, 0.1),
+          axis.text.y = element_text(face = "bold", size = 16, color = "black"),
+          axis.text.x = element_text(face = "bold", size = 16, color = "black"),
+          axis.title.x = element_text(size = 18, margin = ggplot2::margin(t = 8), color = "black"),
           panel.grid.major.y = element_blank(), 
-          panel.border     = element_blank(),  
-          panel.background = element_blank(),
-          panel.grid.minor = element_blank())
+          panel.border = element_blank(),  
+          panel.background = element_rect(fill = "white", color = NA),
+          panel.grid.minor = element_blank(),
+          panel.grid.major.x = element_line(color = "grey90", size = 0.5))
 }
 
 ##### Plot theme 
 
 uniform_plot_theme <- function() {
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 20) +
     theme(
-      plot.title      = element_text(hjust = 0, face = "bold", size = 28),
-      axis.text.x     = element_text(face = "bold", size = 32, angle = 0),
-      axis.text.y     = element_text(face = "bold", size = 32),
-      axis.title.x    = element_text(size = 28, margin = ggplot2::margin(t = 12)),
-      axis.title.y    = element_blank(),
-      plot.margin     = ggplot2::margin(t = 3, r = 10, b = 3, l = 2),
+      plot.title      = element_text(hjust = 0, face = "bold", size = base_size + 4, color = "black"),
+      axis.text.x     = element_text(face = "bold", size = base_size, angle = 0, color = "black"),
+      axis.text.y     = element_text(face = "bold", size = base_size, color = "black"),
+      axis.title.x    = element_text(size = base_size, margin = ggplot2::margin(t = 0.25), color = "black"),
+      axis.title.y    = element_blank(size = base_size),
+      plot.margin     = ggplot2::margin(0.1, 0.1, 0.1, 0),
       panel.grid.major.y = element_blank(),
       panel.grid.minor   = element_blank(),
       panel.border       = element_blank(),
-      panel.background   = element_blank(),
-      plot.background    = element_rect(fill = "white", color = NA) 
+      panel.background   = element_rect(fill = "white", color = NA),
+      plot.background    = element_rect(fill = "white", color = NA),
+      panel.grid.major.x = element_line(color = "grey90", size = 0.5)
     )
 }
 
+# Standardized theme for combined plots
+combined_plot_theme <- function(base_size = 20) {
+  theme_minimal(base_size = base_size) +
+    theme(
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA),
+      panel.grid.major = element_line(color = "grey90", size = 0.5),
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank(),
+      plot.title = element_text(hjust = 0, face = "bold", size = base_size + 4, color = "black"),
+      axis.text = element_text(face = "bold", size = base_size + 2, color = "black"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.title = element_text(face = "bold", size = base_size, color = "black"),
+      legend.position = "none",
+      plot.margin = ggplot2::margin(0.1, 0.1, 0.1, 0.1, "pt")
+    )
+}
 
+# Apply standardized theme to all plots before combining
+standardize_plot_theme <- function(plot_list) {
+  lapply(plot_list, function(p) {
+    if (inherits(p, "ggplot")) {
+      p + combined_plot_theme()
+    } else {
+      p
+    }
+  })
+}
