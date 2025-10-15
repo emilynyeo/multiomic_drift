@@ -8,7 +8,8 @@ p_load(tools, reticulate, viridis, tidyplots, patchwork, jsonlite, maps, ggvenn,
        reshape2, scales, gridExtra, plotly, sf, tidyverse, naniar, VIM, gridExtra,
        sjPlot, htmltools, officer, flextable, webshot, apaTables, MuMIn, lme4, 
        glue, grid, rsq, pheatmap, GGally, VennDiagram, glmmTMB, broom.mixed, gt,
-       patchwork, tidyverse, ggbeeswarm, scales, viridis, magrittr, ggpubr)
+       patchwork, tidyverse, ggbeeswarm, scales, viridis, magrittr, ggpubr,
+       ggtext)
 
 ##### FUNCTIONS ###########################################################
 
@@ -224,20 +225,20 @@ plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
          y = NULL) +
     
     scale_y_discrete(expand = expansion(add = 0.75)) +
-    theme_minimal(base_size = 18) +
+    theme_minimal(base_size = 25) +
     theme(legend.position = "right",
           legend.box.just = "center",
-          legend.title = element_text(face = "bold", size = 16, 
+          legend.title = element_text(face = "bold", size = 25, 
                                       hjust = 0.5, vjust = 2,
                                       margin = ggplot2::margin(b = 2)),
-          legend.text = element_text(size = 16),
+          legend.text = element_text(size = 20),
           axis.text = element_text(face = "bold", color = "black"), 
           plot.background = element_rect(fill = "white", color = NA),
           plot.title = element_text(hjust = 0, face = "bold", size = 20, color = "black"),
           plot.margin = ggplot2::margin(0.1, 0.1, 0.1, 0.1),
-          axis.text.y = element_text(face = "bold", size = 16, color = "black"),
-          axis.text.x = element_text(face = "bold", size = 16, color = "black"),
-          axis.title.x = element_text(size = 18, margin = ggplot2::margin(t = 8), color = "black"),
+          axis.text.y = element_text(face = "bold", size = 22, color = "black"),
+          axis.text.x = element_text(face = "bold", size = 22, color = "black"),
+          axis.title.x = element_text(size = 25, margin = ggplot2::margin(t = 8), color = "black"),
           panel.grid.major.y = element_blank(), 
           panel.border = element_blank(),  
           panel.background = element_rect(fill = "white", color = NA),
@@ -248,14 +249,14 @@ plot_shap_beeswarm <- function(shap_df, plot_title, high_color) {
 ##### Plot theme 
 
 uniform_plot_theme <- function() {
-  theme_minimal(base_size = 20) +
+  theme_minimal(base_size = 28) +
     theme(
       plot.title      = element_text(hjust = 0, face = "bold", size = base_size + 4, color = "black"),
       axis.text.x     = element_text(face = "bold", size = base_size, angle = 0, color = "black"),
       axis.text.y     = element_text(face = "bold", size = base_size, color = "black"),
-      axis.title.x    = element_text(size = base_size, margin = ggplot2::margin(t = 0.25), color = "black"),
+      axis.title.x    = element_text(size = base_size+2, margin = ggplot2::margin(t = 0.25), color = "black"),
       axis.title.y    = element_blank(size = base_size),
-      plot.margin     = ggplot2::margin(0.1, 0.1, 0.1, 0),
+      plot.margin     = ggplot2::margin(0.1, 0.1, 0.1, 0.0),
       panel.grid.major.y = element_blank(),
       panel.grid.minor   = element_blank(),
       panel.border       = element_blank(),
@@ -266,7 +267,27 @@ uniform_plot_theme <- function() {
 }
 
 # Standardized theme for combined plots
-combined_plot_theme <- function(base_size = 20) {
+# combined_plot_theme <- function(base_size = 26) {
+#   theme_minimal(base_size = base_size) +
+#     theme(
+#       plot.background = element_rect(fill = "white", color = NA),
+#       panel.background = element_rect(fill = "white", color = NA),
+#       panel.grid.major = element_line(color = "grey90", size = 0.5),
+#       panel.grid.minor = element_blank(),
+#       panel.border = element_blank(),
+#       plot.title = element_text(hjust = 0, face = "bold", size = base_size + 4, color = "black"),
+#       axis.text = element_text(face = "bold", size = base_size + 2, color = "black"),
+#       axis.text.x = element_text(angle = 45, hjust = 1.5),
+#       axis.title = element_text(face = "bold", size = base_size + 4, color = "black"),
+#       axis.title.x = element_text(margin = ggplot2::margin(0.0, 0, 0, 0, "cm")),
+#       axis.title.y = element_text(vjust = 0),
+#       legend.position = "none",
+#       plot.margin = ggplot2::margin(0.1, 0.1, 0.1, 0, "pt")
+#     )
+# }
+
+# plotting_utils.R — replace axis.title.y and margins to avoid extra spacing
+combined_plot_theme <- function(base_size = 28) {
   theme_minimal(base_size = base_size) +
     theme(
       plot.background = element_rect(fill = "white", color = NA),
@@ -277,19 +298,37 @@ combined_plot_theme <- function(base_size = 20) {
       plot.title = element_text(hjust = 0, face = "bold", size = base_size + 4, color = "black"),
       axis.text = element_text(face = "bold", size = base_size + 2, color = "black"),
       axis.text.x = element_text(angle = 45, hjust = 1),
-      axis.title = element_text(face = "bold", size = base_size, color = "black"),
+      axis.title = element_text(face = "bold", size = base_size + 4, color = "black"),
+      axis.title.x = element_text(margin = ggplot2::margin(t = 0.3)),
+      axis.title.y = element_markdown(
+                     angle = 90,        # keep vertical orientation
+                     vjust = 0.5,       # center on the axis
+                     margin = ggplot2::margin(r = 0, l = 0)),  # changed
       legend.position = "none",
-      plot.margin = ggplot2::margin(0.1, 0.1, 0.1, 0.1, "pt")
+      plot.margin = ggplot2::margin(5, 5, 5, 5)  # more balanced
     )
 }
 
+
 # Apply standardized theme to all plots before combining
-standardize_plot_theme <- function(plot_list) {
-  lapply(plot_list, function(p) {
-    if (inherits(p, "ggplot")) {
+# standardize_plot_theme <- function(plot_list) {
+#   lapply(plot_list, function(p) {
+#     if (inherits(p, "ggplot")) {
+#       p + combined_plot_theme()
+#     } else {
+#       p
+#     }
+#   })
+# }
+
+standardize_plot_theme <- function(plot_list, skip_indices = integer(0)) {
+  lapply(seq_along(plot_list), function(i) {
+    p <- plot_list[[i]]
+    if (inherits(p, "ggplot") && !(i %in% skip_indices)) {
       p + combined_plot_theme()
     } else {
       p
     }
   })
 }
+

@@ -54,14 +54,14 @@ ft_colors <- c(
 # SHAP Plots for Long 
 ```{r}
 title_map <- c(
-  shap_long_micom      = "MERF Long Micom",
-  shap_long_basic      = "MERF Long Basic",
-  shap_long_all      = "MERF Long All",
-  shap_long_metabo   = "MERF Long Metabolomics",
-  shap_long_grs      = "MERF Long GRS",
-  shap_long_pathway  = "MERF Long Pathway",
-  shap_long_taxa     = "MERF Long Taxonomy",
-  shap_long_meta     = "MERF Long Clinical")
+  shap_long_micom      = "MERF Micom",
+  shap_long_basic      = "MERF Basic",
+  shap_long_all      = "MERF Combined",
+  shap_long_metabo   = "MERF Metabolomics",
+  shap_long_grs      = "MERF GRS",
+  shap_long_pathway  = "MERF Pathway",
+  shap_long_taxa     = "MERF Taxonomy",
+  shap_long_meta     = "MERF Clinical")
 
 shap_long_plot_list <- list()
 heights_vec <- numeric(0)
@@ -102,7 +102,7 @@ for (name in names(shap_dfs)) {
   plot_title <- title_map[[name]]
   
   p <- plot_shap_beeswarm(df_top10, plot_title, high_color = "#b44241") +
-        combined_plot_theme(base_size = 16) +
+        combined_plot_theme(base_size = 18) +
         theme(plot.margin = ggplot2::margin(10, 10, 10, 10))
   
   shap_long_plot_list[[name]] <- p
@@ -128,14 +128,14 @@ ggsave(
 
 ```{r}
 title_map_delta <- c(
-  shap_delta_micom    = "MERF Delta Micom",
-  shap_delta_basic    = "MERF Delta Basic",
-  shap_delta_all      = "MERF Delta All",
-  shap_delta_metabo   = "MERF Delta Metabolomics",
-  shap_delta_grs      = "MERF Delta GRS",
-  shap_delta_pathway  = "MERF Delta Pathway",
-  shap_delta_taxa     = "MERF Delta Taxonomy",
-  shap_delta_meta     = "MERF Delta Clinical")
+  shap_delta_micom    = "MERF Micom",
+  shap_delta_basic    = "MERF Basic",
+  shap_delta_all      = "MERF Combined",
+  shap_delta_metabo   = "MERF Metabolomics",
+  shap_delta_grs      = "MERF GRS",
+  shap_delta_pathway  = "MERF Pathway",
+  shap_delta_taxa     = "MERF Taxonomy",
+  shap_delta_meta     = "MERF Clinical")
 
 shap_delta_plot_list <- list()
 heights_vec <- numeric(0)
@@ -174,7 +174,7 @@ for (name in names(shap_delta_dfs)) {
   plot_title <- title_map_delta[[name]]
   
   p <- plot_shap_beeswarm(df_top10, plot_title, high_color = "#b44241") +
-        combined_plot_theme(base_size = 16) +
+        combined_plot_theme(base_size = 18) +
         theme(plot.margin = ggplot2::margin(10, 10, 10, 10))
   
   shap_delta_plot_list[[name]] <- p
@@ -440,8 +440,8 @@ for (omic_name in names(all_r2_dfs)) {
     #labs(title = glue("{omic_name_labels[[omic_name]]}"),
     labs(title = NULL,
          x = NULL,
-         y = expression("Marginal " ~ R^2)) +
-    combined_plot_theme(base_size = 16)
+         y = "Marginal R\u00B2") +
+    combined_plot_theme(base_size = 22)
 
   print(sig_plot)
   assign(paste0(omic_name, "_sig_plot"), sig_plot)
@@ -743,8 +743,8 @@ for (omic_name in names(omic_dfs)) {
     #labs(title = glue("{omic_name_labels[[omic_name]]}"),
     labs(title = NULL,
          x = NULL,
-         y = expression("Marginal " ~ R^2)) +
-    combined_plot_theme(base_size = 20)
+         y = "Marginal R\u00B2") +
+    combined_plot_theme(base_size = 24)
   
   print(sig_plot)
   assign(paste0(omic_name, "_sig_plot_clin_plus"), sig_plot)
@@ -885,14 +885,14 @@ merf_dfs_delta <- list(Basic = basic_md,
 # Combined feature sets
 all_ft_dfs <- list(merf_lg = list(data = merf_dfs_long, 
                                   colors = ft_colors, 
-                                  label = "MERF (Longitudinal BMI Prediction)", 
-                                  model_label = "MERF (Longitudinal BMI Prediction)",
+                                  label = "MERF", 
+                                  model_label = "MERF",
                                   x_ax_label = "Feature Importance"),
                    
                    merf_delta = list(data = merf_dfs_delta, 
                                      colors = ft_colors, 
-                                     label = "MERF ΔBMI Prediction", 
-                                     model_label = "MERF ΔBMI Prediction",
+                                     label = "MERF", 
+                                     model_label = "MERF",
                                      x_ax_label = "Feature Importance"))
 
 merf_plots <- list()
@@ -939,7 +939,7 @@ for (type in names(all_ft_dfs)) {
     labs(title = paste(label, " ~ ",toupper(ft_name)),
        x = paste(" ", x_ax_label),
        y = NULL) +
-    combined_plot_theme(base_size = 16) + 
+    combined_plot_theme(base_size = 18) + 
     scale_x_continuous(limits = c(0, x_limit), 
                        expand = expansion(mult = c(0, 0.02))) 
     
@@ -979,12 +979,12 @@ lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic,
 # Combined feature sets
 all_lass_ft_dfs <- list(lass_lg = list(data = lass_dfs_long, colors = ft_colors, 
                                   label = "long", 
-                                  model_label = "GlmmLasso BMI Prediction",
+                                  model_label = "GlmmLasso",
                                   x_ax_label = "Feature Co-efficient"),
                         
                    lass_delta = list(data = lass_dfs_delta, colors = ft_colors, 
                                      label = "delta", 
-                                     model_label = "GlmmLasso ΔBMI Prediction",
+                                     model_label = "GlmmLasso",
                                      x_ax_label = "Feature Co-efficient"))
 imap_dfr(lass_dfs_long, ~ 
            summarise(.x, min = min(Estimate, na.rm = TRUE), max = max(Estimate, na.rm = TRUE)) %>%
@@ -1024,7 +1024,7 @@ for (type in names(all_lass_ft_dfs)) {
       labs(title = paste(model_label, toupper(ft_name)),
            y = NULL,
            x = paste("", x_ax_label)) +
-      combined_plot_theme(base_size = 16) + 
+      combined_plot_theme(base_size = 18) + 
       scale_y_discrete(expand = expansion(mult = c(0.05, 0.05)))
 
     object_name <- paste0("plot_", type, "_", ft_name, "_", label)
@@ -1057,7 +1057,7 @@ for (type in names(all_lass_ft_dfs)) {
 ```{r}
 library(patchwork)
 bl <- c(mget(plot_names[c(1,2)]), merf_plots[c(2, 3, 6, 7, 8)],  lass_plots_lg[c(2, 7)])
-bl <- standardize_plot_theme(bl)
+bl <- standardize_plot_theme(bl, skip_indices = c(1,2))
 
 left_col <- (bl[[1]] / plot_spacer() / bl[[3]] / plot_spacer() / 
              bl[[4]] / plot_spacer() /  bl[[6]] / plot_spacer() / bl[[8]]) +
@@ -1071,18 +1071,19 @@ p <- (left_col | right_col) +
   plot_layout(widths = c(0.49, 0.49)) +
   plot_annotation(tag_levels = "A", tag_suffix = ".") &
   theme(plot.tag = element_text(face = "bold", size = 25),
-        plot.tag.position = c(0.05, 0.97))
+        plot.tag.position = c(0.1, 0.96))
 
 ggsave(file.path(omic_out_dir, "aov_feats_combined/basic_long_two_col_patchwork_spacers.png"),
-       p, width = 40, height = 40, dpi = 400, bg = "white")
+       p, width = 40, height = 40, dpi = 500, bg = "white")
 ```
 
 
 #### Basic Delta 
 
 ```{r}
+library(patchwork)
 bd <- c(mget(plot_names[c(3,4)]), merf_plots[c(10, 12, 15, 16)],  lass_plots_delta[c(2, 7)])
-bd <- standardize_plot_theme(bd)
+bd <- standardize_plot_theme(bd, skip_indices = c(1,2))
 
 # Left column plots
 left_col <- (bd[[1]] / plot_spacer() / bd[[3]] / plot_spacer() /
@@ -1096,14 +1097,14 @@ right_col <- (bd[[2]] / plot_spacer() / bd[[4]] / plot_spacer() /
 
 # Combine columns
 pd <- (left_col | right_col) +
-  plot_layout(widths = c(0.5, 0.45)) +
-  plot_annotation(tag_levels = "A", tag_suffix = ".") + 
+  plot_layout(widths = c(0.49, 0.49)) +
+  plot_annotation(tag_levels = "A", tag_suffix = ".") & 
   theme(plot.tag = element_text(face = "bold", size = 25),
-            plot.tag.position = c(0.05, 0.97))
+            plot.tag.position = c(0.1, 0.96))
 
 # Save
 ggsave(paste0(omic_out_dir, "/aov_feats_combined/basic_delta_test_patchwork.png"),
-       pd, width = 40, height = 40, dpi = 400, bg = 'white')
+       pd, width = 40, height = 40, dpi = 500, bg = 'white')
 
 ```
 
@@ -1112,7 +1113,7 @@ ggsave(paste0(omic_out_dir, "/aov_feats_combined/basic_delta_test_patchwork.png"
 
 ```{r}
 cl <- c(mget(plot_names_clin_plus[c(1,2)]), merf_plots[c(7, 8)],  lass_plots_lg[c(3,7)])
-cl <- standardize_plot_theme(cl)
+cl <- standardize_plot_theme(cl, skip_indices = c(1,2))
 
 # Left column plots
 left_col <- (cl[[1]] / plot_spacer() / cl[[3]] / plot_spacer() / cl[[6]] / plot_spacer()) + 
@@ -1124,13 +1125,13 @@ right_col <- (cl[[2]] / plot_spacer() / cl[[4]] / plot_spacer() / cl[[5]] / plot
 
 # Combine columns
 cl <- (left_col | right_col) +
-  plot_layout(widths = c(0.5, 0.45)) +
-  plot_annotation(tag_levels = "A", tag_suffix = ".") + 
+  plot_layout(widths = c(0.48, 0.48)) +
+  plot_annotation(tag_levels = "A", tag_suffix = ".") & 
   theme(plot.tag = element_text(face = "bold", size = 25),
-            plot.tag.position = c(0.05, 0.97))
+            plot.tag.position = c(0.1, 0.96))
 
 ggsave(paste0(omic_out_dir, "/aov_feats_combined/clin_long_test_patchwork.png"), cl, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 
 ```
 
@@ -1139,7 +1140,7 @@ ggsave(paste0(omic_out_dir, "/aov_feats_combined/clin_long_test_patchwork.png"),
 
 ```{r}
 cd <- c(mget(plot_names_clin_plus[c(3,4)]), merf_plots[c(12, 15, 16)],  lass_plots_delta[c(7)])
-cd <- standardize_plot_theme(cd)
+cd <- standardize_plot_theme(cd, skip_indices = c(1,2))
 
 # Left column plots
 left_col <- (cd[[1]] / plot_spacer() / cd[[3]] / plot_spacer() / cd[[6]] / plot_spacer()) + 
@@ -1151,13 +1152,13 @@ right_col <- (cd[[2]] / plot_spacer() / cd[[4]] / plot_spacer() / cd[[5]] / plot
 
 # Combine columns
 cd <- (left_col | right_col) +
-  plot_layout(widths = c(0.5, 0.45)) +
-  plot_annotation(tag_levels = "A", tag_suffix = ".") + 
+  plot_layout(widths = c(0.49, 0.49)) +
+  plot_annotation(tag_levels = "A", tag_suffix = ".") & 
   theme(plot.tag = element_text(face = "bold", size = 25),
-            plot.tag.position = c(0.05, 0.97))
+            plot.tag.position = c(0.1, 0.96))
 
 ggsave(paste0(omic_out_dir, "/aov_feats_combined/clin_delta_test_patchwork.png"), cd, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 ```
 
 ### Repeating with SHAP 
@@ -1166,8 +1167,8 @@ ggsave(paste0(omic_out_dir, "/aov_feats_combined/clin_delta_test_patchwork.png")
 
 ```{r}
 library(patchwork)
-bl <- c(mget(plot_names[c(1,2)]), shap_long_plot_list[c(2, 3, 6, 7, 8)],  lass_plots_lg[c(2, 7)])
-bl <- standardize_plot_theme(bl)
+bl <- c(mget(plot_names[c(1,2)]), shap_long_plot_list[c(2, 3, 5, 7, 8)],  lass_plots_lg[c(2, 7)])
+bl <- standardize_plot_theme(bl, skip_indices = c(1,2))
 
 left_col <- (bl[[1]] / plot_spacer() / bl[[3]] / plot_spacer() / 
              bl[[4]] / plot_spacer() /  bl[[6]] / plot_spacer() / bl[[8]]) +
@@ -1178,13 +1179,13 @@ right_col <- (bl[[2]] / plot_spacer() / bl[[5]] / plot_spacer() /
               plot_layout(heights = c(0.2, 0.02, 0.2, 0.02, 0.2, 0.02, 0.2))
 
 p <- (left_col | right_col) +
-  plot_layout(widths = c(0.48, 0.48)) +
+  plot_layout(widths = c(0.49, 0.49)) +
   plot_annotation(tag_levels = "A", tag_suffix = ".") &
   theme(plot.tag = element_text(face = "bold", size = 25),
-        plot.tag.position = c(0.05, 0.95))
+        plot.tag.position = c(0.1, 0.96))
 
 ggsave(file.path(omic_out_dir, "aov_feats_combined/shap_basic_long_two_col_patchwork.png"),
-       p, width = 40, height = 40, dpi = 400, bg = "white")
+       p, width = 40, height = 40, dpi = 550, bg = "white")
 ```
 
 
@@ -1192,7 +1193,7 @@ ggsave(file.path(omic_out_dir, "aov_feats_combined/shap_basic_long_two_col_patch
 
 ```{r}
 bd <- c(mget(plot_names[c(3,4)]), shap_delta_plot_list[c(2, 4, 7, 8)],  lass_plots_delta[c(2, 7, 8)])
-bd <- standardize_plot_theme(bd)
+bd <- standardize_plot_theme(bd, skip_indices = c(1,2))
 
 # Left column plots
 left_col <- (bd[[1]]/ plot_spacer()/ bd[[3]]/ plot_spacer()/ bd[[6]]/ plot_spacer()/
@@ -1207,14 +1208,14 @@ right_col <- (bd[[2]]/ plot_spacer()/ bd[[4]]/ plot_spacer()/ bd[[5]]/ plot_spac
 
 # Combine columns
 pd <- (left_col | right_col) +
-  plot_layout(widths = c(0.48, 0.48)) +
-  plot_annotation(tag_levels = "A", tag_suffix = ".") + 
+  plot_layout(widths = c(0.49, 0.49)) +
+  plot_annotation(tag_levels = "A", tag_suffix = ".") & 
   theme(plot.tag = element_text(face = "bold", size = 25),
-        plot.tag.position = c(0.05, 0.95))
+        plot.tag.position = c(0.1, 0.96))
 
 # Save
 ggsave(paste0(omic_out_dir, "/aov_feats_combined/shap_basic_delta_test_patchwork.png"),
-       pd, width = 40, height = 40, dpi = 400, bg = 'white')
+       pd, width = 40, height = 40, dpi = 500, bg = 'white')
 
 ```
 
@@ -1223,7 +1224,7 @@ ggsave(paste0(omic_out_dir, "/aov_feats_combined/shap_basic_delta_test_patchwork
 
 ```{r}
 cl <- c(mget(plot_names_clin_plus[c(1,2)]), shap_long_plot_list[c(7, 8)],  lass_plots_lg[c(3,7)])
-cl <- standardize_plot_theme(cl)
+cl <- standardize_plot_theme(cl, skip_indices = c(1,2))
 
 # Left column plots
 left_col <- (cl[[1]] / plot_spacer() / cl[[3]] / plot_spacer() / cl[[6]] / plot_spacer()) + 
@@ -1235,39 +1236,39 @@ right_col <- (cl[[2]] / plot_spacer() / cl[[4]] / plot_spacer() / cl[[5]] / plot
 
 # Combine columns
 cl <- (left_col | right_col) +
-  plot_layout(widths = c(0.48, 0.48)) +
-  plot_annotation(tag_levels = "A", tag_suffix = ".") + 
+  plot_layout(widths = c(0.49, 0.49)) +
+  plot_annotation(tag_levels = "A", tag_suffix = ".") & 
   theme(plot.tag = element_text(face = "bold", size = 25),
-            plot.tag.position = c(0.05, 0.95))
+            plot.tag.position = c(0.1, 0.96))
 
 ggsave(paste0(omic_out_dir, "/aov_feats_combined/shap_clin_long_test_patchwork.png"), cl, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 
 ```
 
 ##### Clinical Delta SHAP
 
 ```{r}
-cd <- c(mget(plot_names_clin_plus[c(3,4)]), shap_delta_plot_list[c(7, 8)],  lass_plots_delta[c(3,7)])
-cd <- standardize_plot_theme(cd)
+cd <- c(mget(plot_names_clin_plus[c(3,4)]), shap_delta_plot_list[c(4 , 7, 8)],  lass_plots_delta[c(7)])
+cd <- standardize_plot_theme(cd, skip_indices = c(1,2))
 
 # Left column plots
-left_col <- (cd[[1]] / plot_spacer() / cd[[3]] / plot_spacer() / cd[[6]] / plot_spacer()) + 
+left_col <- (cd[[1]] / plot_spacer() / cd[[3]] / plot_spacer() / cd[[5]] / plot_spacer()) + 
              plot_layout(heights = c(0.2, 0.02, 0.2, 0.02, 0.2, 0.25))
 
 # Right column plots
-right_col <- (cd[[2]] / plot_spacer() / cd[[4]] / plot_spacer() / cd[[5]] / plot_spacer()) + 
+right_col <- (cd[[2]] / plot_spacer() / cd[[4]] / plot_spacer() / cd[[6]] / plot_spacer()) + 
               plot_layout(heights = c(0.2, 0.02, 0.2, 0.02, 0.2, 0.25))
 
 # Combine columns
 cd <- (left_col | right_col) +
-  plot_layout(widths = c(0.48, 0.48)) +
-  plot_annotation(tag_levels = "A", tag_suffix = ".") + 
+  plot_layout(widths = c(0.495, 0.495)) +
+  plot_annotation(tag_levels = "A", tag_suffix = ".") & 
   theme(plot.tag = element_text(face = "bold", size = 25),
-            plot.tag.position = c(0.55, 0.95))
+            plot.tag.position = c(0.1, 0.96))
 
 ggsave(paste0(omic_out_dir, "/aov_feats_combined/shap_clin_delta_test_patchwork.png"), cd, 
-       width = 40, height = 40, dpi = 400, bg = 'white')
+       width = 40, height = 40, dpi = 500, bg = 'white')
 ```
 
 
