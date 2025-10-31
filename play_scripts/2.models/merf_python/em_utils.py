@@ -188,28 +188,6 @@ def plot_top_20_feature_importances(feature_names, feature_importances, output_d
     plt.savefig(os.path.join(output_dir, output_file), dpi=300, bbox_inches='tight')
     plt.show()
 
-# EXPLANA functions 
-# placeholder dataframe for creating figure
-# def no_features_selected():
-#     _df = pd.DataFrame({"important_features": ["no_selected_features"],
-#                         "decoded_features": ["NA"],
-#                         "feature_importance_vals": [-100]})
-#     _df.to_csv(ds_out_path + dataset + "-boruta-important.txt", index=False,
-#                sep="\t")
-
-
-# def fail_analysis(out_file):
-#     with open(out_file, "w") as file:
-#         file.write("Failed Analysis")
-#     no_features_selected()
-#     return
-
-# def percent_var_statement(step, oob):
-#     if step == "full_forest":
-#         # if first percent var explained is less than 5% then terminate
-#         if float(oob) < 5.0:
-#             fail_analysis(out_file)
-#             return
         
 def create_parameter_grids(df):
     # Find the row with the lowest mean_mse_score
