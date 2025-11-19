@@ -19,69 +19,93 @@ source("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions
 pred_dir_long <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/long"
 #merf_long <- read.csv('/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/april/anova_results/new_split/april_long_predictions_df_april29.csv') %>% 
 merf_long <- read.csv('/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/long/merf_long_predictions_df.csv') %>%  
-  dplyr::filter(Model == "MSE Model")
+  dplyr::filter(Model == "MSE Model") %>% 
+  rename(y_new_meta_noas = y_new_meta_no_age_sex,
+         y_new_all_noas = y_new_all_no_age_sex,
+         y_new_all_nclin = y_new_all_no_clin)
 
 basic <- read.csv(file.path(pred_dir_long, "basic_long.csv")) %>% dplyr::rename(y_new_basic = y_hat_new)
 meta <- read.csv(file.path(pred_dir_long, "meta_keep_long.csv")) %>% dplyr::rename(y_new_meta = y_hat_new)
+meta_no_age_sex <- read.csv(file.path(pred_dir_long, "meta_keep_no_age_sex_long.csv")) %>% dplyr::rename(y_new_meta_no_age_sex = y_hat_new)
 grs <- read.csv(file.path(pred_dir_long, "only_grs_long.csv")) %>% dplyr::rename(y_new_grs = y_hat_new)
 taxa <- read.csv(file.path(pred_dir_long, "only_taxa_long.csv")) %>% dplyr::rename(y_new_taxa = y_hat_new)
 pathway <- read.csv(file.path(pred_dir_long, "only_pathway_long.csv")) %>% dplyr::rename(y_new_pathway = y_hat_new)
 micom <- read.csv(file.path(pred_dir_long, "only_micom_long.csv")) %>% dplyr::rename(y_new_micom = y_hat_new)
 metabo <- read.csv(file.path(pred_dir_long, "only_metabo_long.csv")) %>% dplyr::rename(y_new_metabo = y_hat_new)
 all <- read.csv(file.path(pred_dir_long, "only_all_long.csv")) %>% dplyr::rename(y_new_all = y_hat_new)
+all_no_age_sex <- read.csv(file.path(pred_dir_long, "only_all_no_age_sex_long.csv")) %>% dplyr::rename(y_new_all_no_age_sex = y_hat_new)
+all_no_clin <- read.csv(file.path(pred_dir_long, "only_all_no_clin_long.csv")) %>% dplyr::rename(y_new_all_no_clin = y_hat_new)
 
 # MERF DELTA
 merf_delta <- read.csv('/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/merf_delta_predictions_df.csv') %>% 
-  dplyr::filter(Model == "MSE Model")
+  dplyr::filter(Model == "MSE Model") %>% 
+  rename(y_new_meta_noas = y_new_meta_no_age_sex, 
+         y_new_all_noas = y_new_all_no_age_sex,
+         y_new_all_nclin = y_new_all_no_clin)
 predict_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/"
 basic_md <- read.csv(file.path(predict_dir, "basic_delta_april29.csv")) %>% dplyr::rename(y_new_basic = y_hat_new)
 meta_md <- read.csv(file.path(predict_dir, "meta_keep_delta_april29.csv")) %>% dplyr::rename(y_new_meta = y_hat_new)
+meta_no_age_sex_md <- read.csv(file.path(predict_dir, "meta_keep_no_age_sex_delta_april29.csv")) %>% dplyr::rename(y_new_meta_no_age_sex = y_hat_new)
 grs_md <- read.csv(file.path(predict_dir, "only_grs_delta_april29.csv")) %>% dplyr::rename(y_new_grs = y_hat_new)
 taxa_md <- read.csv(file.path(predict_dir, "only_taxa_delta_april29.csv")) %>% dplyr::rename(y_new_taxa = y_hat_new)
 pathway_md <- read.csv(file.path(predict_dir, "only_pathway_delta_april29.csv")) %>% dplyr::rename(y_new_pathway = y_hat_new)
 micom_md <- read.csv(file.path(predict_dir, "only_micom_delta_april29.csv")) %>% dplyr::rename(y_new_micom = y_hat_new)
 metabo_md <- read.csv(file.path(predict_dir, "only_metabo_delta_april29.csv")) %>% dplyr::rename(y_new_metabo = y_hat_new)
 all_md <- read.csv(file.path(predict_dir, "only_all_delta_april29.csv")) %>% dplyr::rename(y_new_all = y_hat_new)
+all_no_age_sex_md <- read.csv(file.path(predict_dir, "only_all_no_age_sex_delta_april29.csv")) %>% dplyr::rename(y_new_all_no_age_sex = y_hat_new)
+all_no_clin_md <- read.csv(file.path(predict_dir, "only_all_no_clin_delta_april29.csv")) %>% dplyr::rename(y_new_all_no_clin = y_hat_new)
 
 # GLMMLASSO LONG
 #gl_lasso_long <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/march30_long/new_split_may/april_long_predictions_df_april29.csv") %>% 
 gl_lasso_long <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/june_lasso_long_predictions_df.csv") %>%
   dplyr::rename(y_new_meta = y_new_meta_only,
+                y_new_meta_noas = y_new_meta_nas_only,
                 y_new_grs = y_new_grs_only,
                 y_new_taxa = y_new_tax_only,
                 y_new_micom = y_new_micom_only,
                 y_new_pathway = y_new_path_only,
                 y_new_metabo = y_new_metabo_only,
-                y_new_all = y_new_all_only)
+                y_new_all = y_new_all_only,
+                y_new_all_noas = y_new_all_nas_only,
+                y_new_all_nclin = y_new_all_nclin_only)
 
 gl_ftimp_long_basic <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusbasic_gl_long_top_features.csv")
 gl_ftimp_long_meta <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusmeta_gl_long_top_features.csv")
+gl_ftimp_long_meta_no_age_sex <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/meta_no_age_sex_gl_long_top_features.csv")
 gl_ftimp_long_grs <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/grs_gl_long_top_features.csv")
 gl_ftimp_long_taxa <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plustaxa_gl_long_top_features.csv")
 gl_ftimp_long_micom <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusmicom_gl_long_top_features.csv")
 gl_ftimp_long_pathway <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_pluspathway_gl_long_top_features.csv")
 gl_ftimp_long_metabo <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusmetabo_gl_long_top_features.csv")
 gl_ftimp_long_all <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/may_basic_plusall_gl_long_top_features.csv")
+gl_ftimp_long_all_no_age_sex <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/all_no_age_sex_gl_long_top_features.csv")
+gl_ftimp_long_all_no_clin <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/long/all_no_clin_gl_long_top_features.csv")
 
 # GLMMLASSO DELTA 
 gl_lasso_delta <- read.csv('/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/gl_delta_predictions_df.csv') %>% 
   dplyr::rename(y_new_basic = y_new_basic_only,
                 y_new_meta = y_new_meta_only,
+                y_new_meta_noas = y_new_meta_noas_only,
                 y_new_grs = y_new_grs_only,
                 y_new_taxa = y_new_tax_only,
                 y_new_micom = y_new_micom_only,
                 y_new_pathway = y_new_path_only,
                 y_new_metabo = y_new_metab_only,
-                y_new_all = y_new_all_only)
+                y_new_all = y_new_all_only, 
+                y_new_all_noas = y_new_all_noas_only,
+                y_new_all_nclin = y_new_all_nclin_only)
 
 gl_ftimp_delta_basic <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/basic_gl_delta_top_features.csv")
 gl_ftimp_delta_meta <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/meta_gl_delta_top_features.csv")
+gl_ftimp_delta_meta_no_age_sex <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/meta_no_age_sex_gl_delta_top_features.csv")
 gl_ftimp_delta_grs <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/grs_gl_delta_top_features.csv")
 gl_ftimp_delta_taxa <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/taxa_gl_delta_top_features.csv")
 gl_ftimp_delta_micom <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/micom_gl_delta_top_features.csv")
 gl_ftimp_delta_pathway <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/pathway_gl_delta_top_features.csv")
 gl_ftimp_delta_metabo <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/metabo_gl_delta_top_features.csv")
 gl_ftimp_delta_all <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/all_gl_delta_top_features.csv")
+gl_ftimp_delta_all_no_age_sex <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/all_no_age_sex_gl_delta_top_features.csv")
+gl_ftimp_delta_all_no_clin <- read.csv("/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/glmmlasso/may_basic_plus/delta/all_no_clin_gl_delta_top_features.csv")
 
 ### Read in MERF SHAP data ####################################################################################
 
@@ -90,24 +114,30 @@ long_merf_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-p
 shap_dfs <- list(
   shap_long_basic  = read_csv(file.path(long_merf_dir, "shap_long_basic_BEST_MSE_Model.csv")),
   shap_long_meta   = read_csv(file.path(long_merf_dir, "shap_long_meta_keep_MSE_Model.csv")),
+  shap_long_meta_no_age_sex   = read_csv(file.path(long_merf_dir, "shap_long_meta_keep_no_age_sex_MSE_Model.csv")),
   shap_long_grs    = read_csv(file.path(long_merf_dir, "shap_long_only_grs_MSE_Model.csv")),
   shap_long_taxa   = read_csv(file.path(long_merf_dir, "shap_long_only_taxa_MSE_Model.csv")),
   shap_long_pathway= read_csv(file.path(long_merf_dir, "shap_long_only_pathway_MSE_Model.csv")),
   shap_long_micom  = read_csv(file.path(long_merf_dir, "shap_long_only_micom_MSE_Model.csv")),
   shap_long_metabo = read_csv(file.path(long_merf_dir, "shap_long_only_metabo_MSE_Model.csv")),
-  shap_long_all    = read_csv(file.path(long_merf_dir, "shap_long_only_all_MSE_Model.csv")))
+  shap_long_all    = read_csv(file.path(long_merf_dir, "shap_long_only_all_MSE_Model.csv")),
+  shap_long_all_no_age_sex    = read_csv(file.path(long_merf_dir, "shap_long_only_all_no_age_sex_MSE_Model.csv")),
+  shap_long_all_no_clin    = read_csv(file.path(long_merf_dir, "shap_long_only_all_no_clin_MSE_Model.csv")))
 
 delta_merf_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta"
 
 shap_delta_dfs <- list(
   shap_delta_basic  = read_csv(file.path(delta_merf_dir, "shap_long_basic_MSE_Model.csv")),
   shap_delta_meta   = read_csv(file.path(delta_merf_dir, "shap_long_meta_keep_MSE_Model.csv")),
+  shap_delta_meta_no_age_sex   = read_csv(file.path(delta_merf_dir, "shap_long_meta_keep_no_age_sex_MSE_Model.csv")),
   shap_delta_grs    = read_csv(file.path(delta_merf_dir, "shap_long_only_grs_MSE_Model.csv")),
   shap_delta_taxa   = read_csv(file.path(delta_merf_dir, "shap_long_only_taxa_MSE_Model.csv")),
   shap_delta_pathway= read_csv(file.path(delta_merf_dir, "shap_long_only_pathway_MSE_Model.csv")),
   shap_delta_micom  = read_csv(file.path(delta_merf_dir, "shap_long_only_micom_MSE_Model.csv")),
   shap_delta_metabo = read_csv(file.path(delta_merf_dir, "shap_long_only_metabo_MSE_Model.csv")),
-  shap_delta_all    = read_csv(file.path(delta_merf_dir, "shap_long_only_all_MSE_Model.csv")))
+  shap_delta_all    = read_csv(file.path(delta_merf_dir, "shap_long_only_all_MSE_Model.csv")),
+  shap_delta_all_no_age_sex    = read_csv(file.path(delta_merf_dir, "shap_long_only_all_no_age_sex_MSE_Model.csv")),
+  shap_delta_all_no_clin    = read_csv(file.path(delta_merf_dir, "shap_long_only_all_no_clin_MSE_Model.csv")))
 
 
 ###### RENAME VARIABLES ####################################################################################

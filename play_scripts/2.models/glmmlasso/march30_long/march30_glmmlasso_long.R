@@ -50,6 +50,8 @@ ggplot(long, aes(x = range, y = bmi_prs, color = factor(subject_id), group = fac
 basic <- c('subject_id','BMI', 'range','age', 'sex', 'randomized_group')
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
+meta_keep_no_age_sex <- c('subject_id','BMI', 'range', 'randomized_group', 'race', 
+                          'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
 only_grs <- c('subject_id', 'BMI', 'range',  'bmi_prs')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(long), value = TRUE))
 
@@ -73,15 +75,31 @@ all_col <- c('subject_id','BMI', 'range',
              names(long)[path_start:path_end],
              names(long)[tabo_start:tabo_end])
 
+all_col_no_age_sex <- c('subject_id','BMI', 'range','randomized_group', 'race', 
+                        'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x',
+             grep("^g__", names(long), value = TRUE),
+             names(long)[micom_start:micom_end],
+             names(long)[path_start:path_end],
+             names(long)[tabo_start:tabo_end])
+
+all_col_no_clin <- c('subject_id','BMI', 'range',
+                     grep("^g__", names(long), value = TRUE),
+                     names(long)[micom_start:micom_end],
+                     names(long)[path_start:path_end],
+                     names(long)[tabo_start:tabo_end])
+
 # Create data frames based on the columns defined
 basic <- long[, basic, drop = FALSE] %>% unique()
 meta <- long[, meta_keep, drop = FALSE] %>% unique()
+meta_no_age_sex <- long[, meta_keep_no_age_sex, drop = FALSE] %>% unique()
 grs <- long[, only_grs, drop = FALSE] %>% unique()
 taxa <- long[, only_taxa, drop = FALSE] %>% unique()
 micom <- long[, only_micom, drop = FALSE] %>% unique()
 pathway <- long[, only_pathway, drop = FALSE] %>% unique()
 metabo <- long[, only_tabo, drop = FALSE] %>% unique()
 all <- long[, all_col, drop = FALSE] %>% unique()
+all_no_age_sex <- long[, all_col_no_age_sex, drop = FALSE] %>% unique()
+all_no_clin <- long[, all_col_no_clin, drop = FALSE] %>% unique()
 
 ## Check MICOM correlatioon 
 heatmap(cor(micom[, 4:ncol(micom)]))
@@ -94,6 +112,22 @@ preProcValues_train <- preProcess(all[, c(2, 4:ncol(all))],
                                   uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
 preProcValues_train
 all <- predict(preProcValues_train, all)
+
+## Check all_no_age_sex correlation
+preProcValues_train <- preProcess(all_no_age_sex[, c(2, 4:ncol(all_no_age_sex))], 
+                                  method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                                  numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                                  uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues_train
+all_no_age_sex <- predict(preProcValues_train, all_no_age_sex)
+
+## Check all_no_clin correlation
+preProcValues_train <- preProcess(all_no_clin[, c(2, 4:ncol(all_no_clin))], 
+                                  method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                                  numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                                  uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues_train
+all_no_clin <- predict(preProcValues_train, all_no_clin)
 
 subject_id_count <- meta %>%
   dplyr::filter(range %in% c("0","6", "12")) %>%
@@ -109,7 +143,9 @@ missing_subjects
 # Test sample names
 #test_names <- c("ABR-079", "AGA-071", "AHE-055", "ALI-121", "ALO-163", "AMA-031", "ASO-013", "AWI-167", "BMO-164", "CWA-183", "DSC-024", "EBE-130", "EHI-177", "EJO-092", "GFU-188", "HGI-010", "JCA-109", "JGO-100", "KBU-085", "KCE-034", "KHE-170", "LDO-148", "LST-186", "LZD-142", "MAR-119", "MCA-088", "MJA-153", "MWE-112", "NPO-149", "RAE-114", "SBO-020", "SEG-080", "SKA-195", "SLO-178", "SSH-028", "TDU-086","TFA-016", "VCA-041")
 
-test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052", "AHE-055", "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193")
+#What happens when I take following outlier out: "AHE-055"
+
+test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052", "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193")
   
 # Train sample names
 #rain_names <- c("AAL-144", "ACO-053", "ADA-105", "AKE-009", "AKI-011", "AKO-139", "AMC-155", "AME-128", "AME-157", "ATA-129", "AWA-052", "AWA-083", "BAN-193", "BHO-014", "BIN-201", "BKN-104", "BMI-156", "BSA-174", "CAM-057", "CCO-189", "CED-026", "CEL-073", "CGA-134", "CIS-077", "CKR-078", "CLE-049", "COW-066", "CRO-108", "CWA-161", "EBE-051", "EKA-135", "EKR-045", "ELA-159", "EPO-182", "EVO-184", "FWI-098", "GHA-035", "HDE-154", "IBE-120", "JDI-140", "JER-110", "JFU-027", "JJO-093", "JKN-127", "JPO-022", "JUG-116", "JUT-032", "JVE-126", "KAN-138", "KBR-162", "KEL-185", "KEL-199", "KGI-029", "KHU-196", "KPA-042", "KRI-072", "KVA-038", "KWA-122", "KWA-141", "LBL-047", "LBU-015", "LEL-147", "LFI-003", "LJA-101", "LMC-111", "LPF-198", "LVA-017", "MBA-187", "MCW-065", "MDI-107", "MES-068", "MFB-118", "MGA-076", "MHO-117", "MKE-192", "MMA-036", "MRT-179", "MSH-091", "MST-039", "MWE-143", "MWO-133", "MWY-152", "NAR-099", "NBI-048", "NBI-069", "NCO-171", "NDI-067", "NEL-094", "NKA-090", "NMO-151", "NTA-021", "PBE-123", "QNG-166", "RAF-125", "RAM-050", "RHP-023", "RLA-132", "ROL-006", "SAB-160", "SCA-043", "SCR-061", "SDA-150", "SGA-062", "SKA-087", "SRO-194", "TBU-115", "TFA-172", "TRO-113", "TSH-146", "TSL-056", "WPE-005", "YOR-103", "YSU-097", "ZVU-096")
@@ -120,7 +156,8 @@ cat("Length of test names:", length(test_names), "\n")
 cat("Length of train names:", length(train_names), "\n")
 
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "grs","micom", "pathway", "taxa", "metabo", "all")
+data_frames <- c("basic", "meta", "meta_no_age_sex", "grs","micom", "pathway", 
+                 "taxa", "metabo", "all", "all_no_age_sex", "all_no_clin")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -131,6 +168,7 @@ for (df in data_frames) {
   assign(paste0(df, "_train"), train_set)
   assign(paste0(df, "_test"), test_set)
 }
+
 
 # CHECK CORRELATIONS
 #preProcValues_train <- preProcess(all_train[, c(2, 4:ncol(all_train))], 
@@ -147,17 +185,19 @@ for (df in data_frames) {
 #                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
 #preProcValues_test
 #all_test <- predict(preProcValues_test, all_test)
-#### Test CV LASSO
 
-# Step 1: run glmmlasso through a grid of lambdas for the best one
-# Step 2: re-run glmmlasso using the best lambdas
-# Step 4: Use that model in step 3 to predict BMI in the test set
-# Step 5: That prediction in step 4 becomes the "risk score" for that omic
+# # Remove highly correlated for all_no_age_sex
+# cor_mat <- cor(all_no_age_sex_train[5:ncol(all_no_age_sex_train)], use = "pairwise.complete.obs")
+# high_cor <- findCorrelation(cor_mat, cutoff = 0.90)
+# numeric_cols <- colnames(all_no_age_sex_train[5:ncol(all_no_age_sex_train)])
+# all_no_age_sex_train <- all_no_age_sex_train[, c(setdiff(names(all_no_age_sex_train), 
+#                                                          names(all_no_age_sex_train)[numeric_cols][high_cor]))]
 
 # STEP 1
 #data_frames <- c("grs")
 #df_name <- "metabo"
-data_frames <- c("basic", "meta", "grs", "taxa", "pathway", "micom", "metabo", "all")
+data_frames <- c("basic", "meta", "meta_no_age_sex", "grs", "taxa", "pathway", 
+                 "micom", "metabo", "all", "all_no_age_sex", "all_no_clin")
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -309,6 +349,10 @@ meta_pred_df[, head(names(meta_pred_df), 2)] <-
   lapply(meta_pred_df[, head(names(meta_pred_df), 2)], as.factor) 
 meta_pred_df <- meta_pred_df%>% dplyr::rename(y_new_meta_only = predicted)
 
+meta_no_age_sex_pred_df[, head(names(meta_no_age_sex_pred_df), 2)] <- 
+  lapply(meta_no_age_sex_pred_df[, head(names(meta_no_age_sex_pred_df), 2)], as.factor) 
+meta_no_age_sex_pred_df <- meta_no_age_sex_pred_df%>% dplyr::rename(y_new_meta_nas_only = predicted)
+
 taxa_pred_df[, head(names(taxa_pred_df), 2)] <- 
   lapply(taxa_pred_df[, head(names(taxa_pred_df), 2)], as.factor) 
 taxa_pred_df <- taxa_pred_df%>% dplyr::rename(y_new_tax_only = predicted)
@@ -333,6 +377,14 @@ all_pred_df[, head(names(all_pred_df), 2)] <-
   lapply(all_pred_df[, head(names(all_pred_df), 2)], as.factor) 
 all_pred_df <- all_pred_df %>% dplyr::rename(y_new_all_only = predicted)
 
+all_no_age_sex_pred_df[, head(names(all_no_age_sex_pred_df), 2)] <- 
+  lapply(all_no_age_sex_pred_df[, head(names(all_no_age_sex_pred_df), 2)], as.factor) 
+all_no_age_sex_pred_df <- all_no_age_sex_pred_df %>% dplyr::rename(y_new_all_nas_only = predicted)
+
+all_no_clin_pred_df[, head(names(all_no_clin_pred_df), 2)] <- 
+  lapply(all_no_clin_pred_df[, head(names(all_no_clin_pred_df), 2)], as.factor) 
+all_no_clin_pred_df <- all_no_clin_pred_df %>% dplyr::rename(y_new_all_nclin_only = predicted)
+
 met_basic <- merge(basic_pred_df, meta_pred_df, by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
@@ -356,7 +408,19 @@ all_but_all <- merge(met_tax_micom_path_tabo, grs_pred_df,
                   by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-all_omic <- merge(all_but_all, all_pred_df, 
+all_but_all_meta_noas <- merge(all_but_all, meta_no_age_sex_pred_df, 
+                              by = c("subject_id", "time")) %>% 
+                        dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_but_all_both_noas <- merge(all_but_all_meta_noas, all_no_age_sex_pred_df, 
+                               by = c("subject_id", "time")) %>% 
+                         dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_but_all_three_noas <- merge(all_but_all_both_noas, all_no_clin_pred_df, 
+                               by = c("subject_id", "time")) %>% 
+                      dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_omic <- merge(all_but_all_three_noas, all_pred_df, 
                   by = c("subject_id", "time")) %>% 
   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% 
   unique()
@@ -371,13 +435,13 @@ write.csv(mod_dat, file = paste0(out_dir, "june_lasso_long_predictions_df.csv"))
 
 ### Single plus omic including time 
 lmer_basic <- lmer(bmi ~ y_new_basic + Time + (1|Cluster), data = mod_dat, REML = FALSE)
-lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta_only + Time + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta_nas_only + Time + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_grs_b <- lmer(bmi ~ y_new_basic + y_new_grs_only + Time + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_path_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_tax_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_metabo_b <- lmer(bmi ~ y_new_basic + y_new_metabo_only + Time+ (1|Cluster), data = mod_dat, REML = FALSE)
-lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all_nas_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic, lmer_meta_b, test = "LRT")
 anova(lmer_basic, lmer_grs_b, test = "LRT")
@@ -428,13 +492,13 @@ writeLines(html_table, paste0(out_dir, "lasso_long_anova_table_time.html"))
 # Repeat without time 
 ### Single plus omic not including time 
 lmer_basic_noT <- lmer(bmi ~ y_new_basic + (1|Cluster), data = mod_dat, REML = FALSE)
-lmer_meta_b_noT <- lmer(bmi ~ y_new_basic + y_new_meta_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_meta_b_noT <- lmer(bmi ~ y_new_basic + y_new_meta_nas_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_grs_b_noT <- lmer(bmi ~ y_new_basic + y_new_grs_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_micom_b_noT <- lmer(bmi ~ y_new_basic + y_new_micom_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_path_b_noT <- lmer(bmi ~ y_new_basic + y_new_path_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_tax_b_noT <- lmer(bmi ~ y_new_basic + y_new_tax_only + (1|Cluster), data = mod_dat, REML = FALSE)
 lmer_metabo_b_noT <- lmer(bmi ~ y_new_basic + y_new_metabo_only + (1|Cluster), data = mod_dat, REML = FALSE)
-lmer_all_b_noT <- lmer(bmi ~ y_new_basic + y_new_all_only + (1|Cluster), data = mod_dat, REML = FALSE)
+lmer_all_b_noT <- lmer(bmi ~ y_new_basic + y_new_all_nas_only + (1|Cluster), data = mod_dat, REML = FALSE)
 
 anova(lmer_basic_noT, lmer_meta_b_noT, test = "LRT")
 anova(lmer_basic_noT, lmer_grs_b_noT, test = "LRT")

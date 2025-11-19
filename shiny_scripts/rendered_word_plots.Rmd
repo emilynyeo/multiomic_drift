@@ -26,7 +26,7 @@ omic_out_dir <- file.path(base_dir, "paper_plots")
 venn_dir <- file.path(base_dir, "paper_plots")
 
 # Create output subdirectories if they don't exist
-output_dirs <- c("shap", "anova_tables", "aov_feats_combined", "venns", "lass_ft_imp")
+output_dirs <- c("shap_02", "anova_tables_02", "aov_feats_combined_02", "venns_02", "lass_ft_imp_02")
 for (dir in output_dirs) {
   dir.create(file.path(omic_out_dir, dir), recursive = TRUE, showWarnings = FALSE)
 }
@@ -57,11 +57,14 @@ title_map <- c(
   shap_long_micom      = "MERF Micom",
   shap_long_basic      = "MERF Basic",
   shap_long_all      = "MERF Combined",
+  shap_long_all_no_age_sex      = "MERF Combined (-)",
+  shap_long_all_no_clin      = "MERF Combined (-c)",
   shap_long_metabo   = "MERF Metabolomics",
   shap_long_grs      = "MERF GRS",
   shap_long_pathway  = "MERF Pathway",
   shap_long_taxa     = "MERF Taxonomy",
-  shap_long_meta     = "MERF Clinical")
+  shap_long_meta     = "MERF Clinical",
+  shap_long_meta_no_age_sex = "MERF Clinical (-)")
 
 shap_long_plot_list <- list()
 heights_vec <- numeric(0)
@@ -115,7 +118,7 @@ combined_shap_long <- wrap_plots(shap_long_plot_list,  # Combine vertically
 
 # Save large PDF
 ggsave(
-  filename = file.path(omic_out_dir, "shap/all_shap_plots_combined_abs.pdf"),
+  filename = file.path(omic_out_dir, "shap_02/all_shap_plots_combined_abs.pdf"),
   plot = combined_shap_long,
   width = 18,
   height = sum(heights_vec) * 0.5,
@@ -131,11 +134,14 @@ title_map_delta <- c(
   shap_delta_micom    = "MERF Micom",
   shap_delta_basic    = "MERF Basic",
   shap_delta_all      = "MERF Combined",
+  shap_delta_all_no_age_sex      = "MERF Combined (-)",
+  shap_delta_all_no_clin      = "MERF Combined (-c)",
   shap_delta_metabo   = "MERF Metabolomics",
   shap_delta_grs      = "MERF GRS",
   shap_delta_pathway  = "MERF Pathway",
   shap_delta_taxa     = "MERF Taxonomy",
-  shap_delta_meta     = "MERF Clinical")
+  shap_delta_meta     = "MERF Clinical",
+  shap_delta_meta_no_age_sex     = "MERF Clinical (-)")
 
 shap_delta_plot_list <- list()
 heights_vec <- numeric(0)
@@ -187,7 +193,7 @@ combined_shap_delta <- wrap_plots(shap_delta_plot_list,  # Combine vertically
 
 # Save large PDF
 ggsave(
-  filename = file.path(omic_out_dir, "shap/all_delta_shap_plots_combined_abs.pdf"),
+  filename = file.path(omic_out_dir, "shap_02/all_delta_shap_plots_combined_abs.pdf"),
   plot = combined_shap_delta,
   width = 18,
   height = sum(heights_vec) * 0.5,
@@ -222,23 +228,23 @@ for (omic_name in names(omic_dfs)) {
   
   ## Fit LMER Models on scores 
   lmer_basic <- lmer(bmi ~ y_new_basic + (1|Cluster), data = omic, REML = FALSE)
-  lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta + (1|Cluster), data = omic, REML = FALSE)
+  lmer_meta_b <- lmer(bmi ~ y_new_basic + y_new_meta_noas + (1|Cluster), data = omic, REML = FALSE)
   lmer_grs_b <- lmer(bmi ~ y_new_basic + y_new_grs + (1|Cluster), data = omic, REML = FALSE)
   lmer_micom_b <- lmer(bmi ~ y_new_basic + y_new_micom + (1|Cluster), data = omic, REML = FALSE)
   lmer_path_b <- lmer(bmi ~ y_new_basic + y_new_pathway + (1|Cluster), data = omic, REML = FALSE)
   lmer_tax_b <- lmer(bmi ~ y_new_basic + y_new_taxa + (1|Cluster), data = omic, REML = FALSE)
   lmer_metabo_b <- lmer(bmi ~ y_new_basic + y_new_metabo + (1|Cluster), data = omic, REML = FALSE)
-  lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all + (1|Cluster), data = omic, REML = FALSE)
+  lmer_all_b <- lmer(bmi ~ y_new_basic + y_new_all_noas + (1|Cluster), data = omic, REML = FALSE)
 
   models <- list(
     Basic = lmer_basic,
-    `Basic + Clinical` = lmer_meta_b,
+    `Basic + Clinical (-)` = lmer_meta_b,
     `Basic + GRS` = lmer_grs_b,
     `Basic + Micom` = lmer_micom_b,
     `Basic + Pathway` = lmer_path_b,
     `Basic + Taxa` = lmer_tax_b,
     `Basic + Metabolomics` = lmer_metabo_b,
-    `Basic + Combined` = lmer_all_b)
+    `Basic + Combined (-)` = lmer_all_b)
 
   # Extract RÂ² values
   r2_df <- do.call(rbind, lapply(names(models), function(name) {
@@ -281,13 +287,13 @@ for (omic_name in names(omic_dfs)) {
   # Annotate comparisons
   anova_labels <- anova_table %>%
     dplyr::mutate(Compared_Model = dplyr::recode(model_comparison,
-        "lmer_basic vs lmer_meta_b" = "Basic + Clinical",
+        "lmer_basic vs lmer_meta_b" = "Basic + Clinical (-)",
         "lmer_basic vs lmer_grs_b" = "Basic + GRS",
         "lmer_basic vs lmer_tax_b" = "Basic + Taxa",
         "lmer_basic vs lmer_micom_b" = "Basic + Micom",
         "lmer_basic vs lmer_path_b" = "Basic + Pathway",
         "lmer_basic vs lmer_metabo_b" = "Basic + Metabolomics",
-        "lmer_basic vs lmer_all_b" = "Basic + Combined"),
+        "lmer_basic vs lmer_all_b" = "Basic + Combined (-)"),
       Significance = case_when(
         `Pr(>Chisq)` < 0.001 ~ "***",
         `Pr(>Chisq)` < 0.01  ~ "**",
@@ -380,23 +386,23 @@ for (omic_name in names(all_r2_dfs)) {
 ```{r}
 delta_labels <- c(
   "Basic" = "Δ Basic",
-  "Basic + Clinical" = "+ Δ Clinical",
+  "Basic + Clinical" = "+ Δ Clinical (-)",
   "Basic + GRS" = "+ Δ GRS",
   "Basic + Pathway" = "+ Δ Pathway",
   "Basic + Taxa" = "+ Δ Taxa",
   "Basic + Micom" = "+ Δ Micom",
   "Basic + Metabolomics" = "+ Δ Metabolomics",
-  "Basic + Combined" = "+ Δ Combined")
+  "Basic + Combined" = "+ Δ Combined (-)")
 
 long_labels <- c(
   "Basic" = " Basic",
-  "Basic + Clinical" = "+ Clinical",
+  "Basic + Clinical" = "+ Clinical (-)",
   "Basic + GRS" = "+ GRS",
   "Basic + Pathway" = "+ Pathway",
   "Basic + Taxa" = "+ Taxa",
   "Basic + Micom" = "+ Micom",
   "Basic + Metabolomics" = "+ Metabolomics",
-  "Basic + Combined" = "+ Combined")
+  "Basic + Combined" = "+ Combined (-)")
 
 for (omic_name in names(all_r2_dfs)) {
   r2_df <- all_r2_dfs[[omic_name]]
@@ -406,9 +412,9 @@ for (omic_name in names(all_r2_dfs)) {
   r2_annotated <- left_join(r2_df, anova_labels, by = c("Model" = "Compared_Model"))
 
   # Set custom model order
-  custom_order <- c("Basic", "Basic + Clinical", "Basic + GRS", "Basic + Pathway",
+  custom_order <- c("Basic", "Basic + Clinical (-)", "Basic + GRS", "Basic + Pathway",
                     "Basic + Taxa", "Basic + Micom", 
-                    "Basic + Metabolomics", "Basic + Combined")
+                    "Basic + Metabolomics", "Basic + Combined (-)")
   fill_vals <- setNames(sapply(custom_order, get_color), custom_order)
   r2_annotated$Model <- factor(r2_annotated$Model, levels = custom_order)
 
@@ -501,7 +507,7 @@ final_anova_table_initial <- combined_anova_df %>%
 
 final_anova_table_initial
 gtsave(final_anova_table_initial, 
-       filename = paste0(omic_out_dir, "/anova_tables/anova_initial_table_with_grs.png"))
+       filename = paste0(omic_out_dir, "/anova_tables_02/anova_initial_table_with_grs.png"))
 ```
 
 ## Another ANOVA initial combination As a word doc for convenience 
@@ -528,7 +534,7 @@ create_word_doc <- function(tables, filename) {
       body_add_flextable(ft) %>%
       body_add_par("", style = "Normal")
   }
-  print(doc, target = paste0(omic_out_dir, "/anova_tables/", filename))
+  print(doc, target = paste0(omic_out_dir, "/anova_tables_02/", filename))
 }
 
 create_word_doc(raw_tables, "anova_initial_combined.docx")
@@ -568,7 +574,7 @@ for (omic_name in names(omic_dfs)) {
   lmer_meta_pathway  <- lmer(bmi ~ y_new_meta + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_taxa     <- lmer(bmi ~ y_new_meta + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_metabo   <- lmer(bmi ~ y_new_meta + y_new_metabo + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_all      <- lmer(bmi ~ y_new_meta + y_new_all + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_all      <- lmer(bmi ~ y_new_meta + y_new_all_nclin + (1|Cluster), data = mod_dat, REML = FALSE)
 
   models <- list(
     `Clinical`           = lmer_meta_b,
@@ -577,7 +583,7 @@ for (omic_name in names(omic_dfs)) {
     `Clinical + Pathway` = lmer_meta_pathway,
     `Clinical + Taxa`    = lmer_meta_taxa,
     `Clinical + Metabolomics`  = lmer_meta_metabo,
-    `Clinical + Combined`     = lmer_meta_all)
+    `Clinical + Combined (-c)`     = lmer_meta_all)
 
   r2_df_clin_plus <- do.call(rbind, lapply(names(models), function(name) {
     r2_vals_clin_plus <- r.squaredGLMM(models[[name]])
@@ -605,7 +611,7 @@ for (omic_name in names(omic_dfs)) {
   lmer_meta_pathway  <- lmer(bmi ~ y_new_meta + y_new_pathway + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_taxa     <- lmer(bmi ~ y_new_meta + y_new_taxa + (1|Cluster), data = mod_dat, REML = FALSE)
   lmer_meta_metabo   <- lmer(bmi ~ y_new_meta + y_new_metabo + (1|Cluster), data = mod_dat, REML = FALSE)
-  lmer_meta_all      <- lmer(bmi ~ y_new_meta + y_new_all + (1|Cluster), data = mod_dat, REML = FALSE)
+  lmer_meta_all      <- lmer(bmi ~ y_new_meta + y_new_all_nclin + (1|Cluster), data = mod_dat, REML = FALSE)
 
   lmer_models <- list(
     c("lmer_meta_b", "lmer_meta_b"),
@@ -645,7 +651,7 @@ for (omic_name in names(omic_dfs)) {
         "lmer_meta_b vs lmer_meta_micom" = "Clinical + Micom",
         "lmer_meta_b vs lmer_meta_pathway" = "Clinical + Pathway",
         "lmer_meta_b vs lmer_meta_metabo" = "Clinical + Metabolomics",
-        "lmer_meta_b vs lmer_meta_all"     = "Clinical + Combined"),
+        "lmer_meta_b vs lmer_meta_all"     = "Clinical + Combined (-c)"),
       Significance = case_when(
         `Pr(>Chisq)` < 0.001 ~ "***",
         `Pr(>Chisq)` < 0.01  ~ "**",
@@ -659,7 +665,7 @@ for (omic_name in names(omic_dfs)) {
 
   custom_order <- c("Clinical", "Clinical + GRS", "Clinical + Pathway", 
                     "Clinical + Taxa", "Clinical + Micom", 
-                    "Clinical + Metabolomics", "Clinical + Combined")
+                    "Clinical + Metabolomics", "Clinical + Combined (-c)")
   
   clinical_aic <- AIC(lmer_meta_b)
   r2_annotated <- r2_df_clin_plus %>%
@@ -700,7 +706,7 @@ delta_labels <- c(
   "Clinical + Taxa" = "+ Δ Taxa",
   "Clinical + Micom" = "+ Δ Micom",
   "Clinical + Metabolomics" = "+ Δ Metabolomics",
-  "Clinical + Combined" = "+ Δ Combined")
+  "Clinical + Combined" = "+ Δ Combined (-c)")
 
 # For *_long dataframes
 long_labels <- c(
@@ -710,7 +716,7 @@ long_labels <- c(
   "Clinical + Taxa" = "+ Taxa",
   "Clinical + Micom" = "+ Micom",
   "Clinical + Metabolomics" = "+ Metabolomics",
-  "Clinical + Combined" = "+ Combined")
+  "Clinical + Combined" = "+ Combined (-c)")
 
 for (omic_name in names(omic_dfs)) {
   r2_annotated <- get(paste0(omic_name, "_r2_annotated_clin_plus"))
@@ -719,7 +725,7 @@ for (omic_name in names(omic_dfs)) {
   # Set custom model order
   custom_order <- c("Clinical", "Clinical + GRS", "Clinical + Pathway",
                     "Clinical + Taxa", "Clinical + Micom", 
-                    "Clinical + Metabolomics", "Clinical + Combined")
+                    "Clinical + Metabolomics", "Clinical + Combined (-c)")
   
   fill_vals <- setNames(sapply(custom_order, get_color_clin), custom_order)
 
@@ -802,7 +808,7 @@ final_anova_table_clin_p2 <- combined_anova_df_clin_p %>%
   gt(groupname_col = "Model_Type") %>%
     tab_header(title = "Additive Model Comparison's (ANOVA)") %>%
     fmt_number(columns = where(is.numeric), decimals = 3) %>%
-    sub_missing(missing_text = "-") %>%
+    sub_missing(missing_text = " ") %>%
     cols_width(1 ~ pct(16),
                `RÂ²` ~ pct(10), 
                Significance ~ pct(10),
@@ -826,7 +832,7 @@ final_anova_table_clin_p2 <- combined_anova_df_clin_p %>%
   locations = cells_row_groups())
 
 final_anova_table_clin_p2
-gtsave(final_anova_table_clin_p2, filename = paste0(omic_out_dir, "/anova_tables/anova_table_clin_p.png"))
+gtsave(final_anova_table_clin_p2, filename = paste0(omic_out_dir, "/anova_tables_02/anova_table_clin_p.png"))
 ```
 
 # ANOVA TABLE FOR CLINICAL ANOVA COMBINED 

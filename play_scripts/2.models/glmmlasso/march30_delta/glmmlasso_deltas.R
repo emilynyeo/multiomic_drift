@@ -46,6 +46,8 @@ all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>%
 basic <- c('subject_id','BMI', 'range', 'sex', 'age', 'randomized_group') #
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x') # 
+meta_keep_no_age_sex <- c('subject_id','BMI', 'range', 'randomized_group', 'race', 
+                          'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
 only_grs <- c('subject_id','BMI', 'range','bmi_prs')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(all_deltas), value = TRUE))
 
@@ -69,9 +71,23 @@ all_col <- c('subject_id','BMI', 'range',
              names(all_deltas)[path_start:path_end],
              names(all_deltas)[tabo_start:tabo_end])
 
+all_col_no_age_sex <- c('subject_id','BMI', 'range','randomized_group', 'race', 
+                        'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x',
+                        grep("^g__", names(all_deltas), value = TRUE),
+                        names(all_deltas)[micom_start:micom_end],
+                        names(all_deltas)[path_start:path_end],
+                        names(all_deltas)[tabo_start:tabo_end])
+
+all_col_no_clin <- c('subject_id','BMI', 'range',
+                     grep("^g__", names(all_deltas), value = TRUE),
+                     names(all_deltas)[micom_start:micom_end],
+                     names(all_deltas)[path_start:path_end],
+                     names(all_deltas)[tabo_start:tabo_end])
+
 # Create data frames based on the columns defined
 basic <- all_deltas[, basic, drop = FALSE] %>% unique()
 meta <- all_deltas[, meta_keep, drop = FALSE] %>% unique()
+meta_no_age_sex <- all_deltas[, meta_keep_no_age_sex, drop = FALSE] %>% unique()
 grs <- all_deltas[, only_grs, drop = FALSE] %>% unique()
 taxa <- all_deltas[, only_taxa, drop = FALSE] %>% unique()
 micom <- all_deltas[, only_micom, drop = FALSE] %>% unique()
@@ -79,12 +95,17 @@ pathway <- all_deltas[, only_pathway, drop = FALSE] %>% unique()
 metabo <- all_deltas[, only_tabo, drop = FALSE] %>% unique()
 all <- all_deltas[, all_col, drop = FALSE] %>% unique() %>% 
        dplyr::mutate(randomized_group = as.numeric(randomized_group))
+all_no_age_sex <- all_deltas[, all_col_no_age_sex, drop = FALSE] %>% unique() %>% 
+  dplyr::mutate(randomized_group = as.numeric(randomized_group))
+all_no_clin <- all_deltas[, all_col_no_clin, drop = FALSE] %>% unique() 
 
 # Make train and test set
 # Test sample names
 #test_names <- c("ABR-079", "AGA-071", "AHE-055", "ALI-121", "ALO-163", "AMA-031", "ASO-013", "AWI-167", "BMO-164", "CWA-183", "DSC-024", "EBE-130", "EHI-177", "EJO-092", "GFU-188", "HGI-010", "JCA-109", "JGO-100", "KBU-085", "KCE-034", "KHE-170", "LDO-148", "LST-186", "LZD-142", "MAR-119", "MCA-088", "MJA-153", "MWE-112", "NPO-149", "RAE-114", "SBO-020", "SEG-080", "SKA-195", "SLO-178", "SSH-028", "TDU-086","TFA-016", "VCA-041")
 
-test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052", "AHE-055", "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193")
+# Taking out the odd one : "AHE-055"
+
+test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052",  "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193")
 
 # Train sample names
 #train_names <- c("AAL-144", "ACO-053", "ADA-105", "AKE-009", "AKI-011", "AKO-139", "AMC-155", "AME-128", "AME-157", "ATA-129", "AWA-052", "AWA-083", "BAN-193", "BHO-014", "BIN-201", "BKN-104", "BMI-156", "BSA-174", "CAM-057", "CCO-189", "CED-026", "CEL-073", "CGA-134", "CIS-077", "CKR-078", "CLE-049", "COW-066", "CRO-108", "CWA-161", "EBE-051", "EKA-135", "EKR-045", "ELA-159", "EPO-182", "EVO-184", "FWI-098", "GHA-035", "HDE-154", "IBE-120", "JDI-140", "JER-110", "JFU-027", "JJO-093", "JKN-127", "JPO-022", "JUG-116", "JUT-032", "JVE-126", "KAN-138", "KBR-162", "KEL-185", "KEL-199", "KGI-029", "KHU-196", "KPA-042", "KRI-072", "KVA-038", "KWA-122", "KWA-141", "LBL-047", "LBU-015", "LEL-147", "LFI-003", "LJA-101", "LMC-111", "LPF-198", "LVA-017", "MBA-187", "MCW-065", "MDI-107", "MES-068", "MFB-118", "MGA-076", "MHO-117", "MKE-192", "MMA-036", "MRT-179", "MSH-091", "MST-039", "MWE-143", "MWO-133", "MWY-152", "NAR-099", "NBI-048", "NBI-069", "NCO-171", "NDI-067", "NEL-094", "NKA-090", "NMO-151", "NTA-021", "PBE-123", "QNG-166", "RAF-125", "RAM-050", "RHP-023", "RLA-132", "ROL-006", "SAB-160", "SCA-043", "SCR-061", "SDA-150", "SGA-062", "SKA-087", "SRO-194", "TBU-115", "TFA-172", "TRO-113", "TSH-146", "TSL-056", "WPE-005", "YOR-103", "YSU-097", "ZVU-096")
@@ -110,8 +131,25 @@ preProcValues
 all <- predict(preProcValues, all)
 heatmap(cor(all[, c(2, 5:ncol(all))]))
 
+## Check all_no_age_sex correlation
+preProcValues_train <- preProcess(all_no_age_sex[, c(2, 4:ncol(all_no_age_sex))], 
+                                  method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                                  numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                                  uniqueCut = 10, cutoff = 0.70, na.remove = TRUE)
+preProcValues_train
+all_no_age_sex <- predict(preProcValues_train, all_no_age_sex)
+
+## Check all_no_clin correlation
+preProcValues_train <- preProcess(all_no_clin[, c(2, 4:ncol(all_no_clin))], 
+                                  method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                                  numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                                  uniqueCut = 10, cutoff = 0.70, na.remove = TRUE)
+preProcValues_train
+all_no_clin <- predict(preProcValues_train, all_no_clin)
+
 # Make test and tain sets for each omic 
-data_frames <- c("basic", "meta", "grs", "micom", "pathway", "taxa", "metabo", "all")
+data_frames <- c("basic", "meta", "meta_no_age_sex", "grs", "taxa", "pathway", 
+                 "micom", "metabo", "all", "all_no_age_sex", "all_no_clin")
 for (df in data_frames) {
   df_data <- get(df)  # Get the data frame by name
   df_data <- df_data %>% dplyr::filter(!df_data$subject_id %in% missing_subjects)  # Filter rows
@@ -141,9 +179,26 @@ preProcValues
 all_train <- predict(preProcValues, all_train)
 heatmap(cor(all[, c(2, 5:ncol(all_train))]))
 
+# CHECK ALL_NO_AGE_SEX CORRELATIONS
+preProcValues <- preProcess(all_no_age_sex_train, 
+                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues
+all_no_age_sex_train <- predict(preProcValues, all_no_age_sex_train)
+
+# CHECK ALL_NO_CLINICAL CORRELATIONS
+preProcValues <- preProcess(all_no_clin_train, 
+                            method = c("nzv", "corr"), thresh = 0.95, fudge = 0.2, 
+                            numUnique = 15, verbose = TRUE, freqCut = 95/5, 
+                            uniqueCut = 10, cutoff = 0.75, na.remove = TRUE)
+preProcValues
+all_no_clin_train <- predict(preProcValues, all_no_clin_train)
+
 # STEP 1
 #data_frames <- c("all") # "basic",
-data_frames <- c("basic", "meta", "grs", "taxa", "pathway", "micom", "metabo", "all") #
+data_frames <- c("basic", "meta", "meta_no_age_sex", "grs", "taxa", "pathway", 
+                 "micom", "metabo", "all", "all_no_age_sex", "all_no_clin") #
 for (df_name in data_frames) {
   train_data <- get(paste0(df_name, "_train"))
   test_data <- get(paste0(df_name, "_test"))
@@ -295,6 +350,7 @@ hist(cor_values,
 
 ################################################################################
 meta_delta_pred_df <- meta_delta_pred_df %>% rename(meta_predicted = predicted)
+meta_no_age_sex_delta_pred_df <- meta_no_age_sex_delta_pred_df %>% rename(meta_no_age_sex_predicted = predicted)
 basic_delta_pred_df <- basic_delta_pred_df %>% rename(basic_predicted = predicted)
 grs_delta_pred_df <- grs_delta_pred_df %>% rename(grs_predicted = predicted)
 taxa_delta_pred_df <- taxa_delta_pred_df %>% rename(taxa_predicted = predicted)
@@ -302,6 +358,8 @@ micom_delta_pred_df <- micom_delta_pred_df %>% rename(micom_predicted = predicte
 pathway_delta_pred_df <- pathway_delta_pred_df %>% rename(pathway_predicted = predicted)
 metabo_delta_pred_df <- metabo_delta_pred_df %>% rename(metabo_predicted = predicted)
 all_delta_pred_df <- all_delta_pred_df %>% rename(all_predicted = predicted)
+all_no_age_sex_delta_pred_df <- all_no_age_sex_delta_pred_df %>% rename(all_no_age_sex_predicted = predicted)
+all_no_clin_delta_pred_df <- all_no_clin_delta_pred_df %>% rename(all_no_clin_predicted = predicted)
 
 ##### Compare models
 met_tax <- merge(meta_delta_pred_df, taxa_delta_pred_df, 
@@ -328,9 +386,21 @@ all_but_b <- merge(met_tax_micom_path_tab_all, grs_delta_pred_df,
                    by = c("subject_id", "time")) %>% 
              dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
 
-all_omic <- merge(basic_delta_pred_df, all_but_b, 
+all_but_b_mnoas <- merge(all_but_b, meta_no_age_sex_delta_pred_df,
+                         by = c("subject_id", "time")) %>% 
+                dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_but_b_anoas <- merge(all_but_b_mnoas, all_no_age_sex_delta_pred_df,
+                         by = c("subject_id", "time")) %>% 
+                   dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_but_b_anoc <- merge(all_but_b_anoas, all_no_clin_delta_pred_df,
+                         by = c("subject_id", "time")) %>% 
+                    dplyr::select(-c(actual.y)) %>% rename(actual = actual.x)
+
+all_omic <- merge(basic_delta_pred_df, all_but_b_anoc, 
                   by = c("subject_id", "time")) %>% 
-  dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% unique()
+            dplyr::select(-c(actual.y)) %>% rename(actual = actual.x) %>% unique()
 
 #all_omic[, 3:8] <- scale(all_omic[, 3:8])
 
@@ -340,12 +410,15 @@ mod_dat = all_omic %>% dplyr::rename(bmi = actual,
                               Cluster = subject_id,
                               y_new_basic_only = basic_predicted, 
                               y_new_meta_only = meta_predicted,
+                              y_new_meta_noas_only = meta_no_age_sex_predicted,
                               y_new_grs_only = grs_predicted,
                               y_new_micom_only = micom_predicted,
                               y_new_path_only = pathway_predicted,
                               y_new_tax_only = taxa_predicted,
                               y_new_metab_only = metabo_predicted,
-                              y_new_all_only = all_predicted)
+                              y_new_all_only = all_predicted,
+                              y_new_all_noas_only = all_no_age_sex_predicted,
+                              y_new_all_nclin_only = all_no_clin_predicted)
 
 write.csv(mod_dat, file = paste0(out_dir, "gl_delta_predictions_df.csv"))
 
