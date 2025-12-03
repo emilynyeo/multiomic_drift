@@ -28,3 +28,33 @@
 [OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_BEST_Prev_Model.png
 [OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_BEST_Prev_Model.csv
 [SKIP] SHAP values are None for model: only_all_no_clin_BEST_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_beeswarm_only_all_no_clin_BEST_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/shap_long_only_all_no_clin_BEST_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_BEST_MSE Model

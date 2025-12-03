@@ -16,6 +16,7 @@ library(officer)
 library(flextable)
 library(webshot)
 library(apaTables)
+library(kneedle)
 library(MuMIn)
 '%ni%' <- Negate('%in%')
 r2_general <-function(preds,actual){ 
@@ -46,7 +47,7 @@ all_deltas <- read_csv(paste0(data_dir, "all_delta.csv")) %>%
 basic <- c('subject_id','BMI', 'range', 'sex', 'age', 'randomized_group') #
 meta_keep <- c('subject_id','BMI', 'range', 'randomized_group', 'sex', 'race', 
                'age', 'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x') # 
-meta_keep_no_age_sex <- c('subject_id','BMI', 'range', 'randomized_group', 'race', 
+meta_keep_no_age_sex <- c('subject_id','BMI', 'range', 'race', 
                           'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x')
 only_grs <- c('subject_id','BMI', 'range','bmi_prs')
 only_taxa <- c('subject_id','BMI', 'range', grep("^g__", names(all_deltas), value = TRUE))
@@ -71,7 +72,7 @@ all_col <- c('subject_id','BMI', 'range',
              names(all_deltas)[path_start:path_end],
              names(all_deltas)[tabo_start:tabo_end])
 
-all_col_no_age_sex <- c('subject_id','BMI', 'range','randomized_group', 'race', 
+all_col_no_age_sex <- c('subject_id','BMI', 'range','race', 
                         'HbA1c', 'HDL', 'homo_ir', 'insulin', 'LDL', 'Glucose.x',
                         grep("^g__", names(all_deltas), value = TRUE),
                         names(all_deltas)[micom_start:micom_end],
@@ -95,8 +96,7 @@ pathway <- all_deltas[, only_pathway, drop = FALSE] %>% unique()
 metabo <- all_deltas[, only_tabo, drop = FALSE] %>% unique()
 all <- all_deltas[, all_col, drop = FALSE] %>% unique() %>% 
        dplyr::mutate(randomized_group = as.numeric(randomized_group))
-all_no_age_sex <- all_deltas[, all_col_no_age_sex, drop = FALSE] %>% unique() %>% 
-  dplyr::mutate(randomized_group = as.numeric(randomized_group))
+all_no_age_sex <- all_deltas[, all_col_no_age_sex, drop = FALSE] %>% unique()
 all_no_clin <- all_deltas[, all_col_no_clin, drop = FALSE] %>% unique() 
 
 # Make train and test set
@@ -105,7 +105,7 @@ all_no_clin <- all_deltas[, all_col_no_clin, drop = FALSE] %>% unique()
 
 # Taking out the odd one : "AHE-055"
 
-test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052",  "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193")
+test_names <- c("ASO-013", "NTA-021", "KGI-029", "KPA-042", "AWA-052",  "COW-066", "NBI-069", "CEL-073", "CAL-074", "ABR-079", "SEG-080", "NKA-090", "NEL-094", "LJA-101", "ADA-105", "MLU-106", "MDI-107", "JER-110", "TRO-113", "MFB-118", "ALI-121", "KWA-122", "RAF-125", "EBE-130", "CGA-134", "LZD-142", "NPO-149", "HDE-154", "AMC-155", "SAB-160", "QNG-166", "NCO-171", "BSA-174", "EHI-177", "LST-186", "MBA-187", "BAN-193", "AHE-055")
 
 # Train sample names
 #train_names <- c("AAL-144", "ACO-053", "ADA-105", "AKE-009", "AKI-011", "AKO-139", "AMC-155", "AME-128", "AME-157", "ATA-129", "AWA-052", "AWA-083", "BAN-193", "BHO-014", "BIN-201", "BKN-104", "BMI-156", "BSA-174", "CAM-057", "CCO-189", "CED-026", "CEL-073", "CGA-134", "CIS-077", "CKR-078", "CLE-049", "COW-066", "CRO-108", "CWA-161", "EBE-051", "EKA-135", "EKR-045", "ELA-159", "EPO-182", "EVO-184", "FWI-098", "GHA-035", "HDE-154", "IBE-120", "JDI-140", "JER-110", "JFU-027", "JJO-093", "JKN-127", "JPO-022", "JUG-116", "JUT-032", "JVE-126", "KAN-138", "KBR-162", "KEL-185", "KEL-199", "KGI-029", "KHU-196", "KPA-042", "KRI-072", "KVA-038", "KWA-122", "KWA-141", "LBL-047", "LBU-015", "LEL-147", "LFI-003", "LJA-101", "LMC-111", "LPF-198", "LVA-017", "MBA-187", "MCW-065", "MDI-107", "MES-068", "MFB-118", "MGA-076", "MHO-117", "MKE-192", "MMA-036", "MRT-179", "MSH-091", "MST-039", "MWE-143", "MWO-133", "MWY-152", "NAR-099", "NBI-048", "NBI-069", "NCO-171", "NDI-067", "NEL-094", "NKA-090", "NMO-151", "NTA-021", "PBE-123", "QNG-166", "RAF-125", "RAM-050", "RHP-023", "RLA-132", "ROL-006", "SAB-160", "SCA-043", "SCR-061", "SDA-150", "SGA-062", "SKA-087", "SRO-194", "TBU-115", "TFA-172", "TRO-113", "TSH-146", "TSL-056", "WPE-005", "YOR-103", "YSU-097", "ZVU-096")

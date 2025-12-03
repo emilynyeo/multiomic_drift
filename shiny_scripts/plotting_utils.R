@@ -303,7 +303,7 @@ combined_plot_theme <- function(base_size = 28) {
       axis.title.y = element_markdown(
                      angle = 90,        # keep vertical orientation
                      vjust = 0.5,       # center on the axis
-                     margin = ggplot2::margin(r = 0, l = 0)),  # changed
+                     margin = ggplot2::margin(t = 0, r = 2, b = 0, l = 0)),  # changed
       legend.position = "none",
       plot.margin = ggplot2::margin(5, 5, 5, 5)  # more balanced
     )

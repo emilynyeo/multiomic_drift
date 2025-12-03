@@ -328,3 +328,333 @@
 [OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_BEST_OOB_Model.png
 [OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_BEST_OOB_Model.csv
 [SKIP] SHAP values are None for model: only_all_no_clin_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_MSE_Model.csv
+[SKIP] SHAP values are None for model: basic_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_Prev_Model.csv
+[SKIP] SHAP values are None for model: basic_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_PTEV_Model.csv
+[SKIP] SHAP values are None for model: basic_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_OOB_Model.csv
+[SKIP] SHAP values are None for model: basic_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: basic_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_MSE_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_Prev_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_PTEV_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_MSE_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_Prev_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_PTEV_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_grs_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_grs_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_grs_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_grs_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_BEST_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_BEST_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_grs_BEST_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_BEST_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_BEST_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_BEST_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_micom_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_micom_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_micom_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_micom_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_micom_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_BEST_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_BEST_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_BEST_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_BEST_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_BEST_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_BEST_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_MSE_Model.csv
+[SKIP] SHAP values are None for model: basic_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_Prev_Model.csv
+[SKIP] SHAP values are None for model: basic_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_PTEV_Model.csv
+[SKIP] SHAP values are None for model: basic_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_OOB_Model.csv
+[SKIP] SHAP values are None for model: basic_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_basic_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_basic_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: basic_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_MSE_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_Prev_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_PTEV_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_MSE_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_Prev_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_PTEV_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_OOB_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_meta_keep_no_age_sex_BEST_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_meta_keep_no_age_sex_BEST_MSE_Model.csv
+[SKIP] SHAP values are None for model: meta_keep_no_age_sex_BEST_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_grs_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_grs_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_grs_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_grs_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_grs_BEST_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_grs_BEST_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_grs_BEST_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_taxa_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_taxa_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_taxa_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_micom_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_micom_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_micom_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_micom_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_micom_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_micom_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_micom_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_pathway_BEST_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_pathway_BEST_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_pathway_BEST_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_metabo_BEST_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_metabo_BEST_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_metabo_BEST_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_BEST_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_BEST_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_BEST_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_age_sex_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_age_sex_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_age_sex_BEST_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_MSE_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_MSE_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_MSE Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_Prev_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_Prev_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_Prev Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_PTEV Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_OOB_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_OOB_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_OOB Model
+[OK] SHAP beeswarm saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_beeswarm_only_all_no_clin_BEST_PTEV_Model.png
+[OK] SHAP long-format CSV saved: /Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions/play_scripts/2.models/merf_python/may_basic_plus/delta/shap_long_only_all_no_clin_BEST_PTEV_Model.csv
+[SKIP] SHAP values are None for model: only_all_no_clin_BEST_PTEV Model

@@ -144,8 +144,7 @@ shap_delta_dfs <- list(
 
 # For GlmLasso
 gl_ftimp_delta_meta <- gl_ftimp_delta_meta %>%
-  dplyr::mutate(
-    Feature = dplyr::recode(
+  dplyr::mutate(Feature = dplyr::recode(
       Feature,
       "Ldl" = "LDL",
       "Randomized group1" = "IMF Diet Grp.",
@@ -153,6 +152,14 @@ gl_ftimp_delta_meta <- gl_ftimp_delta_meta %>%
       "Hdl" = "HDL",
       "Glucose x" = "Glucose",
       "Homo ir" = "Homo-IR"))
+
+gl_ftimp_delta_meta_no_age_sex <- gl_ftimp_delta_meta_no_age_sex %>%
+  dplyr::mutate(Feature = dplyr::recode(
+    Feature,
+    "Ldl" = "LDL",
+    "Hdl" = "HDL",
+    "Glucose x" = "Glucose",
+    "Homo ir" = "Homo-IR"))
 
 gl_ftimp_delta_grs <- gl_ftimp_delta_grs %>%
   dplyr::mutate(
@@ -206,7 +213,46 @@ gl_ftimp_delta_all <- gl_ftimp_delta_all %>%
       "Glyca" = "Glycoprotein acetyls",
       "Vldl size" = "VLDL-size",
       "Hdl size" = "HDL-size",
+      "Tyr" = "Tyrosine",
       "Gly" = "Glycine",
+      "Homo ir" = "Homo-IR",
+      "Vldl tg" = "TGs in VLDL",
+      "Tg by pg" = "TGs/Phosphoglycerides",
+      "Dha pct" = "DHA (% of FAs)",
+      "Vldl l" = "Lipids in VLDL"))
+
+gl_ftimp_delta_all_no_age_sex <- gl_ftimp_delta_all_no_age_sex %>%
+  dplyr::mutate(
+    Feature = dplyr::recode(
+      Feature,
+      "Superpathway of sulfolactate degradation" = "Sulfolactate degr.",
+      "Superpathway of l phenylalanine biosynthesis" = "L-Phe biosynthesis",
+      "taxadiene.biosynthesis..engineered." = "Taxadiene biosyn. Engineered",
+      "Ldl" = "LDL",
+      "Glyca" = "Glycoprotein acetyls",
+      "Vldl size" = "VLDL-size",
+      "Hdl size" = "HDL-size",
+      "Tyr" = "Tyrosine",
+      "Gly" = "Glycine",
+      "Homo ir" = "Homo-IR",
+      "Vldl tg" = "TGs in VLDL",
+      "Tg by pg" = "TGs/Phosphoglycerides",
+      "Dha pct" = "DHA (% of FAs)",
+      "Vldl l" = "Lipids in VLDL"))
+
+gl_ftimp_delta_all_no_clin <- gl_ftimp_delta_all_no_clin %>%
+  dplyr::mutate(
+    Feature = dplyr::recode(
+      Feature,
+      "Superpathway of sulfolactate degradation" = "Sulfolactate degr.",
+      "Superpathway of l phenylalanine biosynthesis" = "L-Phe biosynthesis",
+      "taxadiene.biosynthesis..engineered" = "Taxadiene biosyn. Engineered",
+      "Glyca" = "Glycoprotein acetyls",
+      "Vldl size" = "VLDL-size",
+      "Hdl size" = "HDL-size",
+      "Tyr" = "Tyrosine",
+      "Gly" = "Glycine",
+      "Homo ir" = "Homo-IR",
       "Vldl tg" = "TGs in VLDL",
       "Tg by pg" = "TGs/Phosphoglycerides",
       "Dha pct" = "DHA (% of FAs)",
@@ -219,6 +265,15 @@ gl_ftimp_long_meta <- gl_ftimp_long_meta %>%
       "Ldl" = "LDL",
       "Randomized group1" = "IMF Diet Grp.",
       "Sex" = "Sex (Male)",
+      "Hdl" = "HDL",
+      "Glucose x" = "Glucose",
+      "Homo ir" = "Homo-IR"))
+
+gl_ftimp_long_meta_no_age_sex <- gl_ftimp_long_meta_no_age_sex %>%
+  dplyr::mutate(
+    Feature = dplyr::recode(
+      Feature,
+      "Ldl" = "LDL",
       "Hdl" = "HDL",
       "Glucose x" = "Glucose",
       "Homo ir" = "Homo-IR"))
@@ -265,8 +320,18 @@ feature_rename_meta <- c(
   "sex" = "Sex (Male)",
   "randomized_group" = "IMF Diet Grp.")
 
+feature_rename_meta_no_age_sex <- c(
+  "Triglyceride_lipid" = "Triglycerides",
+  "HDL_Total_Direct_lipid" = "HDL",
+  "LDL_Calculated" = "LDL",
+  "Glucose.x" = "Glucose",
+  "Insulin_endo" = "Insulin",
+  "HOMA_IR" = "Homo-IR",
+  "race" = "Race")
+
 feature_rename_metabo <- c(
   "PUFA_by_MUFA" = "PUFA:MUFA ratio",
+  "Omega_3_pct" = "Omega-3 %",
   "GlycA" = "Glycoprotein Acetyls",
   "DHA_pct" = "DHA (% of FAs)",
   "Gly" = "Glycine",
@@ -282,11 +347,15 @@ feature_rename_metabo <- c(
   "VLDL_TG" = "TGs in VLDL",
   "Phe" = "Phenylalanine", 
   "His" = "Histidine", 
+  "Tyr" = "Tyrosine",
+  "TG_by_PG" = "TGs/Phosphoglycerides",
+  "IDL_C_pct" = "Cholesterol (% of IDL lipids)",
   "LA" = "Linoleic Acid (% of FAs)")
 
 feature_rename_taxa <- c(
   "g__Anaerotruncus" = "G Anaerotruncus",
   "g__Anaerobutyricum" = "G Anaerobutyricum",
+  "g__Anaerostipes" = "G Anaerostipes",
   "g__Anaerotignum_189125" = "G Anaerotignum 189125",
   "g__CAG-127" = "G CAG-127",
   "g__Clostridium_Q_135822" = "G Clostridium Q 135822",
@@ -309,6 +378,7 @@ feature_rename_taxa <- c(
   "g__BX12" = "G BX12",
   "g__Bifidobacterium_388775" = "G Bifidobacterium 388775",
   "g__CAG-127" = "G CAG-127",
+  "g__UMGS1071" = "G UMGS1071",
   "g__CAG-274" = "G CAG-274",
   "g__Clostridium_Q_135822" = "G Clostridium Q 135822",
   "g__Collinsella" = "G Collinsella",
@@ -319,6 +389,8 @@ feature_rename_taxa <- c(
   "g__Streptococcus" = "G Streptococcus",
   "g__UBA1417" = "g__UBA1417",
   "g__Intestinibacter" = "G Intestinibacter",
+  "g__Romboutsia_B" = "G Romboutsia B",
+  "g__Faecalimonas" = "G Faecalimonas",
   "g__Ruminiclostridium_E" = "G Ruminiclostridium E",
   "g__Ruminococcus_D" = "G Ruminococcus D", 
   "g___1" = "G 1",
@@ -332,6 +404,9 @@ feature_rename_taxa <- c(
 feature_rename_pathway <- c(
   "sulfate.reduction.I..assimilatory." = "Sulfate reduction assimilation",
   "superpathway.of.phylloquinol.biosynthesis" = "Phylloquinol biosyn. pathways",
+  "superpathway.of.polyamine.biosynthesis.II" = "Polyamine Biosyn.II Superpathway",
+  "urate.biosynthesis.inosine.5..phosphate.degradation" = "Urate biosyn. inosine-5-Phosphate degr.",
+  "taxadiene.biosynthesis..engineered" = "Taxadiene biosyn. Engineered",
   "D.glucarate.degradation.I" = "D-glucarate degr. ",
   "L.lysine.biosynthesis.II" = "L-lysine biosyn. II",
   "L.lysine.fermentation.to.acetate.and.butanoate" = "Lys ferm. to acetate/butanoate",
@@ -415,25 +490,39 @@ feature_rename_all <- c(
   "Omega_6" = "Omega6 FA",
   "TCA.cycle.VI..obligate.autotrophs." = "TCA VI (autotrophs)",
   "superpathway.of.sulfur.oxidation..Acidianus.ambivalens." = "Acidianus Ambivalens (Sulfur Oxi.)",
+  "taxadiene.biosynthesis..engineered" = "Taxadiene biosyn. Engineered",
   "NAD.salvage.pathway.II" = "NAD Salvage Pathway II", 
   "g__Acetatifactor" = "G Acetatifactor",
+  "g__Anaerostipes" = "G Anaerostipes",
+  "Total_FA" = "Total FAs",
+  "HDL_size" = "HDL size",
+  "Tyr" = "Tyrosine",
+  "Gly" = "Glycine",
+  "Homo ir" = "Homo-IR",
+  "homo ir" = "Homo-IR",
   "indole.3.acetate" = "Indole-3-acetate")
 
 feature_rename_grs_lg <- feature_rename_grs
 feature_rename_basic_lg <- feature_rename_basic
 feature_rename_meta_lg <- feature_rename_meta
+feature_rename_meta_no_age_sex_lg <- feature_rename_meta_no_age_sex
 feature_rename_metabo_lg <- feature_rename_metabo
 feature_rename_pathway_lg <- feature_rename_pathway
 feature_rename_taxa_lg <- feature_rename_taxa
 feature_rename_all_lg <- feature_rename_all
+feature_rename_all_no_age_sex_lg <- feature_rename_all
+feature_rename_all_no_clin_lg <- feature_rename_all
 
 feature_rename_grs_delta <- feature_rename_grs
 feature_rename_basic_delta <- feature_rename_basic
 feature_rename_meta_delta <- feature_rename_meta
+feature_rename_meta_no_age_sex <- feature_rename_meta_no_age_sex
 feature_rename_metabo_delta <- feature_rename_metabo
 feature_rename_pathway_delta <- feature_rename_pathway
 feature_rename_taxa_delta <- feature_rename_taxa
 feature_rename_all_delta <- feature_rename_all
+feature_rename_all_no_age_sex_delta <- feature_rename_all
+feature_rename_all_no_clin_delta <- feature_rename_all
 
 ######### RENAME SHAPS ####################################################################################
 
@@ -441,10 +530,13 @@ rename_maps <- list(
   shap_long_basic = feature_rename_basic,
   shap_long_grs = feature_rename_grs,
   shap_long_meta     = feature_rename_meta,
+  shap_long_meta_no_age_sex = feature_rename_meta_no_age_sex,
   shap_long_metabo   = feature_rename_metabo,
   shap_long_taxa     = feature_rename_taxa,
   shap_long_pathway  = feature_rename_pathway,
-  shap_long_all = feature_rename_all)
+  shap_long_all = feature_rename_all,
+  shap_long_all_no_age_sex = feature_rename_all,
+  shap_long_all_no_clin = feature_rename_all)
 
 # shap_dfs <- lapply(names(shap_dfs), function(nm) {
 #   if (nm %in% names(rename_maps)) {
@@ -490,10 +582,13 @@ rename_maps_delta <- list(
   shap_delta_basic = feature_rename_basic,
   shap_delta_grs = feature_rename_grs,
   shap_delta_meta     = feature_rename_meta,
+  shap_delta_meta_no_age_sex     = feature_rename_meta,
   shap_delta_metabo   = feature_rename_metabo,
   shap_delta_taxa     = feature_rename_taxa,
   shap_delta_pathway  = feature_rename_pathway,
-  shap_delta_all = feature_rename_all)
+  shap_delta_all = feature_rename_all,
+  shap_delta_all_no_age_sex = feature_rename_all,
+  shap_delta_all_no_clin = feature_rename_all)
 # 
 # shap_delta_dfs <- lapply(names(shap_delta_dfs), function(nm) {
 #   if (nm %in% names(rename_maps_delta)) {
@@ -532,10 +627,12 @@ shap_delta_dfs <- lapply(names(shap_delta_dfs), function(nm) {
 meta <- meta %>%
   mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
                                               ~rename_features_in_json(.x, feature_rename_meta)))
-#grs <- grs %>%
-#  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
-#                                              ~rename_features_in_json(.x, feature_rename_grs)))
-
+meta_no_age_sex <- meta_no_age_sex %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_meta_no_age_sex_lg)))
+grs <- grs %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_grs)))
 metabo <- metabo %>%
   mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
                                               ~rename_features_in_json(.x, feature_rename_metabo_lg)))
@@ -547,14 +644,24 @@ pathway <- pathway %>%
                                               ~rename_features_in_json(.x, feature_rename_pathway_lg)))
 all <- all %>%
   mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
-                                              ~rename_features_in_json(.x, feature_rename_all)))
+                                              ~rename_features_in_json(.x, feature_rename_all_lg)))
+all_no_age_sex <- all_no_age_sex %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_all_no_age_sex_lg)))
+all_no_clin <- all_no_clin %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_all_no_clin_lg)))
+
 # Apply to the column MERF Delta
 meta_md <- meta_md %>%
   mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
                                               ~rename_features_in_json(.x, feature_rename_meta)))
-#grs_md <- grs_md %>%
-# mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
-#                                              ~rename_features_in_json(.x, feature_rename_grs)))
+meta_no_age_sex_md <- meta_no_age_sex_md %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_meta_no_age_sex)))
+grs_md <- grs_md %>%
+ mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_grs)))
 metabo_md <- metabo_md %>%
   mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
                                               ~rename_features_in_json(.x, feature_rename_metabo)))
@@ -567,7 +674,12 @@ pathway_md <- pathway_md %>%
 all_md <- all_md %>%
   mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
                                               ~rename_features_in_json(.x, feature_rename_all)))
-
+all_no_age_sex_md <- all_no_age_sex_md %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_all)))
+all_no_clin_md <- all_no_clin_md %>%
+  mutate(Top_15_Feature_Importances = map_chr(Top_15_Feature_Importances, 
+                                              ~rename_features_in_json(.x, feature_rename_all)))
 ####################################################################################
 
 
