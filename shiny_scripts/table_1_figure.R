@@ -14,6 +14,7 @@ pacman::p_load(knitr, data.table, dplyr, tidyr, tableone, kableExtra, readxl,
 library(naniar)
 library(tibble)
 library(table1)
+library(emmeans)
 
 
 meta <- read_csv("~/projects/research/Stanislawski/BMI_risk_scores/data/correct_meta_files/ashleys_meta/DRIFT_working_dataset_meta_deltas_filtered_05.21.2024.csv")
@@ -440,6 +441,24 @@ feature_table <- data.frame(
             length(only_tabo), length(all_col)),
   p.value = rep("", 7))
 
+####### P-value of BMI changes ############################
+
+fit <- lmer(outcome_BMI_fnl ~ time + randomized_group + time:randomized_group +
+    (1 | subject_id), data = long_imputed)
+anova(fit)
+
+long_imputed$time <- factor(long_imputed$time, levels = c("0", "6", "12"))
+
+fit <- lmer(outcome_BMI_fnl ~ time + randomized_group + (1 | subject_id),
+  data = long_imputed)
+
+VarCorr(fit)
+
+# planned contrasts
+emm <- emmeans(fit, ~ time)
+contrast(emm, list("Baseline vs 6 months" = c(-1, 1, 0),
+  "6 vs 12 months" = c(0, -1, 1)))
+
 #################### TRYING ASHLEYS WYA OF COUTING FOR LONG 
 
 subject_counts <- long_new_split_table %>% 
@@ -649,6 +668,19 @@ ggplot(long_imputed,
   theme_bw() +
   guides(color = 'none')
 
+ggplot(long_imputed, 
+       aes(x = bmi_prs, 
+           y = outcome_BMI_fnl)) +
+  geom_point(aes(color = race)) +
+  geom_labelsmooth(aes(label = race, 
+                       color = race, 
+                       group = race),
+                   method = "lm", formula = y ~ x,
+                   fill = "white", size = 6, 
+                   linewidth = 1.5, 
+                   boxlinewidth = 0.6) +
+  theme_bw() +
+  guides(color = 'none')
 
 ggplot(all_delta, 
        aes(x = bmi_prs, 
@@ -663,3 +695,10 @@ ggplot(all_delta,
                    boxlinewidth = 0.6) +
   theme_bw() +
   guides(color = 'none')
+
+### BMI GRS and RACE STATS
+anova_prs <- aov(bmi_prs ~ race, data = long_imputed)
+summary(anova_prs)
+
+### BMI GRS and ehtnicity stats
+meta_e <- meta %>% 

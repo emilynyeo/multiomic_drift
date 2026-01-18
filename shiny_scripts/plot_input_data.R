@@ -151,7 +151,7 @@ gl_ftimp_delta_meta <- gl_ftimp_delta_meta %>%
       "Sex" = "Sex (Male)",
       "Hdl" = "HDL",
       "Glucose x" = "Glucose",
-      "Homo ir" = "Homo-IR"))
+      "Homo ir" = "HOMA-IR"))
 
 gl_ftimp_delta_meta_no_age_sex <- gl_ftimp_delta_meta_no_age_sex %>%
   dplyr::mutate(Feature = dplyr::recode(
@@ -159,7 +159,7 @@ gl_ftimp_delta_meta_no_age_sex <- gl_ftimp_delta_meta_no_age_sex %>%
     "Ldl" = "LDL",
     "Hdl" = "HDL",
     "Glucose x" = "Glucose",
-    "Homo ir" = "Homo-IR"))
+    "Homo ir" = "HOMA-IR"))
 
 gl_ftimp_delta_grs <- gl_ftimp_delta_grs %>%
   dplyr::mutate(
@@ -215,7 +215,7 @@ gl_ftimp_delta_all <- gl_ftimp_delta_all %>%
       "Hdl size" = "HDL-size",
       "Tyr" = "Tyrosine",
       "Gly" = "Glycine",
-      "Homo ir" = "Homo-IR",
+      "Homo ir" = "HOMA-IR",
       "Vldl tg" = "TGs in VLDL",
       "Tg by pg" = "TGs/Phosphoglycerides",
       "Dha pct" = "DHA (% of FAs)",
@@ -234,7 +234,7 @@ gl_ftimp_delta_all_no_age_sex <- gl_ftimp_delta_all_no_age_sex %>%
       "Hdl size" = "HDL-size",
       "Tyr" = "Tyrosine",
       "Gly" = "Glycine",
-      "Homo ir" = "Homo-IR",
+      "Homo ir" = "HOMA-IR",
       "Vldl tg" = "TGs in VLDL",
       "Tg by pg" = "TGs/Phosphoglycerides",
       "Dha pct" = "DHA (% of FAs)",
@@ -252,7 +252,7 @@ gl_ftimp_delta_all_no_clin <- gl_ftimp_delta_all_no_clin %>%
       "Hdl size" = "HDL-size",
       "Tyr" = "Tyrosine",
       "Gly" = "Glycine",
-      "Homo ir" = "Homo-IR",
+      "Homo ir" = "HOMA-IR",
       "Vldl tg" = "TGs in VLDL",
       "Tg by pg" = "TGs/Phosphoglycerides",
       "Dha pct" = "DHA (% of FAs)",
@@ -267,7 +267,7 @@ gl_ftimp_long_meta <- gl_ftimp_long_meta %>%
       "Sex" = "Sex (Male)",
       "Hdl" = "HDL",
       "Glucose x" = "Glucose",
-      "Homo ir" = "Homo-IR"))
+      "Homo ir" = "HOMA-IR"))
 
 gl_ftimp_long_meta_no_age_sex <- gl_ftimp_long_meta_no_age_sex %>%
   dplyr::mutate(
@@ -276,7 +276,7 @@ gl_ftimp_long_meta_no_age_sex <- gl_ftimp_long_meta_no_age_sex %>%
       "Ldl" = "LDL",
       "Hdl" = "HDL",
       "Glucose x" = "Glucose",
-      "Homo ir" = "Homo-IR"))
+      "Homo ir" = "HOMA-IR"))
 
 gl_ftimp_long_metabo <- gl_ftimp_long_metabo %>%
   dplyr::mutate(
@@ -314,7 +314,7 @@ feature_rename_meta <- c(
   "LDL_Calculated" = "LDL",
   "Glucose.x" = "Glucose",
   "Insulin_endo" = "Insulin",
-  "HOMA_IR" = "Homo-IR",
+  "HOMA_IR" = "HOMA-IR",
   "race" = "Race",
   "age" = "Age",
   "sex" = "Sex (Male)",
@@ -326,7 +326,7 @@ feature_rename_meta_no_age_sex <- c(
   "LDL_Calculated" = "LDL",
   "Glucose.x" = "Glucose",
   "Insulin_endo" = "Insulin",
-  "HOMA_IR" = "Homo-IR",
+  "HOMA_IR" = "HOMA-IR",
   "race" = "Race")
 
 feature_rename_metabo <- c(
@@ -484,7 +484,7 @@ feature_rename_all <- c(
   "L.fucose" = "L-fucose",
   "Thiamin.monophosphate" = "Thiamin monophos.",
   "Insulin_endo" = "Insulin",
-  "HOMA_IR" = "Homo-IR",
+  "HOMA_IR" = "HOMA-IR",
   "MUFA_pct" = "MUFA (% of FAs)",
   "LA" = "Linoleic acid", 
   "Omega_6" = "Omega6 FA",
@@ -498,8 +498,8 @@ feature_rename_all <- c(
   "HDL_size" = "HDL size",
   "Tyr" = "Tyrosine",
   "Gly" = "Glycine",
-  "Homo ir" = "Homo-IR",
-  "homo ir" = "Homo-IR",
+  "Homo ir" = "HOMA-IR",
+  "homo ir" = "HOMA-IR",
   "indole.3.acetate" = "Indole-3-acetate")
 
 feature_rename_grs_lg <- feature_rename_grs
