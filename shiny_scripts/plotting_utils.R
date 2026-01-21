@@ -286,7 +286,7 @@ uniform_plot_theme <- function() {
 #     )
 # }
 
-# plotting_utils.R — replace axis.title.y and margins to avoid extra spacing
+# plotting_utils.R ï¿½ replace axis.title.y and margins to avoid extra spacing
 combined_plot_theme <- function(base_size = 28) {
   theme_minimal(base_size = base_size) +
     theme(
@@ -296,14 +296,14 @@ combined_plot_theme <- function(base_size = 28) {
       panel.grid.minor = element_blank(),
       panel.border = element_blank(),
       plot.title = element_text(hjust = 0, face = "bold", size = base_size + 4, color = "black"),
-      axis.text = element_text(face = "bold", size = base_size + 2, color = "black"),
+      axis.text = element_text(face = "bold", size = base_size + 4, color = "black"),
       axis.text.x = element_text(angle = 45, hjust = 1),
       axis.title = element_text(face = "bold", size = base_size + 4, color = "black"),
-      axis.title.x = element_text(margin = ggplot2::margin(t = 0.3)),
+      axis.title.x = element_text(margin = ggplot2::margin(t = 0.5)),
       axis.title.y = element_markdown(
                      angle = 90,        # keep vertical orientation
                      vjust = 0.5,       # center on the axis
-                     margin = ggplot2::margin(t = 0, r = 2, b = 0, l = 0)),  # changed
+                     margin = ggplot2::margin(t = 0, r = 3.5, b = 0, l = 0)),  # increased right margin
       legend.position = "none",
       plot.margin = ggplot2::margin(5, 5, 5, 5)  # more balanced
     )
@@ -332,3 +332,30 @@ standardize_plot_theme <- function(plot_list, skip_indices = integer(0)) {
   })
 }
 
+### For venn diagrams
+
+# Function to extract top features from MERF data
+get_top_features <- function(df, top_n = NULL, cum_percent = 0.5) {
+  result <- df %>%
+    mutate(Top_15_Feature_Importances = gsub("'", '"', Top_15_Feature_Importances)) %>%
+    mutate(parsed = map(Top_15_Feature_Importances, fromJSON)) %>%
+    unnest(parsed) %>%
+    filter(Feature != "time") %>%
+    group_by(Feature) %>%
+    summarise(avg_importance = mean(Importance, na.rm = TRUE), .groups = "drop") %>%
+    arrange(desc(avg_importance))
+  
+  if (!is.null(top_n)) {
+    result <- result %>% slice_head(n = top_n)
+  } else {
+    result <- result %>%
+      mutate(
+        cum_importance = cumsum(avg_importance),
+        total_importance = sum(avg_importance),
+        cum_percent = cum_importance / total_importance
+      ) %>%
+      filter(cum_percent <= cum_percent | row_number() == 1)
+  }
+  
+  return(result %>% pull(Feature))
+}

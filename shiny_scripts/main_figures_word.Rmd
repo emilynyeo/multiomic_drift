@@ -1,0 +1,104 @@
+---
+title: "Main Figures and Tables"
+author: "Emily Yeo"
+date: "`r Sys.Date()`"
+output: 
+  officedown::rdocx_document:
+    reference_docx: "reference_0.5in_margins.docx"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 7.5,  # Adjusted for 0.5" margins (8.5" - 1" = 7.5")
+  fig.height = 9,   # Adjusted for 0.5" margins and caption space
+  fig.align = "center",
+  out.width = "100%",
+  out.height = "100%"
+)
+
+# Set base directory
+base_dir <- "/Users/emily/projects/research/Stanislawski/comps/mutli-omic-predictions"
+omic_out_dir <- file.path(base_dir, "paper_plots_jan18", "20251110")
+
+# Set page margins to 0.5 inches
+library(officer)
+library(officedown)
+library(pacman)
+
+p_load(tidyplots, patchwork, corrplot,
+       readr, plyr, dplyr, tidyr, purrr, tibble, stringr,  
+       reshape2, scales, gridExtra, plotly, sf, tidyverse,
+       sjPlot, htmltools, officer, flextable, webshot, apaTables, MuMIn, lme4, 
+       glue, VennDiagram, glmmTMB, broom.mixed, gt, tidyverse, ggpubr, ggtext)
+
+source(file.path(base_dir, "shiny_scripts/create_reference_doc.R"))       
+```
+
+```{r set-margins, include=FALSE}
+# Create reference document with 0.5" margins if it doesn't exist
+# This must be in the same directory as the Rmd file for the relative path to work
+ref_doc_path <- file.path(base_dir, "shiny_scripts", "reference_0.5in_margins.docx")
+
+if (!file.exists(ref_doc_path)) {
+  # Create a new document with custom margins
+  # Set page margins to 0.5 inches on all sides
+  # Note: page_mar() values are in inches by default
+  section_props <- prop_section(
+    page_size = page_size(orient = "portrait"),
+    page_margins = page_mar(top = 0.5, bottom = 0.5, left = 0.5, right = 0.5)
+  )
+  
+  ref_doc <- read_docx() %>%
+    body_add_par("Reference document with 0.5 inch margins", style = "Normal")
+  
+  # Set the default section properties for the document
+  ref_doc <- body_set_default_section(ref_doc, section_props)
+  
+  print(ref_doc, target = ref_doc_path)
+  cat("Reference document created at:", ref_doc_path, "\n")
+}
+```
+
+\newpage
+
+# Table 1: Participant Characteristics
+
+Table 1: The characteristics of study participants by timepoint shown as number (%) or mean (standard deviation [SD]). Diet groups DCR and IMF refer to Daily Caloric Restriction and Intermittent Fasting intervention arms, respectively. 
+*[This page left blank for manual insertion of Table 1]*
+
+\newpage
+
+# Figure 1: Performance of Longitudinal BMI Models
+
+```{r figure-1, fig.cap="Figure 1: Performance of Longitudinal BMI Models. Comparison of model performance (R²m) for longitudinal BMI prediction using MERF and GlmmLasso methods. Panels show additive model comparisons starting from Basic models (A, B) and Clinical+ models (C, D). Significance levels: *** p < 0.001, ** p < 0.01, * p < 0.05.", out.width="100%", fig.width=7.5, fig.height=9}
+knitr::include_graphics(file.path(omic_out_dir, "figure_1_temp_w_outliers.png"))
+```
+
+Figure 1: Prediction Assessments of longitudinal BMI omic risk scores. The additive performance of each omic risk score with a reference risk score was compared to the reference risk score alone, using analysis of variance (ANOVA) tests and marginal R2 values (fixed effect variance explained). A: The additive performance of Mixed Effects Random Forest (MERF) omic risk scores compared to the basic risk score (including only age, sex, and diet group) alone. B. The additive performance of MERF omic risk scores compared to the clinical risk score alone. C. The additive performance Generalized Linear Mixed Model with Least Absolute Shrinkage and Selection Operator (GlmmLasso) omic risk scores compared to the basic risk score alone. D. The additive performance of GlmmLasso omic risk scores compared to the clinical risk score alone. Stars denote significance as follows: < 0.001 = ***, <0.01 = **, <0.05 = *.
+
+\newpage
+
+# Figure 2: Top Features of BMI Models
+
+```{r figure-2, fig.cap="Figure 2: Top Features of BMI Models. Feature importance plots showing the top 10 most important features for longitudinal BMI prediction across different omic types. Left column shows MERF results for Clinical+, GRS, Pathway, and Metabolomics models. Right column shows MERF Combined and GlmmLasso results for Clinical+, GRS, and Metabolomics models.", out.width="100%", fig.width=7.5, fig.height=9}
+knitr::include_graphics(file.path(omic_out_dir, "figure_2_temp_w_outliers.png"))
+```
+
+\newpage
+
+# Figure 3: Performance of BMI Change Models
+
+```{r figure-3, fig.cap="Figure 3: Performance of BMI Change Models. Comparison of model performance (R²m) for BMI change (ΔBMI) prediction using MERF and GlmmLasso methods. Panels show additive model comparisons starting from Basic models (A, B) and Clinical+ models (C, D). Significance levels: *** p < 0.001, ** p < 0.01, * p < 0.05.", out.width="100%", fig.width=7.5, fig.height=9}
+knitr::include_graphics(file.path(omic_out_dir, "figure_3_tump_w_outiers.png"))
+```
+
+\newpage
+
+# Figure 4: Top Features of BMI Change Models
+
+```{r figure-4, fig.cap="Figure 4: Top Features of BMI Change Models. Feature importance plots showing the top 10 most important features for BMI change (ΔBMI) prediction across different omic types. Left column shows MERF results for Clinical+, Taxa, Pathway, Metabolomics, and Combined models. Right column shows MERF Combined* and GlmmLasso results for Clinical+, Metabolomics, Combined, and Combined* models.", out.width="100%", fig.width=7.5, fig.height=9}
+knitr::include_graphics(file.path(omic_out_dir, "figure_4_temp_w_outlier.png"))
+```
