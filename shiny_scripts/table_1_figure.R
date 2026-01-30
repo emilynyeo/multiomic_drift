@@ -144,7 +144,7 @@ all_col <- c('subject_id','BMI', 'range',
              names(long_new_split)[tabo_start:tabo_end])
 
 long_feature <- data.frame(Group = c("Basic", "Meta", "Taxa", 
-                                     "Micom", "Pathway", "Metabo", "All"),
+                                     "MICOM", "Pathway", "Metabo", "All"),
                            NumColumns = c((length(basic)-3), (length(meta_keep)-3), (length(only_taxa)-3),
                                           (length(only_micom)-3), (length(only_pathway)-3),
                                           (length(only_tabo)-3), (length(all_col)-3)))
@@ -357,8 +357,8 @@ t0_6_12 <- t0_6_12 %>%
   dplyr::select(-c("level", "level.y")) %>%
   mutate(RowName = case_when(
     RowName == "Diet Group IMF " ~ "Diet Group (%)",
-    RowName == "BMI  mean  SD  " ~ "BMI (mean ± SD)",
-    RowName == "Age  mean  SD  " ~ "Age (mean ± SD)",
+    RowName == "BMI  mean  SD  " ~ "BMI (mean ï¿½ SD)",
+    RowName == "Age  mean  SD  " ~ "Age (mean ï¿½ SD)",
     RowName == "Sex " ~ "Sex (%)",
     RowName == "Cohort Number " ~ "Cohort Number (%)",
     RowName == "Race " ~ "Race (%)",
@@ -410,7 +410,7 @@ save_as_docx(`long_table_one` = styled_table,
              pr_section = props_long,
              path = long_t1)
 
-# You are comparing 2 × 3 = 6 groups
+# You are comparing 2 ï¿½ 3 = 6 groups
 # Each p-value is testing for differences across those 6 groups
 table1 <- CreateTableOne(data = long_new_split_table[c(4:8, 397:399)], 
                          strata = c("Train / Test Subset", "Timepoint"),

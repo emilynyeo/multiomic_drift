@@ -42,7 +42,7 @@ ft_colors <- c(
   `Clinical+`     = "#fbbdd1",
   `Clinical`     = "#fbbdd1",
   Taxa         = "#8B3A3A",
-  Micom        = "#996759",
+  MICOM        = "#996759",
   Pathway      = "#D8A39D",
   Metabolomics = "#C76374",
   Combined     = "#b44241",
@@ -74,7 +74,7 @@ for (name in names(shap_dfs_filtered)) {
   grepl("all_no_clin$", name)     ~ "Combined*",
   grepl("all_no_age_sex$", name)  ~ "Combined",
   grepl("taxa$", name)            ~ "Taxa",
-  grepl("micom$", name)           ~ "Micom",
+  grepl("micom$", name)           ~ "MICOM",
   grepl("pathway$", name)         ~ "Pathway",
   grepl("metabo$", name)          ~ "Metabolomics",
   grepl("grs$", name)             ~ "GRS",
@@ -150,7 +150,7 @@ for (name in names(shap_dfs_filtered_delta)) {
   group_key <- case_when(
     grepl("meta$", name)      ~ "Clinical+",
     grepl("taxa$", name)      ~ "Taxa",
-    grepl("micom$", name)     ~ "Micom",
+    grepl("micom$", name)     ~ "MICOM",
     grepl("pathway$", name)   ~ "Pathway",
     grepl("metabo$", name)    ~ "Metabolomics",
     grepl("all$", name)       ~ "Combined",
@@ -239,7 +239,7 @@ for (omic_name in names(omic_dfs)) {
     Basic = lmer_basic,
     `Basic + Clinical` = lmer_meta_b,
     `Basic + GRS` = lmer_grs_b,
-    `Basic + Micom` = lmer_micom_b,
+    `Basic + MICOM` = lmer_micom_b,
     `Basic + Pathway` = lmer_path_b,
     `Basic + Taxa` = lmer_tax_b,
     `Basic + Metabolomics` = lmer_metabo_b,
@@ -289,7 +289,7 @@ for (omic_name in names(omic_dfs)) {
         "lmer_basic vs lmer_meta_b" = "Basic + Clinical",
         "lmer_basic vs lmer_grs_b" = "Basic + GRS",
         "lmer_basic vs lmer_tax_b" = "Basic + Taxa",
-        "lmer_basic vs lmer_micom_b" = "Basic + Micom",
+        "lmer_basic vs lmer_micom_b" = "Basic + MICOM",
         "lmer_basic vs lmer_path_b" = "Basic + Pathway",
         "lmer_basic vs lmer_metabo_b" = "Basic + Metabolomics",
         "lmer_basic vs lmer_all_b" = "Basic + Combined"),
@@ -381,7 +381,7 @@ delta_labels <- c(
   "Basic + GRS" = "+ Δ GRS",
   "Basic + Pathway" = "+ Δ Pathway",
   "Basic + Taxa" = "+ Δ Taxa",
-  "Basic + Micom" = "+ Δ Micom",
+  "Basic + MICOM" = "+ Δ MICOM",
   "Basic + Metabolomics" = "+ Δ Metabolomics",
   "Basic + Combined" = "+ Δ Combined")
 
@@ -391,7 +391,7 @@ long_labels <- c(
   "Basic + GRS" = "+ GRS",
   "Basic + Pathway" = "+ Pathway",
   "Basic + Taxa" = "+ Taxa",
-  "Basic + Micom" = "+ Micom",
+  "Basic + MICOM" = "+ MICOM",
   "Basic + Metabolomics" = "+ Metabolomics",
   "Basic + Combined" = "+ Combined")
 
@@ -404,7 +404,7 @@ for (omic_name in names(all_r2_dfs)) {
 
   # Set custom model order
   custom_order <- c("Basic", "Basic + Clinical", "Basic + GRS", "Basic + Pathway",
-                    "Basic + Taxa", "Basic + Micom", 
+                    "Basic + Taxa", "Basic + MICOM", 
                     "Basic + Metabolomics", "Basic + Combined")
   fill_vals <- setNames(sapply(custom_order, get_color), custom_order)
   r2_annotated$Model <- factor(r2_annotated$Model, levels = custom_order)
@@ -593,7 +593,7 @@ for (omic_name in names(omic_dfs)) {
   models <- list(
     `Clinical+`           = lmer_meta_b,
     `Clinical+ + GRS`     = lmer_meta_grs,
-    `Clinical+ + Micom`   = lmer_meta_micom,
+    `Clinical+ + MICOM`   = lmer_meta_micom,
     `Clinical+ + Pathway` = lmer_meta_pathway,
     `Clinical+ + Taxa`    = lmer_meta_taxa,
     `Clinical+ + Metabolomics`  = lmer_meta_metabo,
@@ -658,7 +658,7 @@ for (omic_name in names(omic_dfs)) {
         "lmer_meta_b vs lmer_meta_b"     = "Clinical+",
         "lmer_meta_b vs lmer_meta_grs"   = "Clinical+ + GRS",
         "lmer_meta_b vs lmer_meta_taxa"  = "Clinical+ + Taxa",
-        "lmer_meta_b vs lmer_meta_micom" = "Clinical+ + Micom",
+        "lmer_meta_b vs lmer_meta_micom" = "Clinical+ + MICOM",
         "lmer_meta_b vs lmer_meta_pathway" = "Clinical+ + Pathway",
         "lmer_meta_b vs lmer_meta_metabo" = "Clinical+ + Metabolomics",
         "lmer_meta_b vs lmer_meta_all"     = "Clinical+ + Combined*"),
@@ -677,7 +677,7 @@ for (omic_name in names(omic_dfs)) {
                     "Clinical+ + GRS", 
                     "Clinical+ + Pathway", 
                     "Clinical+ + Taxa", 
-                    "Clinical+ + Micom", 
+                    "Clinical+ + MICOM", 
                     "Clinical+ + Metabolomics",
                     "Clinical+ + Combined*")
   
@@ -720,7 +720,7 @@ delta_labels <- c(
   "Clinical+ + GRS" = "+ Δ GRS",
   "Clinical+ + Pathway" = "+ Δ Pathway",
   "Clinical+ + Taxa" = "+ Δ Taxa",
-  "Clinical+ + Micom" = "+ Δ Micom",
+  "Clinical+ + MICOM" = "+ Δ MICOM",
   "Clinical+ + Metabolomics" = "+ Δ Metabolomics",
   "Clinical+ + Combined*" = "+ Δ Combined*")
 
@@ -729,7 +729,7 @@ long_labels <- c(
   "Clinical+ + GRS" = "+ GRS",
   "Clinical+ + Pathway" = "+ Pathway",
   "Clinical+ + Taxa" = "+ Taxa",
-  "Clinical+ + Micom" = "+ Micom",
+  "Clinical+ + MICOM" = "+ MICOM",
   "Clinical+ + Metabolomics" = "+ Metabolomics",
   "Clinical+ + Combined*" = "+ Combined*")
 
@@ -739,7 +739,7 @@ custom_order <- c(
   "Clinical+ + GRS",
   "Clinical+ + Pathway",
   "Clinical+ + Taxa",
-  "Clinical+ + Micom",
+  "Clinical+ + MICOM",
   "Clinical+ + Metabolomics",
   "Clinical+ + Combined*")
 
@@ -750,7 +750,7 @@ fill_vals <- c(
   "Clinical+ + GRS"           = ft_colors[["GRS"]],
   "Clinical+ + Pathway"       = ft_colors[["Pathway"]],
   "Clinical+ + Taxa"          = ft_colors[["Taxa"]],
-  "Clinical+ + Micom"         = ft_colors[["Micom"]],
+  "Clinical+ + MICOM"         = ft_colors[["MICOM"]],
   "Clinical+ + Metabolomics"  = ft_colors[["Metabolomics"]],
   "Clinical+ + Combined*"     = ft_colors[["Combined*"]])
 
@@ -953,7 +953,7 @@ merf_dfs_long <- list(Basic = basic,
                       `Clinical` = meta_no_age_sex,
                       GRS = grs,
                       Taxa = taxa, 
-                      Micom = micom, 
+                      MICOM = micom, 
                       Pathway = pathway, 
                       Metabolomics = metabo, 
                       `Combined` = all_no_age_sex,
@@ -964,7 +964,7 @@ merf_dfs_delta <- list(Basic = basic_md,
                        `Clinical` = meta_no_age_sex_md,
                        GRS = grs_md, 
                        Taxa = taxa_md, 
-                       Micom = micom_md, 
+                       MICOM = micom_md, 
                        Pathway = pathway_md, 
                        Metabolomics = metabo_md, 
                       `Combined` = all_no_age_sex_md,
@@ -1045,7 +1045,7 @@ lass_dfs_long <- list(Basic = gl_ftimp_long_basic,
                       `Clinical` = gl_ftimp_long_meta_no_age_sex,
                       GRS = gl_ftimp_long_grs,
                       Taxa = gl_ftimp_long_taxa, 
-                      Micom = gl_ftimp_long_micom, 
+                      MICOM = gl_ftimp_long_micom, 
                       Pathway = gl_ftimp_long_pathway, 
                       Metabolomics = gl_ftimp_long_metabo, 
                       `Combined` = gl_ftimp_long_all_no_age_sex,
@@ -1056,7 +1056,7 @@ lass_dfs_delta <- list(Basic = gl_ftimp_delta_basic,
                        `Clinical` = gl_ftimp_delta_meta_no_age_sex,
                        GRS = gl_ftimp_delta_grs,
                        Taxa = gl_ftimp_delta_taxa, 
-                       Micom = gl_ftimp_delta_micom, 
+                       MICOM = gl_ftimp_delta_micom, 
                        Pathway = gl_ftimp_delta_pathway, 
                        Metabolomics = gl_ftimp_delta_metabo, 
                        `Combined` = gl_ftimp_delta_all_no_age_sex,
@@ -1547,7 +1547,7 @@ cor_long_df <- list(
                         "Meta Score" = "y_new_meta",
                         "GRS Score" = "y_new_grs",
                         "Taxa Score" = "y_new_taxa",
-                        "Micom Score" = "y_new_micom",
+                        "MICOM Score" = "y_new_micom",
                         "Pathway Score" = "y_new_pathway",
                         "Metabolomics Score" = "y_new_metabo",
                         "Combined Omic Score" = "y_new_all"),
@@ -1557,7 +1557,7 @@ cor_long_df <- list(
                         "Meta Score" = "y_new_meta",
                         "GRS Score" = "y_new_grs",
                         "Taxa Score" = "y_new_taxa",
-                        "Micom Score" = "y_new_micom",
+                        "MICOM Score" = "y_new_micom",
                         "Pathway Score" = "y_new_pathway",
                         "Metabolomics Score" = "y_new_metabo",
                         "Combined Omic Score" = "y_new_all"))
@@ -1585,7 +1585,7 @@ rename_map <- c(
   "Clinical Score" = "y_new_meta",
   "GRS Score" = "y_new_grs",
   "Taxa Score" = "y_new_taxa",
-  "Micom Score" = "y_new_micom",
+  "MICOM Score" = "y_new_micom",
   "Pathway Score" = "y_new_pathway",
   "Metabolomics Score" = "y_new_metabo",
   "Combined Omic Score" = "y_new_all")
@@ -1595,7 +1595,7 @@ score_colors <- c(
   "Clinical Score" = ft_colors["Clinical"],
   "GRS Score" = ft_colors["GRS"],
   "Taxa Score" = ft_colors["Taxa"],
-  "Micom Score" = ft_colors["Micom"],
+  "MICOM Score" = ft_colors["MICOM"],
   "Pathway Score" = ft_colors["Pathway"],
   "Metabolomics Score" = ft_colors["Metabolomics"],
   "Combined Omic Score" = ft_colors["Combined"],
@@ -1615,7 +1615,7 @@ gl_lasso_long_bar <- gl_lasso_long %>% rename(!!!rename_map) %>%
 plot_score_means <- function(df, title = "Mean Scores with Error Bars", y_limits = NULL) {
   summary_df <- df %>%
     select(`Basic Score`, `Clinical Score`, `GRS Score`, `Taxa Score`,
-           `Micom Score`, `Pathway Score`, `Metabolomics Score`,  
+           `MICOM Score`, `Pathway Score`, `Metabolomics Score`,  
            `Combined Omic Score`, `Actual BMI`) %>%
     pivot_longer(cols = everything(), 
                  names_to = "Score Type", 
@@ -1628,7 +1628,7 @@ plot_score_means <- function(df, title = "Mean Scores with Error Bars", y_limits
   # Set desired order of bars
   score_levels <- c(
     "Actual BMI", "Basic Score", "Clinical Score",
-    "GRS Score", "Taxa Score", "Micom Score",
+    "GRS Score", "Taxa Score", "MICOM Score",
     "Pathway Score", "Metabolomics Score", "Combined Omic Score"
   )
   summary_df$`Score Type` <- factor(summary_df$`Score Type`, levels = score_levels)
